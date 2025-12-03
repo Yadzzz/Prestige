@@ -1,17 +1,19 @@
-﻿namespace Server
+﻿using Server.Infrastructure;
+
+namespace Server
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Console.ForegroundColor = ConsoleColor.White;
 
-            ServerEnvironment.GetServerEnvironment().Initialize();
+            var env = ServerEnvironment.GetServerEnvironment();
+            env.Initialize();
 
-            while (true)
-            {
-                Console.ReadKey();
-            }
+            await env.ServerManager.DiscordBotHost.StartAsync();
+
+            await Task.Delay(-1); // keep app alive
         }
     }
 }

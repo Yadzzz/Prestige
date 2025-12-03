@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Server.Server;
 using Server.Communication;
+using Server.Infrastructure;
 
 namespace Server
 {

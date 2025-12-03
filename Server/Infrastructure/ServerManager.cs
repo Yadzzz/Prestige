@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Server.Infrastructure.Connection;
 using Server.Infrastructure.Database;
 using Server.Infrastructure.Logger;
+using Server.Infrastructure.Discord;
 
 namespace Server.Infrastructure
 {
@@ -14,6 +15,7 @@ namespace Server.Infrastructure
         public ConnectionManager ConnectionManager { get; set; }
         public DatabaseManager DatabaseManager { get; set; }
         public LoggerManager LoggerManager { get; set; }
+        public DiscordBotHost DiscordBotHost { get; set; }
 
         public ServerManager()
         {
@@ -25,6 +27,14 @@ namespace Server.Infrastructure
                 FileLoggerEnabled = false,
                 DatabaseLoggerEnabled = false,
             });
+
+            var discordOptions = new DiscordOptions
+            {
+                Token = Environment.GetEnvironmentVariable("DISCORD_TOKEN"),
+                GuildId = 1445556867307929612
+            };
+
+            this.DiscordBotHost = new DiscordBotHost(discordOptions);
 
             Console.WriteLine("ServerManager Initialized ->");
         }
