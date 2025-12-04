@@ -9,6 +9,7 @@ using Server.Infrastructure.Logger;
 using Server.Infrastructure.Discord;
 using Server.Client.Users;
 using Server.Client.Transactions;
+using Server.Client.Stakes;
 
 namespace Server.Infrastructure
 {
@@ -20,6 +21,7 @@ namespace Server.Infrastructure
         public DiscordBotHost DiscordBotHost { get; set; }
         public UsersService UsersService { get; set; }
         public TransactionsService TransactionsService { get; set; }
+        public StakesService StakesService { get; set; }
 
         public ServerManager()
         {
@@ -33,6 +35,7 @@ namespace Server.Infrastructure
             });
             this.UsersService = new UsersService(this.DatabaseManager);
             this.TransactionsService = new TransactionsService(this.DatabaseManager, this.UsersService);
+            this.StakesService = new StakesService(this.DatabaseManager);
 
             var discordOptions = new DiscordOptions
             {
