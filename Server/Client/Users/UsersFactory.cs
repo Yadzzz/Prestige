@@ -1,17 +1,19 @@
-﻿using DSharpPlus.SlashCommands;
-using Server.Infrastructure.Database;
+﻿using Server.Infrastructure.Database;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Server.Client.Users
 {
-    public static class UsersFactory
+    public class UsersService
     {
-        public static bool UserExists(string identifier)
+        private readonly DatabaseManager _databaseManager;
+
+        public UsersService(DatabaseManager databaseManager)
+        {
+            _databaseManager = databaseManager;
+        }
+
+        public bool UserExists(string identifier)
         {
             if (string.IsNullOrEmpty(identifier))
             {
@@ -29,15 +31,14 @@ namespace Server.Client.Users
                     return Convert.ToInt32(result) > 0;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //Log to file
+                // TODO: log error
             }
             return false;
         }
 
-
-        public static bool TryGetUser(string identifier, out User user)
+        public bool TryGetUser(string identifier, out User user)
         {
             user = null;
 
@@ -74,15 +75,15 @@ namespace Server.Client.Users
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //Log to file
+                // TODO: log error
             }
 
             return user != null;
         }
 
-        public static bool CreateUser(string identifier, string username, string displayName)
+        public bool CreateUser(string identifier, string username, string displayName)
         {
             if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(username))
             {
@@ -103,30 +104,26 @@ namespace Server.Client.Users
                     return rowsAffected > 0;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //Log to file
+                // TODO: log error
                 return false;
             }
         }
 
-        public static async Task<User?> EnsureUserAsync(string userId, string username, string displayName)
+        public Task<User?> EnsureUserAsync(string userId, string username, string displayName)
         {
-            //if (ctx.User.IsBot || (ctx.User.IsSystem.HasValue && ctx.User.IsSystem.Value))
-            //{
-            //    await ctx.CreateResponseAsync("Bots and system users cannot use this command.");
-            //    return null;
-            //}
-
             if (!UserExists(userId))
+            {
                 CreateUser(userId, username, displayName);
+            }
 
             if (!TryGetUser(userId, out var user) || user == null)
             {
-                return null;
+                return Task.FromResult<User?>(null);
             }
 
-            return user;
+            return Task.FromResult<User?>(user);
         }
     }
 }

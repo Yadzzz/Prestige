@@ -3,6 +3,8 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using Server.Client.Users;
+using Server.Client.Transactions;
+using Server.Infrastructure;
 using Server.Client.Utils;
 using System;
 using System.Collections.Generic;
@@ -16,7 +18,11 @@ namespace Server.Communication.Discord.Commands
         [Aliases("bal", "wallet", "money", "gp")]
         public async Task Balance(CommandContext ctx)
         {
-            var user = await UsersFactory.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var env = ServerEnvironment.GetServerEnvironment();
+            var usersService = env.ServerManager.UsersService;
+            var transactionsService = env.ServerManager.TransactionsService;
+
+            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
             if (user == null)
                 return;
 

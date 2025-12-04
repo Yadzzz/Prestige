@@ -7,6 +7,8 @@ using Server.Infrastructure.Connection;
 using Server.Infrastructure.Database;
 using Server.Infrastructure.Logger;
 using Server.Infrastructure.Discord;
+using Server.Client.Users;
+using Server.Client.Transactions;
 
 namespace Server.Infrastructure
 {
@@ -16,6 +18,8 @@ namespace Server.Infrastructure
         public DatabaseManager DatabaseManager { get; set; }
         public LoggerManager LoggerManager { get; set; }
         public DiscordBotHost DiscordBotHost { get; set; }
+        public UsersService UsersService { get; set; }
+        public TransactionsService TransactionsService { get; set; }
 
         public ServerManager()
         {
@@ -27,6 +31,8 @@ namespace Server.Infrastructure
                 FileLoggerEnabled = false,
                 DatabaseLoggerEnabled = false,
             });
+            this.UsersService = new UsersService(this.DatabaseManager);
+            this.TransactionsService = new TransactionsService(this.DatabaseManager, this.UsersService);
 
             var discordOptions = new DiscordOptions
             {

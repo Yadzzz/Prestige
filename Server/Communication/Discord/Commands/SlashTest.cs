@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus.SlashCommands;
 using Server.Client.Users;
+using Server.Infrastructure;
 
 namespace Server.Communication.Discord.Commands
 {
@@ -19,7 +20,9 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
             
-            var user = await UsersFactory.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var env = ServerEnvironment.GetServerEnvironment();
+            var usersService = env.ServerManager.UsersService;
+            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
             if (user == null) return;
 
             var count = Interlocked.Increment(ref _counter);
