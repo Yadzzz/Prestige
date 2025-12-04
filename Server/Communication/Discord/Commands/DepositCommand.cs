@@ -8,6 +8,7 @@ using Server.Client.Users;
 using Server.Client.Transactions;
 using Server.Client.Utils;
 using Server.Infrastructure;
+using DSharpPlus;
 
 namespace Server.Communication.Discord.Commands
 {
