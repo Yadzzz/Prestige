@@ -5,7 +5,6 @@ namespace Server.Infrastructure.Discord
     /// </summary>
     public static class DiscordIds
     {
-        public const string DiscordToken = "";
         // Guild
         public const ulong GuildId = 1445556867307929612UL;
 
