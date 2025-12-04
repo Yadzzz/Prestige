@@ -49,9 +49,20 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            // Lock stake amount up-front so it can't be reused while pending
+            var balanceLocked = usersService.RemoveBalance(user.Identifier, amountK);
+            if (!balanceLocked)
+            {
+                await ctx.RespondAsync("Failed to lock balance for this stake. Please try again.");
+                return;
+            }
+
             var stake = stakesService.CreateStake(user, amountK);
             if (stake == null)
             {
+                // rollback locked balance on failure
+                usersService.AddBalance(user.Identifier, amountK);
+
                 await ctx.RespondAsync("Failed to create stake. Please try again later.");
                 serverManager.LogsService.Log(
                     source: nameof(StakeCommand),

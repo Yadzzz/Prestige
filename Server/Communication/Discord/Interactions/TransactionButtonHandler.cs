@@ -14,14 +14,15 @@ namespace Server.Communication.Discord.Interactions
     {
         public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
         {
-            if (e.Id.StartsWith("tx_usercancel_", StringComparison.OrdinalIgnoreCase))
-            {
-                await HandleUserCancelAction(client, e);
-            }
-            else
-            {
-                await HandleStaffTransactionAction(client, e);
-            }
+            // User cancel for deposits/withdrawals is temporarily disabled.
+            // if (e.Id.StartsWith("tx_usercancel_", StringComparison.OrdinalIgnoreCase))
+            // {
+            //     await HandleUserCancelAction(client, e);
+            // }
+            // else
+            // {
+            await HandleStaffTransactionAction(client, e);
+            // }
         }
 
         private static async Task HandleStaffTransactionAction(DiscordClient client, ComponentInteractionCreateEventArgs e)

@@ -14,11 +14,12 @@ namespace Server.Communication.Discord.Interactions
     {
         public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
         {
-            if (e.Id.StartsWith("stake_usercancel_", StringComparison.OrdinalIgnoreCase))
-            {
-                await HandleUserCancelAsync(client, e);
-                return;
-            }
+            // User cancel for stakes is temporarily disabled.
+            // if (e.Id.StartsWith("stake_usercancel_", StringComparison.OrdinalIgnoreCase))
+            // {
+            //     await HandleUserCancelAsync(client, e);
+            //     return;
+            // }
 
             var parts = e.Id.Split('_');
             if (parts.Length != 3)
@@ -85,6 +86,8 @@ namespace Server.Communication.Discord.Interactions
             {
                 if (newStatus == StakeStatus.Won)
                 {
+                    // stake amount was already removed when the stake was created.
+                    // On win, user should get back stake + win amount.
                     feeK = (long)Math.Round(stake.AmountK * 0.10m, MidpointRounding.AwayFromZero);
                     payoutK = stake.AmountK - feeK;
 
@@ -93,11 +96,17 @@ namespace Server.Communication.Discord.Interactions
                         payoutK = 0;
                     }
 
-                    usersService.AddBalance(stake.Identifier, payoutK);
+                    // net change compared to before stake: +payoutK
+                    usersService.AddBalance(stake.Identifier, stake.AmountK + payoutK);
                 }
                 else if (newStatus == StakeStatus.Lost)
                 {
-                    usersService.RemoveBalance(stake.Identifier, stake.AmountK);
+                    // user already paid stake up-front; nothing more to change
+                }
+                else if (newStatus == StakeStatus.Cancelled)
+                {
+                    // staff-cancelled: return the locked stake amount
+                    usersService.AddBalance(stake.Identifier, stake.AmountK);
                 }
 
                 usersService.TryGetUser(stake.Identifier, out user);
@@ -187,9 +196,15 @@ namespace Server.Communication.Discord.Interactions
                             ? "https://i.imgur.com/DtaZNgy.gif"
                             : "https://i.imgur.com/jq2603y.gif";
 
+                    // total win = original stake + net profit after fee
+                    var totalWinK = stake.AmountK + payoutK;
+                    var totalWinText = GpFormatter.Format(totalWinK);
+
                     var userEmbed = new DiscordEmbedBuilder()
                         .WithTitle(resultTitle)
-                        .WithDescription(resultDescription)
+                        .WithDescription(newStatus == StakeStatus.Won && payoutK > 0
+                            ? $"Congratulations 🎉\nYou won the {totalWinText} stake."
+                            : resultDescription)
                         .WithColor(newStatus == StakeStatus.Won ? DiscordColor.SpringGreen :
                                    newStatus == StakeStatus.Lost ? DiscordColor.Red : DiscordColor.Orange)
                         .WithThumbnail(userThumbnail)
@@ -201,12 +216,8 @@ namespace Server.Communication.Discord.Interactions
                         userEmbed.AddField("Streak", "1", true);
                         userEmbed.AddField("Balance", balanceText, true);
 
-                        // Third field varies by outcome to help width
-                        if (newStatus == StakeStatus.Won && payoutK > 0)
-                        {
-                            userEmbed.AddField("You receive", payoutText ?? string.Empty, true);
-                        }
-                        else if (newStatus == StakeStatus.Lost)
+                        // Extra field for lost outcome
+                        if (newStatus == StakeStatus.Lost)
                         {
                             userEmbed.AddField("You lost", amountText, true);
                         }
@@ -262,6 +273,7 @@ namespace Server.Communication.Discord.Interactions
 
             var env = ServerEnvironment.GetServerEnvironment();
             var stakesService = env.ServerManager.StakesService;
+            var usersService = env.ServerManager.UsersService;
 
             var stake = stakesService.GetStakeById(stakeId);
             if (stake == null)
@@ -279,6 +291,7 @@ namespace Server.Communication.Discord.Interactions
             }
 
             stakesService.UpdateStakeStatus(stake.Id, StakeStatus.Cancelled);
+            // Give back their stake amount
 
             env.ServerManager.LogsService.Log(
                 source: nameof(StakeButtonHandler),
