@@ -48,11 +48,16 @@ namespace Server.Communication.Discord.Commands
             }
 
             var prettyAmount = GpFormatter.Format(transaction.AmountK);
+            var balanceText = GpFormatter.Format(user.Balance);
+            var remainingText = GpFormatter.Format(user.Balance - transaction.AmountK);
 
             var pendingEmbed = new DiscordEmbedBuilder()
-                .WithTitle("Withdrawal Request Created ⏳")
-                .WithDescription($"{ctx.Member.DisplayName}, your withdrawal of **{prettyAmount}** is now **pending**.")
-                .WithColor(DiscordColor.Orange)
+                .WithTitle("Withdraw Request")
+                .WithDescription("Your withdrawal request was submitted. You will be notified once a staff member reviews it.")
+                .AddField("Member", ctx.User.Username, true)
+                .AddField("Amount", prettyAmount, true)
+                .AddField("Remaining", remainingText, true)
+                .WithColor(DiscordColor.Gold)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
@@ -61,7 +66,7 @@ namespace Server.Communication.Discord.Commands
                 .AddEmbed(pendingEmbed)
                 .AddComponents(userCancelButton));
 
-            var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.DepositWithdrawStaffChannelId);
+            var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.WithdrawStaffChannelId);
 
             var staffEmbed = new DiscordEmbedBuilder()
                 .WithTitle("New Withdrawal Request ⏳")

@@ -57,7 +57,7 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Remaining", remainingPretty, true)
                 .AddField("Member", ctx.Member.DisplayName, true)
                 .WithColor(DiscordColor.Gold)
-                .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
                 .WithFooter("Prestige Bets")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 

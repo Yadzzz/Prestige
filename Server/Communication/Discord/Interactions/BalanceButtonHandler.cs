@@ -106,8 +106,8 @@ namespace Server.Communication.Discord.Interactions
                 builder.AddComponents(components);
             }
 
-            // Update the existing message so history paginates in-place
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, builder);
+            // Send a new message for history instead of editing the original
+            await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, builder);
         }
 
         private static async Task HandleDepositInfoAsync(ComponentInteractionCreateEventArgs e)

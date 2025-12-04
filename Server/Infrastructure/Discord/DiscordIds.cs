@@ -12,7 +12,8 @@ namespace Server.Infrastructure.Discord
         public const ulong StaffRoleId = 1446166541933613127UL;
 
         // Channels
-        public const ulong DepositWithdrawStaffChannelId = 1446088366985838642UL;
+        public const ulong DepositStaffChannelId = 1446212804737503494UL;
+        public const ulong WithdrawStaffChannelId = 1446212852388991118UL;
         public const ulong StakeStaffChannelId = 1446157757106491404UL;
     }
 }

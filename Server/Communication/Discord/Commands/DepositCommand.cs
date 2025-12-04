@@ -41,11 +41,17 @@ namespace Server.Communication.Discord.Commands
             }
 
             var prettyAmount = GpFormatter.Format(transaction.AmountK);
+            var balanceText = GpFormatter.Format(user.Balance);
+            var expectedBalanceText = GpFormatter.Format(user.Balance + transaction.AmountK);
 
             var pendingEmbed = new DiscordEmbedBuilder()
-                .WithTitle("Deposit Request Created ⏳")
-                .WithDescription($"{ctx.Member.DisplayName}, your deposit of **{prettyAmount}** is now **pending**.")
-                .WithColor(DiscordColor.Orange)
+                .WithTitle("Deposit Request")
+                .WithDescription("Your deposit request was sent for staff review.")
+                .AddField("Balance", balanceText, true)
+                .AddField("Deposit", prettyAmount, true)
+                .AddField("Expected Balance", expectedBalanceText, true)
+                .WithColor(DiscordColor.Gold)
+                .WithThumbnail("https://i.imgur.com/1hkVfFD.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
@@ -56,7 +62,7 @@ namespace Server.Communication.Discord.Commands
                 .AddComponents(userCancelButton));
 
             // Send to staff channel
-            var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.DepositWithdrawStaffChannelId);
+            var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.DepositStaffChannelId);
 
             var staffEmbed = new DiscordEmbedBuilder()
                 .WithTitle("New Deposit Request ⏳")

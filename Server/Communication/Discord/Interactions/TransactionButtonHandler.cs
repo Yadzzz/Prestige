@@ -102,7 +102,7 @@ namespace Server.Communication.Discord.Interactions
             var updatedEmbed = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder())
                 .WithTitle($"{typeLabel} Request - {statusText}");
 
-            // Update or inject Status line in description to reflect new status
+            // Update or inject Status line in description to reflect new status for staff
             var desc = originalEmbed?.Description ?? string.Empty;
             if (!string.IsNullOrEmpty(desc))
             {
@@ -148,54 +148,99 @@ namespace Server.Communication.Discord.Interactions
 
             await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, responseBuilder);
 
-            if (transaction.UserChannelId.HasValue && transaction.UserMessageId.HasValue)
+            if (transaction.UserChannelId.HasValue)
             {
                 try
                 {
                     var userChannel = await client.GetChannelAsync(transaction.UserChannelId.Value);
-                    var userMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
+                    var isWithdraw = transaction.Type == TransactionType.Withdraw;
+                    var amountText = GpFormatter.Format(transaction.AmountK);
 
-                    var userEmbedBuilder = new DiscordEmbedBuilder(userMessage.Embeds.Count > 0 ? userMessage.Embeds[0] : new DiscordEmbedBuilder());
-                    var statusIcon = newStatus switch
+                    // Colors per status
+                    var color = newStatus switch
                     {
-                        TransactionStatus.Accepted => "✅",
-                        TransactionStatus.Cancelled => "🔁",
-                        TransactionStatus.Denied => "❌",
-                        _ => string.Empty
+                        TransactionStatus.Accepted => DiscordColor.Green,
+                        TransactionStatus.Denied => DiscordColor.Red,
+                        TransactionStatus.Cancelled => DiscordColor.Orange,
+                        _ => DiscordColor.Blurple
                     };
-                    var userTypeLabel = transaction.Type == TransactionType.Withdraw ? "Withdrawal" : "Deposit";
-                    userEmbedBuilder.Title = $"{userTypeLabel} Request {statusIcon}".Trim();
 
-                    var userDesc = userEmbedBuilder.Description ?? string.Empty;
-                    if (!string.IsNullOrEmpty(userDesc))
+                    var title = isWithdraw ? "Withdraw Request" : "Deposit Request";
+
+                    var thumbnailUrl = !isWithdraw && newStatus == TransactionStatus.Accepted
+                        ? "https://i.imgur.com/0qEQpNC.gif"
+                        : "https://i.imgur.com/DHXgtn5.gif";
+
+                    var processedEmbed = new DiscordEmbedBuilder()
+                        .WithTitle(title)
+                        .WithColor(color)
+                        .WithThumbnail(thumbnailUrl)
+                        .WithTimestamp(DateTimeOffset.UtcNow);
+
+                    if (isWithdraw)
                     {
-                        userDesc = userDesc.Replace("pending", statusText.ToLowerInvariant());
+                        processedEmbed.WithDescription($"Your withdrawal request for **{amountText}** has been processed.");
+                    }
+                    else
+                    {
+                        var descStatus = newStatus switch
+                        {
+                            TransactionStatus.Accepted => "was processed.",
+                            TransactionStatus.Denied => "was declined.",
+                            TransactionStatus.Cancelled => "was cancelled.",
+                            _ => "was processed."
+                        };
+                        processedEmbed.WithDescription($"Your deposit request was {descStatus}");
                     }
 
-                    if (!string.IsNullOrEmpty(balanceText))
+                    if (isWithdraw)
                     {
-                        var goldIcon = "💰"; // RuneScape-style gold icon approximation
-                        var balanceLine = $"{goldIcon} Balance: **{balanceText}**";
-
-                        if (string.IsNullOrEmpty(userDesc))
+                        processedEmbed.AddField("Staff", e.User.Username, true);
+                        if (!string.IsNullOrEmpty(balanceText))
                         {
-                            // No main text, just show balance
-                            userDesc = balanceLine;
+                            processedEmbed.AddField("Balance", balanceText, true);
                         }
-                        else if (!userDesc.Contains("Balance:", StringComparison.OrdinalIgnoreCase))
+                        processedEmbed.AddField("Date", DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm"), true);
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(balanceText))
                         {
-                            // Add a blank line, then the balance line for spacing
-                            userDesc += "\n\n" + balanceLine;
+                            processedEmbed.AddField("Balance", balanceText, true);
                         }
+                        processedEmbed.AddField("Deposit", amountText, true);
+                        processedEmbed.AddField("Staff", e.User.Username, true);
                     }
 
-                    userEmbedBuilder.Description = userDesc;
+                    await userChannel.SendMessageAsync(new DiscordMessageBuilder()
+                        .WithContent($"<@{transaction.Identifier}>")
+                        .AddEmbed(processedEmbed));
 
-                    await userMessage.ModifyAsync(builder =>
+                    // Disable the original user cancel button on the pending transaction message, if present
+                    if (transaction.UserMessageId.HasValue)
                     {
-                        builder.Content = $"<@{transaction.Identifier}>";
-                        builder.Embed = userEmbedBuilder.Build();
-                    });
+                        try
+                        {
+                            var originalMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
+
+                            var disabledCancel = new DiscordButtonComponent(
+                                ButtonStyle.Secondary,
+                                $"tx_usercancel_{transaction.Id}",
+                                "Cancel",
+                                disabled: true,
+                                emoji: new DiscordComponentEmoji("🔁"));
+
+                            await originalMessage.ModifyAsync(builder =>
+                            {
+                                builder.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                                builder.ClearComponents();
+                                builder.AddComponents(disabledCancel);
+                            });
+                        }
+                        catch
+                        {
+                        }
+                    }
                 }
                 catch
                 {
@@ -238,24 +283,50 @@ namespace Server.Communication.Discord.Interactions
                 staffIdentifier: e.User.Id.ToString(),
                 notes: "Cancelled by user");
 
-            if (transaction.UserChannelId.HasValue && transaction.UserMessageId.HasValue)
+            if (transaction.UserChannelId.HasValue)
             {
                 try
                 {
                     var userChannel = await client.GetChannelAsync(transaction.UserChannelId.Value);
-                    var userMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
-
-                    var userEmbedBuilder = new DiscordEmbedBuilder(userMessage.Embeds.Count > 0 ? userMessage.Embeds[0] : new DiscordEmbedBuilder());
                     var statusText = "CANCELLED";
                     var typeLabel = transaction.Type == TransactionType.Withdraw ? "Withdrawal" : "Deposit";
-                    userEmbedBuilder.Title = $"{typeLabel} Request 🔁";
-                    userEmbedBuilder.Description = userEmbedBuilder.Description?.Replace("pending", statusText.ToLowerInvariant());
 
-                    await userMessage.ModifyAsync(builder =>
+                    var userEmbedBuilder = new DiscordEmbedBuilder()
+                        .WithTitle($"{typeLabel} 🔁")
+                        .WithDescription($"Your {typeLabel.ToLowerInvariant()} request was cancelled.")
+                        .WithColor(DiscordColor.Orange)
+                        .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                        .WithTimestamp(DateTimeOffset.UtcNow);
+
+                    await userChannel.SendMessageAsync(new DiscordMessageBuilder()
+                        .WithContent($"<@{transaction.Identifier}>")
+                        .AddEmbed(userEmbedBuilder));
+
+                    // Disable cancel button on the original user message, if present
+                    if (transaction.UserMessageId.HasValue)
                     {
-                        builder.Embed = userEmbedBuilder.Build();
-                        builder.ClearComponents();
-                    });
+                        try
+                        {
+                            var originalMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
+
+                            var disabledCancel = new DiscordButtonComponent(
+                                ButtonStyle.Secondary,
+                                $"tx_usercancel_{transaction.Id}",
+                                "Cancel",
+                                disabled: true,
+                                emoji: new DiscordComponentEmoji("🔁"));
+
+                            await originalMessage.ModifyAsync(builder =>
+                            {
+                                builder.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                                builder.ClearComponents();
+                                builder.AddComponents(disabledCancel);
+                            });
+                        }
+                        catch
+                        {
+                        }
+                    }
                 }
                 catch
                 {
