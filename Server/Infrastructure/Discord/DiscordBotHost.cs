@@ -61,6 +61,7 @@ namespace Server.Infrastructure.Discord
             commands.RegisterCommands<Server.Communication.Discord.Commands.TestCommand>();
             commands.RegisterCommands<EmbedCommand>();
             commands.RegisterCommands<BalanceCommand>();
+            commands.RegisterCommands<DepositCommand>();
         }
 
         public async Task StartAsync()

@@ -13,6 +13,26 @@ namespace Server.Client.Users
             _databaseManager = databaseManager;
         }
 
+        public bool AddBalance(string identifier, long amount)
+        {
+            if (amount <= 0)
+            {
+                return false;
+            }
+
+            return TryUpdateBalance(identifier, amount);
+        }
+
+        public bool RemoveBalance(string identifier, long amount)
+        {
+            if (amount <= 0)
+            {
+                return false;
+            }
+
+            return TryUpdateBalance(identifier, -amount);
+        }
+
         public bool UserExists(string identifier)
         {
             if (string.IsNullOrEmpty(identifier))
@@ -102,6 +122,32 @@ namespace Server.Client.Users
                     int rowsAffected = command.ExecuteQuery();
 
                     return rowsAffected > 0;
+                }
+            }
+
+            private bool TryUpdateBalance(string identifier, long delta)
+            {
+                if (string.IsNullOrEmpty(identifier) || delta == 0)
+                {
+                    return false;
+                }
+
+                try
+                {
+                    using (var command = new DatabaseCommand())
+                    {
+                        command.SetCommand("UPDATE users SET balance = balance + @delta WHERE identifier = @identifier");
+                        command.AddParameter("identifier", identifier);
+                        command.AddParameter("delta", delta);
+
+                        var result = command.ExecuteQuery();
+                        return Convert.ToInt32(result) > 0;
+                    }
+                }
+                catch (Exception)
+                {
+                    // TODO: log error
+                    return false;
                 }
             }
             catch (Exception)
