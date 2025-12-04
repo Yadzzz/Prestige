@@ -1,9 +1,9 @@
-﻿using DSharpPlus;
+using System.Threading.Tasks;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using System.Threading.Tasks;
 
-namespace Server
+namespace Server.Communication.Discord.Commands
 {
     public class SlashEmbed : ApplicationCommandModule
     {
@@ -34,6 +34,5 @@ namespace Server
                     )
             );
         }
-
     }
 }

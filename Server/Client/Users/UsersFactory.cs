@@ -1,4 +1,5 @@
-﻿using Server.Infrastructure.Database;
+﻿using DSharpPlus.SlashCommands;
+using Server.Infrastructure.Database;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,11 +11,37 @@ namespace Server.Client.Users
 {
     public static class UsersFactory
     {
-        public static bool TryGetUser(string sid, string authToken, out User user)
+        public static bool UserExists(string identifier)
+        {
+            if (string.IsNullOrEmpty(identifier))
+            {
+                return false;
+            }
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("SELECT COUNT(*) FROM users WHERE identifier = @identifier");
+                    command.AddParameter("identifier", identifier);
+
+                    var result = command.ExecuteQuery();
+
+                    return Convert.ToInt32(result) > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                //Log to file
+            }
+            return false;
+        }
+
+
+        public static bool TryGetUser(string identifier, out User user)
         {
             user = null;
 
-            if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(authToken))
+            if (string.IsNullOrEmpty(identifier))
             {
                 return false;
             }
@@ -23,9 +50,8 @@ namespace Server.Client.Users
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("SELECT * FROM users WHERE sid = @sid && auth_token = @auth LIMIT 1");
-                    command.AddParameter("sid", sid);
-                    command.AddParameter("auth", authToken);
+                    command.SetCommand("SELECT * FROM users WHERE identifier = @identifier LIMIT 1");
+                    command.AddParameter("identifier", identifier);
 
                     using (var reader = command.ExecuteDataReader())
                     {
@@ -40,8 +66,9 @@ namespace Server.Client.Users
                             {
                                 Id = Convert.ToInt32(reader["id"]),
                                 Identifier = reader["identifier"].ToString(),
-                                Sid = sid,
-                                AuthToken = authToken
+                                Username = reader["username"].ToString(),
+                                DisplayName = reader["display_name"].ToString(),
+                                Balance = Convert.ToInt64(reader["balance"])
                             };
                         }
                     }
@@ -53,6 +80,53 @@ namespace Server.Client.Users
             }
 
             return user != null;
+        }
+
+        public static bool CreateUser(string identifier, string username, string displayName)
+        {
+            if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(username))
+            {
+                return false;
+            }
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("INSERT INTO users (identifier, username, display_name, balance) VALUES (@identifier, @username, @display_name, @balance)");
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("username", username);
+                    command.AddParameter("display_name", displayName);
+                    command.AddParameter("balance", 0);
+
+                    int rowsAffected = command.ExecuteQuery();
+
+                    return rowsAffected > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                //Log to file
+                return false;
+            }
+        }
+
+        public static async Task<User?> EnsureUserAsync(string userId, string username, string displayName)
+        {
+            //if (ctx.User.IsBot || (ctx.User.IsSystem.HasValue && ctx.User.IsSystem.Value))
+            //{
+            //    await ctx.CreateResponseAsync("Bots and system users cannot use this command.");
+            //    return null;
+            //}
+
+            if (!UserExists(userId))
+                CreateUser(userId, username, displayName);
+
+            if (!TryGetUser(userId, out var user) || user == null)
+            {
+                return null;
+            }
+
+            return user;
         }
     }
 }

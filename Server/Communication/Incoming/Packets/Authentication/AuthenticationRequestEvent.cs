@@ -16,7 +16,7 @@ namespace Server.Communication.Incoming.Packets
             string sid = clientPacket.ReadString();
             string authToken = clientPacket.ReadString();
 
-            if (UsersFactory.TryGetUser(sid, authToken, out User user))
+            if (UsersFactory.TryGetUser(sid, out User user))
             {
                 AuthenticationCompletedComposer packet = new AuthenticationCompletedComposer();
                 clientSocket.Send(packet.Finalize());

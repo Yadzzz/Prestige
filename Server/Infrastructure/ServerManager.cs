@@ -30,7 +30,7 @@ namespace Server.Infrastructure
 
             var discordOptions = new DiscordOptions
             {
-                Token = Environment.GetEnvironmentVariable("DISCORD_TOKEN"),
+                Token = "",
                 GuildId = 1445556867307929612
             };
 
