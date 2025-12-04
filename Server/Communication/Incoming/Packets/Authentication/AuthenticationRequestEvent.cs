@@ -16,16 +16,16 @@ namespace Server.Communication.Incoming.Packets
             string sid = clientPacket.ReadString();
             string authToken = clientPacket.ReadString();
 
-            if (UsersFactory.TryGetUser(sid, out User user))
-            {
-                AuthenticationCompletedComposer packet = new AuthenticationCompletedComposer();
-                clientSocket.Send(packet.Finalize());
-            }
-            else
-            {
-                AuthenticationDeniedComposer packet = new AuthenticationDeniedComposer("Authentication Failed");
-                clientSocket.Send(packet.Finalize());
-            }
+            //if (UsersFactory.TryGetUser(sid, out User user))
+            //{
+            //    AuthenticationCompletedComposer packet = new AuthenticationCompletedComposer();
+            //    clientSocket.Send(packet.Finalize());
+            //}
+            //else
+            //{
+            //    AuthenticationDeniedComposer packet = new AuthenticationDeniedComposer("Authentication Failed");
+            //    clientSocket.Send(packet.Finalize());
+            //}
         }
     }
 }
