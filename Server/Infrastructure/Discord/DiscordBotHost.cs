@@ -1,5 +1,9 @@
 using DSharpPlus;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.SlashCommands;
+using Server.Communication.Discord.Commands;
+using Server.Communication.Discord.Interactions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Server.Infrastructure.Discord
 {
@@ -15,6 +19,7 @@ namespace Server.Infrastructure.Discord
 
             WireEvents();
             ConfigureSlashCommands();
+            ConfigureCommands();
         }
 
         private void WireEvents()
@@ -23,7 +28,7 @@ namespace Server.Infrastructure.Discord
 
             _client.Ready += async (s, e) =>
             {
-                Console.WriteLine("Bot is ready ✅");
+                Console.WriteLine("Bot is ready ->");
                 await Task.CompletedTask;
             };
         }
@@ -42,6 +47,23 @@ namespace Server.Infrastructure.Discord
                 slash.RegisterCommands<SlashTest>();
                 slash.RegisterCommands<SlashEmbed>();
             }
+        }
+
+        private void ConfigureCommands()
+        {
+            var commands = _client.UseCommandsNext(new CommandsNextConfiguration
+            {
+                StringPrefixes = new[] { "!" },   // PREFIX is "!"
+                EnableMentionPrefix = false
+            });
+
+            // Register your module
+            commands.RegisterCommands<Server.Communication.Discord.Commands.TestCommand>();
+            commands.RegisterCommands<EmbedCommand>();
+            commands.RegisterCommands<BalanceCommand>();
+            commands.RegisterCommands<DepositCommand>();
+            commands.RegisterCommands<WithdrawCommand>();
+            commands.RegisterCommands<StakeCommand>();
         }
 
         public async Task StartAsync()

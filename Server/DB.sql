@@ -1,0 +1,54 @@
+--CREATE DATABASE IF NOT EXISTS `prestige`
+--  CHARACTER SET utf8mb4
+--  COLLATE utf8mb4_unicode_ci;
+
+--USE `prestige`;
+
+--CREATE TABLE `users` (
+--  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--  `identifier` VARCHAR(64) NOT NULL,       -- Discord ID or other unique id
+--  `username` VARCHAR(64) NOT NULL,
+--  `display_name` VARCHAR(64) NOT NULL,
+--  `balance` BIGINT NOT NULL DEFAULT 0,     -- stored in K (thousands)
+--  PRIMARY KEY (`id`),
+--  UNIQUE KEY `uq_users_identifier` (`identifier`)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--CREATE TABLE `transactions` (
+--  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--  `user_id` INT UNSIGNED NOT NULL,         -- FK to users.id
+--  `identifier` VARCHAR(64) NOT NULL,       -- duplicate of user identifier for convenience
+--  `amount_k` BIGINT NOT NULL,              -- amount in thousands (0.5m = 500)
+--  `type` TINYINT NOT NULL,                 -- 0 = Deposit, 1 = Withdraw
+--  `status` TINYINT NOT NULL,               -- 0 = Pending, 1 = Accepted, 2 = Cancelled, 3 = Denied
+--  `staff_id` INT UNSIGNED NULL,            -- optional, if you later store staff as users too
+--  `staff_identifier` VARCHAR(64) NULL,     -- Discord ID of staff member
+--  `created_at` DATETIME NOT NULL,
+--  `updated_at` DATETIME NOT NULL,
+--  `notes` TEXT NULL,
+--  PRIMARY KEY (`id`),
+--  KEY `idx_transactions_user` (`user_id`),
+--  CONSTRAINT `fk_transactions_user`
+--    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+--    ON DELETE CASCADE
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--ALTER TABLE `transactions`
+--  ADD COLUMN `user_message_id` BIGINT NULL,
+--  ADD COLUMN `user_channel_id` BIGINT NULL,
+--  ADD COLUMN `staff_message_id` BIGINT NULL,
+--  ADD COLUMN `staff_channel_id` BIGINT NULL;
+
+--CREATE TABLE stakes (
+--    id INT AUTO_INCREMENT PRIMARY KEY,
+--    user_id INT NOT NULL,
+--    identifier VARCHAR(64) NOT NULL,
+--    amount_k BIGINT NOT NULL,
+--    status INT NOT NULL,
+--    user_message_id BIGINT NULL,
+--    user_channel_id BIGINT NULL,
+--    staff_message_id BIGINT NULL,
+--    staff_channel_id BIGINT NULL,
+--    created_at DATETIME NOT NULL,
+--    updated_at DATETIME NOT NULL
+--);
