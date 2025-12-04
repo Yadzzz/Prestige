@@ -26,6 +26,10 @@ namespace Server.Client.Transactions
         public TransactionStatus Status { get; set; }
         public int? StaffId { get; set; }
         public string StaffIdentifier { get; set; }
+        public ulong? UserMessageId { get; set; }
+        public ulong? UserChannelId { get; set; }
+        public ulong? StaffMessageId { get; set; }
+        public ulong? StaffChannelId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public string Notes { get; set; }

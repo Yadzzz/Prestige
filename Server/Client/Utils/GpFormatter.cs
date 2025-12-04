@@ -6,12 +6,11 @@ namespace Server.Client.Utils
 {
     public static class GpFormatter
     {
-        public static string Format(long stored)
-        {
-            // stored → thousands → millions
-            decimal millions = stored / 1000.0m;
-
-            return millions.ToString("0.###") + "M";
-        }
+            // stored is in thousands (K); format as millions (M)
+            public static string Format(long storedK)
+            {
+                decimal millions = storedK / 1000.0m;
+                return millions.ToString("0.###") + "M";
+            }
     }
 }

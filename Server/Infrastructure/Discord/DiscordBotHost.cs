@@ -62,6 +62,7 @@ namespace Server.Infrastructure.Discord
             commands.RegisterCommands<EmbedCommand>();
             commands.RegisterCommands<BalanceCommand>();
             commands.RegisterCommands<DepositCommand>();
+            commands.RegisterCommands<WithdrawCommand>();
         }
 
         public async Task StartAsync()

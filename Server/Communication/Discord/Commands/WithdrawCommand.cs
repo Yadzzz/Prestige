@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Threading.Tasks;
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
@@ -8,15 +9,14 @@ using Server.Client.Users;
 using Server.Client.Transactions;
 using Server.Client.Utils;
 using Server.Infrastructure;
-using DSharpPlus;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class DepositCommand : BaseCommandModule
+    public class WithdrawCommand : BaseCommandModule
     {
-        [Command("d")]
-        [Aliases("deposit")] 
-        public async Task Deposit(CommandContext ctx, string amount)
+        [Command("w")]
+        [Aliases("withdraw")]
+        public async Task Withdraw(CommandContext ctx, string amount)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
@@ -28,38 +28,43 @@ namespace Server.Communication.Discord.Commands
 
             if (!TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Example: `!d 100` or `!d 0.5`");
+                await ctx.RespondAsync("Invalid amount. Example: `!w 100` or `!w 0.5`");
                 return;
             }
 
-            var transaction = transactionsService.CreateDepositRequest(user, amountK);
+            // Ensure the user has enough balance (stored in K)
+            if (user.Balance < amountK)
+            {
+                await ctx.RespondAsync("You don't have enough balance for this withdrawal.");
+                return;
+            }
+
+            var transaction = transactionsService.CreateWithdrawRequest(user, amountK);
             if (transaction == null)
             {
-                await ctx.RespondAsync("Failed to create deposit request. Please try again later.");
+                await ctx.RespondAsync("Failed to create withdrawal request. Please try again later.");
                 return;
             }
 
             var prettyAmount = GpFormatter.Format(transaction.AmountK);
 
             var pendingEmbed = new DiscordEmbedBuilder()
-                .WithTitle("Deposit Request Created ⏳")
-                .WithDescription($"{ctx.Member.DisplayName}, your deposit of **{prettyAmount}** is now **pending**.")
+                .WithTitle("Withdrawal Request Created ⏳")
+                .WithDescription($"{ctx.Member.DisplayName}, your withdrawal of **{prettyAmount}** is now **pending**.")
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
 
-            // Send user message and capture its ID
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(pendingEmbed)
                 .AddComponents(userCancelButton));
 
-            // Send to staff channel
             var staffChannelId = 1446088366985838642UL;
             var staffChannel = await ctx.Client.GetChannelAsync(staffChannelId);
 
             var staffEmbed = new DiscordEmbedBuilder()
-                .WithTitle("New Deposit Request ⏳")
+                .WithTitle("New Withdrawal Request ⏳")
                 .WithDescription($"User: {ctx.Member.DisplayName} ({user.Identifier})\nAmount: **{prettyAmount}**\nTransaction ID: `{transaction.Id}`\nStatus: **PENDING**")
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
@@ -72,7 +77,6 @@ namespace Server.Communication.Discord.Commands
                 .AddEmbed(staffEmbed)
                 .AddComponents(acceptButton, cancelButton, denyButton));
 
-            // Persist message/channel IDs so we can update messages on status changes
             transactionsService.UpdateTransactionMessages(
                 transaction.Id,
                 userMessage.Id,

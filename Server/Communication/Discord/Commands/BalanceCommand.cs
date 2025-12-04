@@ -42,6 +42,7 @@ namespace Server.Communication.Discord.Commands
             var row1 = new[]
             {
             new DiscordButtonComponent(ButtonStyle.Primary, "bal_deposit", "Deposit", emoji: new DiscordComponentEmoji("💳")),
+            new DiscordButtonComponent(ButtonStyle.Secondary, "bal_history", "History", emoji: new DiscordComponentEmoji("📜")),
             new DiscordButtonComponent(ButtonStyle.Primary, "bal_withdraw", "Withdraw", emoji: new DiscordComponentEmoji("🏧")),
             //new DiscordButtonComponent(ButtonStyle.Success, "bal_buy", "Buy", emoji: new DiscordComponentEmoji("🛒"))
         };

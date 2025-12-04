@@ -124,30 +124,30 @@ namespace Server.Client.Users
                     return rowsAffected > 0;
                 }
             }
-
-            private bool TryUpdateBalance(string identifier, long delta)
+            catch (Exception)
             {
-                if (string.IsNullOrEmpty(identifier) || delta == 0)
-                {
-                    return false;
-                }
+                // TODO: log error
+                return false;
+            }
+        }
 
-                try
-                {
-                    using (var command = new DatabaseCommand())
-                    {
-                        command.SetCommand("UPDATE users SET balance = balance + @delta WHERE identifier = @identifier");
-                        command.AddParameter("identifier", identifier);
-                        command.AddParameter("delta", delta);
+        private bool TryUpdateBalance(string identifier, long delta)
+        {
+            if (string.IsNullOrEmpty(identifier) || delta == 0)
+            {
+                return false;
+            }
 
-                        var result = command.ExecuteQuery();
-                        return Convert.ToInt32(result) > 0;
-                    }
-                }
-                catch (Exception)
+            try
+            {
+                using (var command = new DatabaseCommand())
                 {
-                    // TODO: log error
-                    return false;
+                    command.SetCommand("UPDATE users SET balance = balance + @delta WHERE identifier = @identifier");
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("delta", delta);
+
+                    var result = command.ExecuteQuery();
+                    return Convert.ToInt32(result) > 0;
                 }
             }
             catch (Exception)
