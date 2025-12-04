@@ -50,9 +50,9 @@ namespace Server.Client.Stakes
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: logging
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"CreateStake failed: {ex}");
             }
 
             return null;
@@ -76,8 +76,9 @@ namespace Server.Client.Stakes
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"GetStakeById failed: {ex}");
             }
 
             return null;
@@ -98,8 +99,9 @@ namespace Server.Client.Stakes
                     return rows > 0;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateStakeStatus failed: {ex}");
             }
 
             return false;
@@ -122,8 +124,9 @@ namespace Server.Client.Stakes
                     return rows > 0;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateStakeMessages failed: {ex}");
             }
 
             return false;

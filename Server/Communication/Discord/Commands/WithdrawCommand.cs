@@ -15,10 +15,19 @@ namespace Server.Communication.Discord.Commands
 {
     public class WithdrawCommand : BaseCommandModule
     {
+        private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, DateTime> LastUsed = new();
+
         [Command("w")]
         [Aliases("withdraw")]
         public async Task Withdraw(CommandContext ctx, string amount)
         {
+            if (IsRateLimited(ctx.User.Id))
+            {
+                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                return;
+            }
+
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
             var transactionsService = env.ServerManager.TransactionsService;
@@ -58,6 +67,7 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Amount", prettyAmount, true)
                 .AddField("Remaining", remainingText, true)
                 .WithColor(DiscordColor.Gold)
+                .WithThumbnail("https://i.imgur.com/A4tPGOW.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
@@ -89,6 +99,18 @@ namespace Server.Communication.Discord.Commands
                 userMessage.Channel.Id,
                 staffMessage.Id,
                 staffMessage.Channel.Id);
+        }
+
+        private bool IsRateLimited(ulong userId)
+        {
+            var now = DateTime.UtcNow;
+            if (LastUsed.TryGetValue(userId, out var last) && (now - last) < RateLimitInterval)
+            {
+                return true;
+            }
+
+            LastUsed[userId] = now;
+            return false;
         }
 
         private bool TryParseAmountInK(string input, out long amountK)

@@ -58,9 +58,9 @@ namespace Server.Client.Transactions
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"CreateDepositRequest failed: {ex}");
             }
 
             return null;
@@ -107,9 +107,9 @@ namespace Server.Client.Transactions
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"CreateWithdrawRequest failed: {ex}");
             }
 
             return null;
@@ -133,9 +133,9 @@ namespace Server.Client.Transactions
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"GetTransactionById failed: {ex}");
             }
 
             return null;
@@ -185,9 +185,9 @@ namespace Server.Client.Transactions
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"GetTransactionsPageForUser failed: {ex}");
             }
 
             return result;
@@ -211,9 +211,9 @@ namespace Server.Client.Transactions
                     return rows > 0;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateTransactionStatus failed: {ex}");
             }
 
             return false;
@@ -236,9 +236,9 @@ namespace Server.Client.Transactions
                     return rows > 0;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateTransactionMessages failed: {ex}");
             }
 
             return false;

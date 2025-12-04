@@ -237,14 +237,15 @@ namespace Server.Communication.Discord.Interactions
                                 builder.AddComponents(disabledCancel);
                             });
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable transaction user cancel button after staff action: {ex}");
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore if we can't edit the user message
+                    ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to send processed transaction message to user: {ex}");
                 }
             }
         }
@@ -323,14 +324,15 @@ namespace Server.Communication.Discord.Interactions
                                 builder.AddComponents(disabledCancel);
                             });
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable transaction user cancel button on user cancel: {ex}");
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore if we can't edit
+                    ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to send transaction cancel message to user: {ex}");
                 }
             }
 
@@ -361,9 +363,9 @@ namespace Server.Communication.Discord.Interactions
                         builder.AddComponents(components);
                     });
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore if we can't edit staff message
+                    ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to update staff transaction message on user cancel: {ex}");
                 }
             }
 

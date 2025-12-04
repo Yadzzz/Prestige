@@ -227,13 +227,15 @@ namespace Server.Communication.Discord.Interactions
                                 builder.AddComponents(disabledCancel);
                             });
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable stake user cancel button: {ex}");
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to send stake result to user: {ex}");
                 }
             }
 
@@ -306,13 +308,15 @@ namespace Server.Communication.Discord.Interactions
                                 builder.AddComponents(disabledCancel);
                             });
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable stake user cancel button on cancel: {ex}");
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to send stake cancel message to user: {ex}");
                 }
             }
 
@@ -336,8 +340,9 @@ namespace Server.Communication.Discord.Interactions
                         b.ClearComponents();
                     });
                 }
-                catch
+                catch (Exception ex)
                 {
+                    ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to update staff stake message on cancel: {ex}");
                 }
             }
 

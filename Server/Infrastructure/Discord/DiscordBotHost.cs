@@ -39,13 +39,13 @@ namespace Server.Infrastructure.Discord
 
             if (_options.GuildId != 0)
             {
-                slash.RegisterCommands<SlashTest>(_options.GuildId);
-                slash.RegisterCommands<SlashEmbed>(_options.GuildId);
+                //slash.RegisterCommands<SlashTest>(_options.GuildId);
+                //slash.RegisterCommands<SlashEmbed>(_options.GuildId);
             }
             else
             {
-                slash.RegisterCommands<SlashTest>();
-                slash.RegisterCommands<SlashEmbed>();
+                //slash.RegisterCommands<SlashTest>();
+                //slash.RegisterCommands<SlashEmbed>();
             }
         }
 
@@ -58,8 +58,6 @@ namespace Server.Infrastructure.Discord
             });
 
             // Register your module
-            commands.RegisterCommands<Server.Communication.Discord.Commands.TestCommand>();
-            commands.RegisterCommands<EmbedCommand>();
             commands.RegisterCommands<BalanceCommand>();
             commands.RegisterCommands<DepositCommand>();
             commands.RegisterCommands<WithdrawCommand>();
