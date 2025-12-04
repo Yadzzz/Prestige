@@ -39,11 +39,20 @@ namespace Server.Client.Transactions
                     var rows = command.ExecuteQuery();
                     if (rows <= 0)
                     {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        env.ServerManager.LogsService.Log(
+                            source: nameof(TransactionsService),
+                            level: "Warning",
+                            userIdentifier: user.Identifier,
+                            action: "CreateDepositNoRows",
+                            message: $"Insert returned 0 rows for deposit user={user.Identifier} amountK={amountK}",
+                            exception: null);
                         return null;
                     }
                 }
 
                 // fetch last inserted transaction for this user (simpler for now)
+                Transaction? createdTx = null;
                 using (var fetch = new DatabaseCommand())
                 {
                     fetch.SetCommand("SELECT * FROM transactions WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
@@ -53,14 +62,37 @@ namespace Server.Client.Transactions
                     {
                         if (reader != null && reader.Read())
                         {
-                            return MapTransaction(reader);
+                            createdTx = MapTransaction(reader);
                         }
                     }
+                }
+
+                if (createdTx != null)
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LogsService.Log(
+                        source: nameof(TransactionsService),
+                        level: "Info",
+                        userIdentifier: user.Identifier,
+                        action: "DepositRequested",
+                        message: $"Deposit requested txId={createdTx.Id} user={user.Identifier} amountK={amountK}",
+                        exception: null,
+                        metadataJson: $"{{\"referenceId\":{createdTx.Id},\"kind\":\"Deposit\",\"amountK\":{amountK}}}");
+
+                    return createdTx;
                 }
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"CreateDepositRequest failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"CreateDepositRequest failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionsService),
+                    level: "Error",
+                    userIdentifier: user?.Identifier,
+                    action: "CreateDepositRequestException",
+                    message: "Unhandled exception during deposit request creation",
+                    exception: ex.ToString());
             }
 
             return null;
@@ -93,6 +125,7 @@ namespace Server.Client.Transactions
                     }
                 }
 
+                Transaction? createdTx = null;
                 using (var fetch = new DatabaseCommand())
                 {
                     fetch.SetCommand("SELECT * FROM transactions WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
@@ -102,14 +135,37 @@ namespace Server.Client.Transactions
                     {
                         if (reader != null && reader.Read())
                         {
-                            return MapTransaction(reader);
+                            createdTx = MapTransaction(reader);
                         }
                     }
+                }
+
+                if (createdTx != null)
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LogsService.Log(
+                        source: nameof(TransactionsService),
+                        level: "Info",
+                        userIdentifier: user.Identifier,
+                        action: "WithdrawRequested",
+                        message: $"Withdraw requested txId={createdTx.Id} user={user.Identifier} amountK={amountK}",
+                        exception: null,
+                        metadataJson: $"{{\"referenceId\":{createdTx.Id},\"kind\":\"Withdraw\",\"amountK\":{amountK}}}");
+
+                    return createdTx;
                 }
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"CreateWithdrawRequest failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"CreateWithdrawRequest failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionsService),
+                    level: "Error",
+                    userIdentifier: user?.Identifier,
+                    action: "CreateWithdrawRequestException",
+                    message: "Unhandled exception during withdraw request creation",
+                    exception: ex.ToString());
             }
 
             return null;
@@ -135,7 +191,15 @@ namespace Server.Client.Transactions
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"GetTransactionById failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"GetTransactionById failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionsService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "GetTransactionByIdException",
+                    message: $"Unhandled exception while fetching transaction id={id}",
+                    exception: ex.ToString());
             }
 
             return null;
@@ -187,7 +251,15 @@ namespace Server.Client.Transactions
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"GetTransactionsPageForUser failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"GetTransactionsPageForUser failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionsService),
+                    level: "Error",
+                    userIdentifier: identifier,
+                    action: "GetTransactionsPageForUserException",
+                    message: "Unhandled exception while paging transactions for user",
+                    exception: ex.ToString());
             }
 
             return result;
@@ -213,7 +285,15 @@ namespace Server.Client.Transactions
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateTransactionStatus failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateTransactionStatus failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionsService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "UpdateTransactionStatusException",
+                    message: $"Unhandled exception while updating status for transaction id={id}",
+                    exception: ex.ToString());
             }
 
             return false;
@@ -238,7 +318,15 @@ namespace Server.Client.Transactions
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateTransactionMessages failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateTransactionMessages failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionsService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "UpdateTransactionMessagesException",
+                    message: $"Unhandled exception while updating messages for transaction id={id}",
+                    exception: ex.ToString());
             }
 
             return false;

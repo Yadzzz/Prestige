@@ -67,6 +67,15 @@ namespace Server.Communication.Discord.Interactions
 
             stakesService.UpdateStakeStatus(stake.Id, newStatus);
 
+            env.ServerManager.LogsService.Log(
+                source: nameof(StakeButtonHandler),
+                level: "Info",
+                userIdentifier: stake.Identifier,
+                action: "StakeResolved",
+                message: $"Stake resolved id={stake.Id} status={newStatus} amountK={stake.AmountK}",
+                exception: null,
+                metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"status\":\"{newStatus}\"}}");
+
             usersService.TryGetUser(stake.Identifier, out var user);
 
             long feeK = 0;
@@ -104,7 +113,7 @@ namespace Server.Communication.Discord.Interactions
             {
                 StakeStatus.Won => "🏆 Stake Won",
                 StakeStatus.Lost => "⚔️ Stake Lost",
-                StakeStatus.Cancelled => "🔁 Stake Cancelled",
+                StakeStatus.Cancelled => "❌ Stake Cancelled",
                 _ => "Stake"
             };
 
@@ -124,7 +133,7 @@ namespace Server.Communication.Discord.Interactions
                 ? "https://i.imgur.com/qmkJM3O.gif"
                 : newStatus == StakeStatus.Lost
                     ? "https://i.imgur.com/DtaZNgy.gif"
-                    : "https://i.imgur.com/DHXgtn5.gif";
+                    : "https://i.imgur.com/jq2603y.gif";
 
             var staffEmbed = new DiscordEmbedBuilder()
                 .WithTitle(resultTitle)
@@ -167,6 +176,7 @@ namespace Server.Communication.Discord.Interactions
             // User-facing embed: send a new message showing result, streak and balance
             if (stake.UserChannelId.HasValue)
             {
+                var envInner = env;
                 try
                 {
                     var userChannel = await client.GetChannelAsync(stake.UserChannelId.Value);
@@ -175,7 +185,7 @@ namespace Server.Communication.Discord.Interactions
                         ? "https://i.imgur.com/qmkJM3O.gif"
                         : newStatus == StakeStatus.Lost
                             ? "https://i.imgur.com/DtaZNgy.gif"
-                            : "https://i.imgur.com/DHXgtn5.gif";
+                            : "https://i.imgur.com/jq2603y.gif";
 
                     var userEmbed = new DiscordEmbedBuilder()
                         .WithTitle(resultTitle)
@@ -218,7 +228,7 @@ namespace Server.Communication.Discord.Interactions
                                 $"stake_usercancel_{stake.Id}",
                                 "Cancel",
                                 disabled: true,
-                                emoji: new DiscordComponentEmoji("🔁"));
+                                emoji: new DiscordComponentEmoji("❌"));
 
                             await originalMessage.ModifyAsync(builder =>
                             {
@@ -269,6 +279,15 @@ namespace Server.Communication.Discord.Interactions
             }
 
             stakesService.UpdateStakeStatus(stake.Id, StakeStatus.Cancelled);
+
+            env.ServerManager.LogsService.Log(
+                source: nameof(StakeButtonHandler),
+                level: "Info",
+                userIdentifier: stake.Identifier,
+                action: "StakeUserCancelled",
+                message: $"Stake user-cancelled id={stake.Id} amountK={stake.AmountK}",
+                exception: null,
+                metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"cancelledBy\":\"User\"}}" );
 
             if (stake.UserChannelId.HasValue)
             {

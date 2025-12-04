@@ -29,12 +29,16 @@ namespace Server.Communication.Discord.Commands
             }
 
             var env = ServerEnvironment.GetServerEnvironment();
-            var usersService = env.ServerManager.UsersService;
-            var transactionsService = env.ServerManager.TransactionsService;
+            var serverManager = env.ServerManager;
+            var usersService = serverManager.UsersService;
+            var transactionsService = serverManager.TransactionsService;
 
             var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
             if (user == null)
+            {
+                await ctx.RespondAsync("Failed to load or create your user account. Please try again later.");
                 return;
+            }
 
             if (!TryParseAmountInK(amount, out var amountK))
             {
@@ -53,6 +57,13 @@ namespace Server.Communication.Discord.Commands
             if (transaction == null)
             {
                 await ctx.RespondAsync("Failed to create withdrawal request. Please try again later.");
+                serverManager.LogsService.Log(
+                    source: nameof(WithdrawCommand),
+                    level: "Error",
+                    userIdentifier: user.Identifier,
+                    action: "CreateWithdrawFailed",
+                    message: $"Failed to create withdraw for {user.Identifier} amountK={amountK}",
+                    exception: null);
                 return;
             }
 
@@ -70,7 +81,7 @@ namespace Server.Communication.Discord.Commands
                 .WithThumbnail("https://i.imgur.com/A4tPGOW.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
+            var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(pendingEmbed)
@@ -85,7 +96,7 @@ namespace Server.Communication.Discord.Commands
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var acceptButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", emoji: new DiscordComponentEmoji("✅"));
-            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
+            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
             var denyButton = new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
 
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()

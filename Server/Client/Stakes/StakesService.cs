@@ -52,7 +52,15 @@ namespace Server.Client.Stakes
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"CreateStake failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"CreateStake failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(StakesService),
+                    level: "Error",
+                    userIdentifier: user?.Identifier,
+                    action: "CreateStakeException",
+                    message: "Unhandled exception during stake creation",
+                    exception: ex.ToString());
             }
 
             return null;
@@ -78,7 +86,15 @@ namespace Server.Client.Stakes
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"GetStakeById failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"GetStakeById failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(StakesService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "GetStakeByIdException",
+                    message: $"Unhandled exception while fetching stake id={id}",
+                    exception: ex.ToString());
             }
 
             return null;
@@ -101,7 +117,15 @@ namespace Server.Client.Stakes
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateStakeStatus failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateStakeStatus failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(StakesService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "UpdateStakeStatusException",
+                    message: $"Unhandled exception while updating status for stake id={id}",
+                    exception: ex.ToString());
             }
 
             return false;
@@ -126,7 +150,15 @@ namespace Server.Client.Stakes
             }
             catch (Exception ex)
             {
-                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"UpdateStakeMessages failed: {ex}");
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateStakeMessages failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(StakesService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "UpdateStakeMessagesException",
+                    message: $"Unhandled exception while updating messages for stake id={id}",
+                    exception: ex.ToString());
             }
 
             return false;

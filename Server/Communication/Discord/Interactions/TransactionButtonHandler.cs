@@ -78,7 +78,7 @@ namespace Server.Communication.Discord.Interactions
                 newStatus,
                 staffId: null,
                 staffIdentifier: e.User.Id.ToString(),
-                notes: null);
+                notes: string.Empty);
 
             if (newStatus == TransactionStatus.Accepted)
             {
@@ -91,6 +91,15 @@ namespace Server.Communication.Discord.Interactions
                     usersService.RemoveBalance(transaction.Identifier, transaction.AmountK);
                 }
             }
+
+            env.ServerManager.LogsService.Log(
+                source: nameof(TransactionButtonHandler),
+                level: "Info",
+                userIdentifier: transaction.Identifier,
+                action: "TransactionResolved",
+                message: $"Transaction resolved txId={txId} type={transaction.Type} status={newStatus} staff={e.User.Id}",
+                exception: null,
+                metadataJson: $"{{\"referenceId\":{txId},\"kind\":\"{transaction.Type}\",\"status\":\"{newStatus}\",\"staffId\":\"{e.User.Id}\"}}" );
 
             var statusText = newStatus.ToString().ToUpperInvariant();
             var typeLabel = transaction.Type == TransactionType.Withdraw ? "Withdrawal" : "Deposit";
@@ -138,7 +147,7 @@ namespace Server.Communication.Discord.Interactions
             var components = new DiscordComponent[]
             {
                 new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅")),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("🔁")),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("❌")),
                 new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: true, emoji: new DiscordComponentEmoji("❌"))
             };
 
@@ -228,7 +237,7 @@ namespace Server.Communication.Discord.Interactions
                                 $"tx_usercancel_{transaction.Id}",
                                 "Cancel",
                                 disabled: true,
-                                emoji: new DiscordComponentEmoji("🔁"));
+                                emoji: new DiscordComponentEmoji("❌"));
 
                             await originalMessage.ModifyAsync(builder =>
                             {
@@ -239,13 +248,29 @@ namespace Server.Communication.Discord.Interactions
                         }
                         catch (Exception ex)
                         {
-                            ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable transaction user cancel button after staff action: {ex}");
+                            var envOuter = ServerEnvironment.GetServerEnvironment();
+                            envOuter.ServerManager.LoggerManager.LogError($"Failed to disable transaction user cancel button after staff action: {ex}");
+                            envOuter.ServerManager.LogsService.Log(
+                                source: nameof(TransactionButtonHandler),
+                                level: "Error",
+                                userIdentifier: transaction.Identifier,
+                                action: "DisableTxUserCancelAfterStaffFailed",
+                                message: "Failed to disable transaction user cancel button after staff processed the transaction.",
+                                exception: ex.ToString());
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to send processed transaction message to user: {ex}");
+                    var envOuter = ServerEnvironment.GetServerEnvironment();
+                    envOuter.ServerManager.LoggerManager.LogError($"Failed to send processed transaction message to user: {ex}");
+                    envOuter.ServerManager.LogsService.Log(
+                        source: nameof(TransactionButtonHandler),
+                        level: "Error",
+                        userIdentifier: transaction.Identifier,
+                        action: "SendProcessedTxToUserFailed",
+                        message: "Failed to send processed transaction message to user.",
+                        exception: ex.ToString());
                 }
             }
         }
@@ -284,12 +309,20 @@ namespace Server.Communication.Discord.Interactions
                 staffIdentifier: e.User.Id.ToString(),
                 notes: "Cancelled by user");
 
+            env.ServerManager.LogsService.Log(
+                source: nameof(TransactionButtonHandler),
+                level: "Info",
+                userIdentifier: transaction.Identifier,
+                action: "TransactionUserCancelled",
+                message: $"Transaction user-cancelled txId={txId} type={transaction.Type} amountK={transaction.AmountK}",
+                exception: null,
+                metadataJson: $"{{\"referenceId\":{txId},\"kind\":\"{transaction.Type}\",\"amountK\":{transaction.AmountK},\"cancelledBy\":\"User\"}}" );
+
             if (transaction.UserChannelId.HasValue)
             {
                 try
                 {
                     var userChannel = await client.GetChannelAsync(transaction.UserChannelId.Value);
-                    var statusText = "CANCELLED";
                     var typeLabel = transaction.Type == TransactionType.Withdraw ? "Withdrawal" : "Deposit";
 
                     var userEmbedBuilder = new DiscordEmbedBuilder()

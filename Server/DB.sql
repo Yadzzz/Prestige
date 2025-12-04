@@ -52,3 +52,19 @@
 --    created_at DATETIME NOT NULL,
 --    updated_at DATETIME NOT NULL
 --);
+
+--CREATE TABLE `logs` (
+--  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--  `created_at` DATETIME NOT NULL,
+--  `source` VARCHAR(128) NOT NULL,          -- e.g. StakeCommand, TransactionsService
+--  `level` VARCHAR(16) NOT NULL,            -- e.g. Info, Error
+--  `user_identifier` VARCHAR(64) NULL,      -- Discord/user identifier if relevant
+--  `action` VARCHAR(128) NULL,              -- short event key, e.g. CreateStakeException
+--  `message` TEXT NULL,                     -- human readable description
+--  `exception` TEXT NULL,                   -- full exception.ToString()
+--  `metadata_json` TEXT NULL,               -- optional JSON payload
+--  PRIMARY KEY (`id`),
+--  KEY `idx_logs_created_at` (`created_at`),
+--  KEY `idx_logs_source` (`source`),
+--  KEY `idx_logs_user_identifier` (`user_identifier`)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

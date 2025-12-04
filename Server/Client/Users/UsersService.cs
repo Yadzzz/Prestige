@@ -19,8 +19,28 @@ namespace Server.Client.Users
             {
                 return false;
             }
+            var updated = TryUpdateBalance(identifier, amount);
 
-            return TryUpdateBalance(identifier, amount);
+            try
+            {
+                if (updated)
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LogsService.Log(
+                        source: nameof(UsersService),
+                        level: "Info",
+                        userIdentifier: identifier,
+                        action: "BalanceIncreased",
+                        message: $"Balance increased by {amount}K for user={identifier}",
+                        exception: null);
+                }
+            }
+            catch
+            {
+                // ignore logging failures
+            }
+
+            return updated;
         }
 
         public bool RemoveBalance(string identifier, long amount)
@@ -29,8 +49,28 @@ namespace Server.Client.Users
             {
                 return false;
             }
+            var updated = TryUpdateBalance(identifier, -amount);
 
-            return TryUpdateBalance(identifier, -amount);
+            try
+            {
+                if (updated)
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LogsService.Log(
+                        source: nameof(UsersService),
+                        level: "Info",
+                        userIdentifier: identifier,
+                        action: "BalanceDecreased",
+                        message: $"Balance decreased by {amount}K for user={identifier}",
+                        exception: null);
+                }
+            }
+            catch
+            {
+                // ignore logging failures
+            }
+
+            return updated;
         }
 
         public bool UserExists(string identifier)

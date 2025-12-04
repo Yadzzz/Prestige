@@ -29,8 +29,9 @@ namespace Server.Communication.Discord.Commands
             }
 
             var env = ServerEnvironment.GetServerEnvironment();
-            var usersService = env.ServerManager.UsersService;
-            var stakesService = env.ServerManager.StakesService;
+            var serverManager = env.ServerManager;
+            var usersService = serverManager.UsersService;
+            var stakesService = serverManager.StakesService;
 
             var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
             if (user == null)
@@ -52,8 +53,24 @@ namespace Server.Communication.Discord.Commands
             if (stake == null)
             {
                 await ctx.RespondAsync("Failed to create stake. Please try again later.");
+                serverManager.LogsService.Log(
+                    source: nameof(StakeCommand),
+                    level: "Error",
+                    userIdentifier: user.Identifier,
+                    action: "CreateStakeFailed",
+                    message: $"Failed to create stake for {user.Identifier} amountK={amountK}",
+                    exception: null);
                 return;
             }
+
+            serverManager.LogsService.Log(
+                source: nameof(StakeCommand),
+                level: "Info",
+                userIdentifier: user.Identifier,
+                action: "StakeCreated",
+                message: $"Stake created id={stake.Id} user={user.Identifier} amountK={stake.AmountK} balanceBefore={user.Balance}",
+                exception: null,
+                metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"balanceBefore\":{user.Balance}}}");
 
             var prettyAmount = GpFormatter.Format(stake.AmountK);
             var remainingK = user.Balance - stake.AmountK;
@@ -70,7 +87,7 @@ namespace Server.Communication.Discord.Commands
                 .WithFooter("Prestige Bets")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_usercancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
+            var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_usercancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(embed)
@@ -85,7 +102,7 @@ namespace Server.Communication.Discord.Commands
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var winButton = new DiscordButtonComponent(ButtonStyle.Success, $"stake_win_{stake.Id}", "Win", emoji: new DiscordComponentEmoji("🏆"));
-            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("🔁"));
+            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
             var loseButton = new DiscordButtonComponent(ButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", emoji: new DiscordComponentEmoji("❌"));
 
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
