@@ -19,10 +19,142 @@ namespace Server.Communication.Discord.Interactions
             // {
             //     await HandleUserCancelAction(client, e);
             // }
-            // else
-            // {
-            await HandleStaffTransactionAction(client, e);
-            // }
+            if (e.Id.StartsWith("tx_deposit_ingame_", StringComparison.OrdinalIgnoreCase) ||
+                e.Id.StartsWith("tx_deposit_crypto_", StringComparison.OrdinalIgnoreCase))
+            {
+                await HandleDepositTypeSelectionAsync(client, e);
+            }
+            else
+            {
+                await HandleStaffTransactionAction(client, e);
+            }
+        }
+
+        private static async Task HandleDepositTypeSelectionAsync(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        {
+            var parts = e.Id.Split('_');
+            if (parts.Length != 4)
+                return;
+
+            var typeToken = parts[2]; // ingame or crypto
+            if (!int.TryParse(parts[3], out var txId))
+                return;
+
+            var env = ServerEnvironment.GetServerEnvironment();
+            var transactionsService = env.ServerManager.TransactionsService;
+
+            var transaction = transactionsService.GetTransactionById(txId);
+            if (transaction == null || transaction.Type != TransactionType.Deposit)
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("Deposit request not found.").AsEphemeral(true));
+                return;
+            }
+
+            if (transaction.Status != TransactionStatus.Pending)
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("This deposit request has already been processed.").AsEphemeral(true));
+                return;
+            }
+
+            var depositTypeText = typeToken.Equals("ingame", StringComparison.OrdinalIgnoreCase)
+                ? "In-game (5% fee)"
+                : "Crypto (0% fee)";
+
+            // Update staff message description with chosen deposit type and enable buttons
+            if (transaction.StaffChannelId.HasValue && transaction.StaffMessageId.HasValue)
+            {
+                try
+                {
+                    var staffChannel = await client.GetChannelAsync(transaction.StaffChannelId.Value);
+                    var staffMessage = await staffChannel.GetMessageAsync(transaction.StaffMessageId.Value);
+
+                    var originalEmbed = staffMessage.Embeds.Count > 0 ? staffMessage.Embeds[0] : null;
+                    var desc = originalEmbed?.Description ?? string.Empty;
+
+                    if (!string.IsNullOrEmpty(desc))
+                    {
+                        var lines = desc.Split('\n');
+                        for (int i = 0; i < lines.Length; i++)
+                        {
+                            if (lines[i].StartsWith("Deposit Type:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                lines[i] = $"Deposit Type: **{depositTypeText}**";
+                            }
+                        }
+                        desc = string.Join("\n", lines);
+                    }
+
+                    var updatedEmbed = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder())
+                        .WithDescription(desc);
+
+                    var components = new DiscordComponent[]
+                    {
+                        new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: false, emoji: new DiscordComponentEmoji("✅")),
+                        new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: false, emoji: new DiscordComponentEmoji("❌")),
+                        new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: false, emoji: new DiscordComponentEmoji("❌"))
+                    };
+
+                    await staffMessage.ModifyAsync(builder =>
+                    {
+                        builder.Embed = updatedEmbed.Build();
+                        builder.ClearComponents();
+                        builder.AddComponents(components);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    env.ServerManager.LoggerManager.LogError($"Failed to update staff deposit message after type selection: {ex}");
+                    env.ServerManager.LogsService.Log(
+                        source: nameof(TransactionButtonHandler),
+                        level: "Error",
+                        userIdentifier: transaction.Identifier,
+                        action: "UpdateStaffDepositTypeFailed",
+                        message: "Failed to update staff deposit message after type selection.",
+                        exception: ex.ToString());
+                }
+            }
+
+            // Disable user buttons
+            try
+            {
+                if (transaction.UserChannelId.HasValue && transaction.UserMessageId.HasValue)
+                {
+                    var userChannel = await client.GetChannelAsync(transaction.UserChannelId.Value);
+                    var originalMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
+
+                    var ingameDisabled = new DiscordButtonComponent(ButtonStyle.Success, $"tx_deposit_ingame_{txId}", "In-game (5% fee)", disabled: true, emoji: new DiscordComponentEmoji("🎮"));
+                    var cryptoDisabled = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_deposit_crypto_{txId}", "Crypto (0% fee)", disabled: true, emoji: new DiscordComponentEmoji("🪙"));
+
+                    var originalEmbed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                    var updatedEmbed = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder())
+                        .WithDescription("Your deposit request was sent for staff review.");
+
+                    await originalMessage.ModifyAsync(builder =>
+                    {
+                        builder.Embed = updatedEmbed.Build();
+                        builder.ClearComponents();
+                        builder.AddComponents(ingameDisabled, cryptoDisabled);
+                    });
+                }
+
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder()
+                        .WithContent($"You selected **{depositTypeText}** for this deposit.")
+                        .AsEphemeral(true));
+            }
+            catch (Exception ex)
+            {
+                env.ServerManager.LoggerManager.LogError($"Failed to update user deposit message after type selection: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionButtonHandler),
+                    level: "Error",
+                    userIdentifier: transaction.Identifier,
+                    action: "UpdateUserDepositTypeFailed",
+                    message: "Failed to update user deposit message after type selection.",
+                    exception: ex.ToString());
+            }
         }
 
         private static async Task HandleStaffTransactionAction(DiscordClient client, ComponentInteractionCreateEventArgs e)
