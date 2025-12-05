@@ -81,7 +81,7 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Member", targetMember.Username, true)
                 .AddField("Staff", staffName, true)
                 .WithColor(DiscordColor.Green)
-                .WithThumbnail("https://i.imgur.com/2xjVq3q.png")
+                .WithThumbnail(isGift ? "https://i.imgur.com/vFstFPx.gif" : "https://i.imgur.com/0qEQpNC.gif")
                 .WithFooter("Prestige Bets")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 

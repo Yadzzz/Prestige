@@ -159,7 +159,7 @@ namespace Server.Communication.Discord.Interactions
                 }
             }
 
-            // Disable user buttons
+            // Update user message: keep Cancel button, update description, and adjust Amount for in-game to show net after fees
             try
             {
                 if (transaction.UserChannelId.HasValue && transaction.UserMessageId.HasValue)
@@ -170,15 +170,37 @@ namespace Server.Communication.Discord.Interactions
                     var ingameDisabled = new DiscordButtonComponent(ButtonStyle.Success, $"tx_deposit_ingame_{txId}", "In-game (5% fee)", disabled: true, emoji: new DiscordComponentEmoji("🎮"));
                     var cryptoDisabled = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_deposit_crypto_{txId}", "Crypto (0% fee)", disabled: true, emoji: new DiscordComponentEmoji("🪙"));
 
+                    // Keep user cancel button enabled
+                    var userCancel = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{txId}", "Cancel", disabled: false, emoji: new DiscordComponentEmoji("❌"));
+
                     var originalEmbed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
-                    var updatedEmbed = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder())
-                        .WithDescription("Your withdrawal request was sent for staff review.");
+                    var embedBuilder = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder());
+
+                    // Always change description text after method selection
+                    embedBuilder.WithDescription("Your withdrawal request was sent for staff review.");
+
+                    // If in-game, update Amount field for the user to show net (after fees)
+                    if (typeToken.Equals("ingame", StringComparison.OrdinalIgnoreCase) && originalEmbed != null)
+                    {
+                        embedBuilder.ClearFields();
+                        foreach (var f in originalEmbed.Fields)
+                        {
+                            if (string.Equals(f.Name, "Amount", StringComparison.OrdinalIgnoreCase))
+                            {
+                                embedBuilder.AddField("Amount", prettyAfterFee, f.Inline);
+                            }
+                            else
+                            {
+                                embedBuilder.AddField(f.Name, f.Value, f.Inline);
+                            }
+                        }
+                    }
 
                     await originalMessage.ModifyAsync(builder =>
                     {
-                        builder.Embed = updatedEmbed.Build();
+                        builder.Embed = embedBuilder.Build();
                         builder.ClearComponents();
-                        builder.AddComponents(ingameDisabled, cryptoDisabled);
+                        builder.AddComponents(ingameDisabled, cryptoDisabled, userCancel);
                     });
                 }
 
@@ -264,8 +286,15 @@ namespace Server.Communication.Discord.Interactions
                 }
                 else if (transaction.Type == TransactionType.Withdraw)
                 {
-                    usersService.RemoveBalance(transaction.Identifier, transaction.AmountK);
+                    // For withdrawals, the amount was already locked when the request was created.
+                    // On accept we don't change balance again; on cancel/deny we refund below.
                 }
+            }
+            else if ((newStatus == TransactionStatus.Cancelled || newStatus == TransactionStatus.Denied)
+                     && transaction.Type == TransactionType.Withdraw)
+            {
+                // Refund locked withdrawal amount on cancel/deny so user balance returns to original.
+                usersService.AddBalance(transaction.Identifier, transaction.AmountK);
             }
 
             env.ServerManager.LogsService.Log(
@@ -339,7 +368,15 @@ namespace Server.Communication.Discord.Interactions
                 {
                     var userChannel = await client.GetChannelAsync(transaction.UserChannelId.Value);
                     var isWithdraw = transaction.Type == TransactionType.Withdraw;
-                    var amountText = GpFormatter.Format(transaction.AmountK);
+
+                    // For in-game withdrawals with a fee, show the net amount (after fees) to the user
+                    var amountKForUser = transaction.AmountK;
+                    if (isWithdraw && transaction.FeeK > 0 && transaction.FeeK < transaction.AmountK)
+                    {
+                        amountKForUser = transaction.AmountK - transaction.FeeK;
+                    }
+
+                    var amountText = GpFormatter.Format(amountKForUser);
 
                     // Colors per status
                     var color = newStatus switch
@@ -353,10 +390,12 @@ namespace Server.Communication.Discord.Interactions
                     var title = isWithdraw ? "Withdraw Request" : "Deposit Request";
 
                     var thumbnailUrl = isWithdraw
-                        ? "https://i.imgur.com/A4tPGOW.gif"
+                        ? (newStatus == TransactionStatus.Accepted
+                            ? "https://i.imgur.com/vHuCoye.gif"
+                            : "https://i.imgur.com/lTUFG2C.gif")
                         : (newStatus == TransactionStatus.Accepted
                             ? "https://i.imgur.com/0qEQpNC.gif"
-                            : "https://i.imgur.com/DHXgtn5.gif");
+                            : "https://i.imgur.com/lTUFG2C.gif");
 
                     var processedEmbed = new DiscordEmbedBuilder()
                         .WithTitle(title)
@@ -486,6 +525,13 @@ namespace Server.Communication.Discord.Interactions
                 staffId: null,
                 staffIdentifier: e.User.Id.ToString(),
                 notes: "Cancelled by user");
+
+            // If this was a withdraw, refund the locked amount on user cancel
+            if (transaction.Type == TransactionType.Withdraw)
+            {
+                var usersService = env.ServerManager.UsersService;
+                usersService.AddBalance(transaction.Identifier, transaction.AmountK);
+            }
 
             env.ServerManager.LogsService.Log(
                 source: nameof(TransactionButtonHandler),

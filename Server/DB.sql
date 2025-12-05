@@ -77,3 +77,6 @@
 
 --  ALTER TABLE `stakes`
 --  ADD COLUMN `fee_k` BIGINT NOT NULL DEFAULT 0 AFTER `amount_k`;
+
+--ALTER TABLE `users`
+--  ADD COLUMN `stake_lose_streak` INT NOT NULL DEFAULT 0 AFTER `stake_streak`;

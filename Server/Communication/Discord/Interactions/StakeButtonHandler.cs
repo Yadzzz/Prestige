@@ -98,14 +98,14 @@ namespace Server.Communication.Discord.Interactions
 
                     // net change compared to before stake: +payoutK
                     usersService.AddBalance(stake.Identifier, stake.AmountK + payoutK);
-                    // increment streak on win
-                    UpdateStakeStreak(stake.Identifier, increment: true);
+                    // increment win streak, reset lose streak
+                    UpdateStakeStreak(stake.Identifier, incrementWin: true);
                 }
                 else if (newStatus == StakeStatus.Lost)
                 {
                     // user already paid stake up-front; nothing more to change
-                    // reset streak on loss
-                    UpdateStakeStreak(stake.Identifier, increment: false);
+                    // increment lose streak, reset win streak
+                    UpdateStakeStreak(stake.Identifier, incrementWin: false);
                 }
                 else if (newStatus == StakeStatus.Cancelled)
                 {
@@ -117,7 +117,8 @@ namespace Server.Communication.Discord.Interactions
             }
 
             var balanceText = user != null ? GpFormatter.Format(user.Balance) : null;
-            var streakText = user != null ? user.StakeStreak.ToString() : null;
+            var winStreakText = user != null ? user.StakeStreak.ToString() : null;
+            var loseStreakText = user != null ? user.StakeLoseStreak.ToString() : null;
             var amountText = GpFormatter.Format(stake.AmountK);
             var feeText = feeK > 0 ? GpFormatter.Format(feeK) : null;
             var payoutText = payoutK > 0 ? GpFormatter.Format(payoutK) : null;
@@ -147,7 +148,7 @@ namespace Server.Communication.Discord.Interactions
                 ? "https://i.imgur.com/qmkJM3O.gif"
                 : newStatus == StakeStatus.Lost
                     ? "https://i.imgur.com/DtaZNgy.gif"
-                    : "https://i.imgur.com/jq2603y.gif";
+                    : "https://i.imgur.com/lTUFG2C.gif";
 
             var staffEmbed = new DiscordEmbedBuilder()
                 .WithTitle(resultTitle)
@@ -199,7 +200,7 @@ namespace Server.Communication.Discord.Interactions
                         ? "https://i.imgur.com/qmkJM3O.gif"
                         : newStatus == StakeStatus.Lost
                             ? "https://i.imgur.com/DtaZNgy.gif"
-                            : "https://i.imgur.com/jq2603y.gif";
+                            : "https://i.imgur.com/lTUFG2C.gif";
 
                     // total win = original stake + net profit after fee
                     var totalWinK = stake.AmountK + payoutK;
@@ -217,10 +218,14 @@ namespace Server.Communication.Discord.Interactions
 
                     if (!string.IsNullOrEmpty(balanceText))
                     {
-                        // Common top row: streak and balance
-                        if (!string.IsNullOrEmpty(streakText))
+                        // Common top row: win/lose streak and balance
+                        if (!string.IsNullOrEmpty(winStreakText))
                         {
-                            userEmbed.AddField("Streak", streakText, true);
+                            userEmbed.AddField("Win Streak", winStreakText, true);
+                        }
+                        if (!string.IsNullOrEmpty(loseStreakText))
+                        {
+                            userEmbed.AddField("Lose Streak", loseStreakText, true);
                         }
                         userEmbed.AddField("Balance", balanceText, true);
 
@@ -320,7 +325,7 @@ namespace Server.Communication.Discord.Interactions
                         .WithTitle("🔁 Stake Cancelled")
                         .WithDescription("Your stake request was cancelled.")
                         .WithColor(DiscordColor.Orange)
-                        .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                        .WithThumbnail("https://i.imgur.com/lTUFG2C.gif")
                         .WithTimestamp(DateTimeOffset.UtcNow);
 
                     await userChannel.SendMessageAsync(new DiscordMessageBuilder()
@@ -371,7 +376,7 @@ namespace Server.Communication.Discord.Interactions
                         .WithTitle("🔁 Stake Cancelled")
                         .WithDescription($"The {GpFormatter.Format(stake.AmountK)} stake for {stake.Identifier} was cancelled by the user.")
                         .WithColor(DiscordColor.Orange)
-                        .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                        .WithThumbnail("https://i.imgur.com/lTUFG2C.gif")
                         .WithTimestamp(DateTimeOffset.UtcNow);
 
                     await staffMessage.ModifyAsync(b =>
@@ -390,19 +395,19 @@ namespace Server.Communication.Discord.Interactions
                 new DiscordInteractionResponseBuilder().WithContent("Your stake request has been cancelled.").AsEphemeral(true));
         }
 
-        private static void UpdateStakeStreak(string identifier, bool increment)
+        private static void UpdateStakeStreak(string identifier, bool incrementWin)
         {
             try
             {
                 using (var command = new Server.Infrastructure.Database.DatabaseCommand())
                 {
-                    if (increment)
+                    if (incrementWin)
                     {
-                        command.SetCommand("UPDATE users SET stake_streak = stake_streak + 1 WHERE identifier = @identifier");
+                        command.SetCommand("UPDATE users SET stake_streak = stake_streak + 1, stake_lose_streak = 0 WHERE identifier = @identifier");
                     }
                     else
                     {
-                        command.SetCommand("UPDATE users SET stake_streak = 0 WHERE identifier = @identifier");
+                        command.SetCommand("UPDATE users SET stake_streak = 0, stake_lose_streak = stake_lose_streak + 1 WHERE identifier = @identifier");
                     }
 
                     command.AddParameter("identifier", identifier);

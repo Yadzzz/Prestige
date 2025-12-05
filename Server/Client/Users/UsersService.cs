@@ -91,9 +91,17 @@ namespace Server.Client.Users
                     return Convert.ToInt32(result) > 0;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                try
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LoggerManager.LogError($"[UsersService.UserExistsError] identifier={identifier} ex={ex}");
+                }
+                catch
+                {
+                    Console.WriteLine($"[UsersService.UserExistsError] {ex}");
+                }
             }
             return false;
         }
@@ -130,15 +138,24 @@ namespace Server.Client.Users
                                 Username = reader["username"].ToString(),
                                 DisplayName = reader["display_name"].ToString(),
                                 Balance = Convert.ToInt64(reader["balance"]),
-                                StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"])
+                                StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"]),
+                                StakeLoseStreak = reader["stake_lose_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_lose_streak"])
                             };
                         }
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                try
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LoggerManager.LogError($"[UsersService.TryGetUserError] identifier={identifier} ex={ex}");
+                }
+                catch
+                {
+                    Console.WriteLine($"[UsersService.TryGetUserError] {ex}");
+                }
             }
 
             return user != null;
@@ -150,25 +167,41 @@ namespace Server.Client.Users
             {
                 return false;
             }
+
+            // If the user already exists, treat creation as a no-op success.
+            if (UserExists(identifier))
+            {
+                return true;
+            }
+
             try
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO users (identifier, username, display_name, balance, stake_streak) VALUES (@identifier, @username, @display_name, @balance, @stake_streak)");
+                    command.SetCommand("INSERT INTO users (identifier, username, display_name, balance, stake_streak, stake_lose_streak) VALUES (@identifier, @username, @display_name, @balance, @stake_streak, @stake_lose_streak)");
                     command.AddParameter("identifier", identifier);
                     command.AddParameter("username", username);
                     command.AddParameter("display_name", displayName);
                     command.AddParameter("balance", 0);
                     command.AddParameter("stake_streak", 0);
+                    command.AddParameter("stake_lose_streak", 0);
 
                     int rowsAffected = command.ExecuteQuery();
 
                     return rowsAffected > 0;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                try
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LoggerManager.LogError($"[UsersService.CreateUserError] identifier={identifier} username={username} ex={ex}");
+                }
+                catch
+                {
+                    Console.WriteLine($"[UsersService.CreateUserError] {ex}");
+                }
                 return false;
             }
         }
@@ -192,23 +225,40 @@ namespace Server.Client.Users
                     return Convert.ToInt32(result) > 0;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO: log error
+                try
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LoggerManager.LogError($"[UsersService.UpdateBalanceError] identifier={identifier} delta={delta} ex={ex}");
+                }
+                catch
+                {
+                    Console.WriteLine($"[UsersService.UpdateBalanceError] {ex}");
+                }
                 return false;
             }
         }
 
         public Task<User?> EnsureUserAsync(string userId, string username, string displayName)
         {
-            if (!UserExists(userId))
+            if (string.IsNullOrEmpty(userId))
             {
-                CreateUser(userId, username, displayName);
+                return Task.FromResult<User?>(null);
             }
 
             if (!TryGetUser(userId, out var user) || user == null)
             {
-                return Task.FromResult<User?>(null);
+                // User does not exist yet; try to create and then fetch.
+                if (!CreateUser(userId, username, displayName))
+                {
+                    return Task.FromResult<User?>(null);
+                }
+
+                if (!TryGetUser(userId, out user) || user == null)
+                {
+                    return Task.FromResult<User?>(null);
+                }
             }
 
             return Task.FromResult<User?>(user);

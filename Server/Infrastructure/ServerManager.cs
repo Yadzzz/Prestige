@@ -32,7 +32,7 @@ namespace Server.Infrastructure
             this.LoggerManager = new LoggerManager(new LoggerConfiguration
             {
                 ConsoleLoggerEnabled = true,
-                FileLoggerEnabled = false,
+                FileLoggerEnabled = true,
                 DatabaseLoggerEnabled = false,
             });
             this.UsersService = new UsersService(this.DatabaseManager);
@@ -43,7 +43,8 @@ namespace Server.Infrastructure
             var discordOptions = new DiscordOptions
             {
                 Token = "",
-                GuildId = Discord.DiscordIds.GuildId
+                GuildId = Discord.DiscordIds.GuildId,
+                Intents = DSharpPlus.DiscordIntents.All
             };
 
             this.DiscordBotHost = new DiscordBotHost(discordOptions, this.UsersService);

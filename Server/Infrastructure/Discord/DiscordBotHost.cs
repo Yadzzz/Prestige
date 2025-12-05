@@ -53,13 +53,11 @@ namespace Server.Infrastructure.Discord
 
             if (_options.GuildId != 0)
             {
-                //slash.RegisterCommands<SlashTest>(_options.GuildId);
-                //slash.RegisterCommands<SlashEmbed>(_options.GuildId);
+                slash.RegisterCommands<PingSlashCommand>(_options.GuildId);
             }
             else
             {
-                //slash.RegisterCommands<SlashTest>();
-                //slash.RegisterCommands<SlashEmbed>();
+                slash.RegisterCommands<PingSlashCommand>();
             }
         }
 
