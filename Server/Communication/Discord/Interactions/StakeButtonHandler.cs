@@ -98,10 +98,14 @@ namespace Server.Communication.Discord.Interactions
 
                     // net change compared to before stake: +payoutK
                     usersService.AddBalance(stake.Identifier, stake.AmountK + payoutK);
+                    // increment streak on win
+                    UpdateStakeStreak(stake.Identifier, increment: true);
                 }
                 else if (newStatus == StakeStatus.Lost)
                 {
                     // user already paid stake up-front; nothing more to change
+                    // reset streak on loss
+                    UpdateStakeStreak(stake.Identifier, increment: false);
                 }
                 else if (newStatus == StakeStatus.Cancelled)
                 {
@@ -113,6 +117,7 @@ namespace Server.Communication.Discord.Interactions
             }
 
             var balanceText = user != null ? GpFormatter.Format(user.Balance) : null;
+            var streakText = user != null ? user.StakeStreak.ToString() : null;
             var amountText = GpFormatter.Format(stake.AmountK);
             var feeText = feeK > 0 ? GpFormatter.Format(feeK) : null;
             var payoutText = payoutK > 0 ? GpFormatter.Format(payoutK) : null;
@@ -213,7 +218,10 @@ namespace Server.Communication.Discord.Interactions
                     if (!string.IsNullOrEmpty(balanceText))
                     {
                         // Common top row: streak and balance
-                        userEmbed.AddField("Streak", "1", true);
+                        if (!string.IsNullOrEmpty(streakText))
+                        {
+                            userEmbed.AddField("Streak", streakText, true);
+                        }
                         userEmbed.AddField("Balance", balanceText, true);
 
                         // Extra field for lost outcome
@@ -380,6 +388,31 @@ namespace Server.Communication.Discord.Interactions
 
             await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder().WithContent("Your stake request has been cancelled.").AsEphemeral(true));
+        }
+
+        private static void UpdateStakeStreak(string identifier, bool increment)
+        {
+            try
+            {
+                using (var command = new Server.Infrastructure.Database.DatabaseCommand())
+                {
+                    if (increment)
+                    {
+                        command.SetCommand("UPDATE users SET stake_streak = stake_streak + 1 WHERE identifier = @identifier");
+                    }
+                    else
+                    {
+                        command.SetCommand("UPDATE users SET stake_streak = 0 WHERE identifier = @identifier");
+                    }
+
+                    command.AddParameter("identifier", identifier);
+                    command.ExecuteQuery();
+                }
+            }
+            catch
+            {
+                // Ignore streak update failures; core stake logic must still succeed.
+            }
         }
     }
 }

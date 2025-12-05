@@ -98,11 +98,11 @@ namespace Server.Communication.Discord.Commands
                 .WithFooter("Prestige Bets")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_usercancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            // User cancel button is temporarily disabled; keep code for future use.
+            // var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_usercancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
-                .AddEmbed(embed)
-                .AddComponents(userCancelButton));
+                .AddEmbed(embed));
 
             var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.StakeStaffChannelId);
 

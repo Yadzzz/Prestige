@@ -22,6 +22,7 @@ namespace Server.Client.Transactions
         public int UserId { get; set; }
         public string Identifier { get; set; }
         public long AmountK { get; set; }
+        public long FeeK { get; set; }
         public TransactionType Type { get; set; }
         public TransactionStatus Status { get; set; }
         public int? StaffId { get; set; }

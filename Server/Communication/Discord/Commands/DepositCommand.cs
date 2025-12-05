@@ -63,7 +63,7 @@ namespace Server.Communication.Discord.Commands
 
             var pendingEmbed = new DiscordEmbedBuilder()
                 .WithTitle("Deposit Request")
-                .WithDescription("Your deposit request was submitted. Please choose a deposit method below.")
+                .WithDescription("Your deposit request was sent for staff review.")
                 .AddField("Balance", balanceText, true)
                 .AddField("Deposit", prettyAmount, true)
                 .AddField("Expected Balance", expectedBalanceText, true)
@@ -71,24 +71,26 @@ namespace Server.Communication.Discord.Commands
                 .WithThumbnail("https://i.imgur.com/1hkVfFD.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var ingameButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_deposit_ingame_{transaction.Id}", "In-game (5% fee)", emoji: new DiscordComponentEmoji("🎮"));
-            var cryptoButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_deposit_crypto_{transaction.Id}", "Crypto (0% fee)", emoji: new DiscordComponentEmoji("🪙"));
+            var userCancelButton = new DiscordButtonComponent(
+                ButtonStyle.Secondary,
+                $"tx_usercancel_{transaction.Id}",
+                "Cancel",
+                emoji: new DiscordComponentEmoji("❌"));
 
-            // Send user message and capture its ID (no mention on initial create)
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(pendingEmbed)
-                .AddComponents(ingameButton, cryptoButton));
+                .AddComponents(userCancelButton));
 
             // Send to staff channel
             var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.DepositStaffChannelId);
 
             var staffEmbed = new DiscordEmbedBuilder()
                 .WithTitle("New Deposit Request ⏳")
-                .WithDescription($"User: {ctx.Member.DisplayName} ({user.Identifier})\nAmount: **{prettyAmount}**\nTransaction ID: `{transaction.Id}`\nDeposit Type: **Not selected**\nStatus: **PENDING**")
+                .WithDescription($"User: {ctx.Member.DisplayName} ({user.Identifier})\nAmount: **{prettyAmount}**\nTransaction ID: `{transaction.Id}`\nStatus: **PENDING**")
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var acceptButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅"));
+            var acceptButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", emoji: new DiscordComponentEmoji("✅"));
             var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
             var denyButton = new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
 

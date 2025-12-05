@@ -16,6 +16,7 @@ namespace Server.Client.Stakes
         public int UserId { get; set; }
         public string Identifier { get; set; }
         public long AmountK { get; set; }
+        public long FeeK { get; set; }
         public StakeStatus Status { get; set; }
         public ulong? UserMessageId { get; set; }
         public ulong? UserChannelId { get; set; }

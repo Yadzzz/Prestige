@@ -27,10 +27,11 @@ namespace Server.Client.Transactions
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO transactions (user_id, identifier, amount_k, type, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @type, @status, @created_at, @updated_at)");
+                    command.SetCommand("INSERT INTO transactions (user_id, identifier, amount_k, fee_k, type, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @fee_k, @type, @status, @created_at, @updated_at)");
                     command.AddParameter("user_id", user.Id);
                     command.AddParameter("identifier", user.Identifier);
                     command.AddParameter("amount_k", amountK);
+                    command.AddParameter("fee_k", 0L);
                     command.AddParameter("type", (int)TransactionType.Deposit);
                     command.AddParameter("status", (int)TransactionStatus.Pending);
                     command.AddParameter("created_at", DateTime.UtcNow);
@@ -109,10 +110,11 @@ namespace Server.Client.Transactions
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO transactions (user_id, identifier, amount_k, type, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @type, @status, @created_at, @updated_at)");
+                    command.SetCommand("INSERT INTO transactions (user_id, identifier, amount_k, fee_k, type, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @fee_k, @type, @status, @created_at, @updated_at)");
                     command.AddParameter("user_id", user.Id);
                     command.AddParameter("identifier", user.Identifier);
                     command.AddParameter("amount_k", amountK);
+                    command.AddParameter("fee_k", 0L);
                     command.AddParameter("type", (int)TransactionType.Withdraw);
                     command.AddParameter("status", (int)TransactionStatus.Pending);
                     command.AddParameter("created_at", DateTime.UtcNow);
@@ -299,6 +301,37 @@ namespace Server.Client.Transactions
             return false;
         }
 
+        public bool UpdateTransactionFee(int id, long feeK)
+        {
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("UPDATE transactions SET fee_k = @fee_k, updated_at = @updated_at WHERE id = @id");
+                    command.AddParameter("fee_k", feeK);
+                    command.AddParameter("updated_at", DateTime.UtcNow);
+                    command.AddParameter("id", id);
+
+                    var rows = command.ExecuteQuery();
+                    return rows > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateTransactionFee failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(TransactionsService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "UpdateTransactionFeeException",
+                    message: $"Unhandled exception while updating fee for transaction id={id}",
+                    exception: ex.ToString());
+            }
+
+            return false;
+        }
+
         public bool UpdateTransactionMessages(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
         {
             try
@@ -340,6 +373,7 @@ namespace Server.Client.Transactions
                 UserId = Convert.ToInt32(reader["user_id"]),
                 Identifier = reader["identifier"].ToString(),
                 AmountK = Convert.ToInt64(reader["amount_k"]),
+                FeeK = reader["fee_k"] == DBNull.Value ? 0L : Convert.ToInt64(reader["fee_k"]),
                 Type = (TransactionType)Convert.ToInt32(reader["type"]),
                 Status = (TransactionStatus)Convert.ToInt32(reader["status"]),
                 StaffId = reader["staff_id"] == DBNull.Value ? (int?)null : Convert.ToInt32(reader["staff_id"]),

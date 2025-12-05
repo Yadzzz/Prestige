@@ -68,3 +68,12 @@
 --  KEY `idx_logs_source` (`source`),
 --  KEY `idx_logs_user_identifier` (`user_identifier`)
 --) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--ALTER TABLE `users`
+--  ADD COLUMN `stake_streak` INT NOT NULL DEFAULT 0;
+
+--ALTER TABLE `transactions`
+--  ADD COLUMN `fee_k` BIGINT NOT NULL DEFAULT 0 AFTER `amount_k`;
+
+--  ALTER TABLE `stakes`
+--  ADD COLUMN `fee_k` BIGINT NOT NULL DEFAULT 0 AFTER `amount_k`;

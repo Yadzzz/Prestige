@@ -13,5 +13,6 @@ namespace Server.Client.Users
         public string Username { get; set; }
         public string DisplayName { get; set; }
         public long Balance { get; set; }
+        public int StakeStreak { get; set; }
     }
 }

@@ -129,7 +129,8 @@ namespace Server.Client.Users
                                 Identifier = reader["identifier"].ToString(),
                                 Username = reader["username"].ToString(),
                                 DisplayName = reader["display_name"].ToString(),
-                                Balance = Convert.ToInt64(reader["balance"])
+                                Balance = Convert.ToInt64(reader["balance"]),
+                                StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"])
                             };
                         }
                     }
@@ -153,11 +154,12 @@ namespace Server.Client.Users
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO users (identifier, username, display_name, balance) VALUES (@identifier, @username, @display_name, @balance)");
+                    command.SetCommand("INSERT INTO users (identifier, username, display_name, balance, stake_streak) VALUES (@identifier, @username, @display_name, @balance, @stake_streak)");
                     command.AddParameter("identifier", identifier);
                     command.AddParameter("username", username);
                     command.AddParameter("display_name", displayName);
                     command.AddParameter("balance", 0);
+                    command.AddParameter("stake_streak", 0);
 
                     int rowsAffected = command.ExecuteQuery();
 

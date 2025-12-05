@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
@@ -14,11 +15,12 @@ namespace Server.Communication.Discord.Interactions
     {
         public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
         {
-            // User cancel for deposits/withdrawals is temporarily disabled.
-            // if (e.Id.StartsWith("tx_usercancel_", StringComparison.OrdinalIgnoreCase))
-            // {
-            //     await HandleUserCancelAction(client, e);
-            // }
+            if (e.Id.StartsWith("tx_usercancel_", StringComparison.OrdinalIgnoreCase))
+            {
+                await HandleUserCancelAction(client, e);
+                return;
+            }
+
             if (e.Id.StartsWith("tx_deposit_ingame_", StringComparison.OrdinalIgnoreCase) ||
                 e.Id.StartsWith("tx_deposit_crypto_", StringComparison.OrdinalIgnoreCase))
             {
@@ -44,23 +46,39 @@ namespace Server.Communication.Discord.Interactions
             var transactionsService = env.ServerManager.TransactionsService;
 
             var transaction = transactionsService.GetTransactionById(txId);
-            if (transaction == null || transaction.Type != TransactionType.Deposit)
+            if (transaction == null || transaction.Type != TransactionType.Withdraw)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Deposit request not found.").AsEphemeral(true));
+                    new DiscordInteractionResponseBuilder().WithContent("Withdrawal request not found.").AsEphemeral(true));
                 return;
             }
 
             if (transaction.Status != TransactionStatus.Pending)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("This deposit request has already been processed.").AsEphemeral(true));
+                    new DiscordInteractionResponseBuilder().WithContent("This withdrawal request has already been processed.").AsEphemeral(true));
                 return;
             }
 
             var depositTypeText = typeToken.Equals("ingame", StringComparison.OrdinalIgnoreCase)
                 ? "In-game (5% fee)"
                 : "Crypto (0% fee)";
+
+            // Pre-compute fee and net for staff display using transaction amount
+            var amountK = transaction.AmountK;
+            var prettyAmount = GpFormatter.Format(amountK);
+            var feeK = typeToken.Equals("ingame", StringComparison.OrdinalIgnoreCase)
+                ? (long)Math.Round(amountK * 0.05m, MidpointRounding.AwayFromZero)
+                : 0L;
+            var afterFeeK = amountK - feeK;
+            var prettyFee = GpFormatter.Format(feeK);
+            var prettyAfterFee = GpFormatter.Format(afterFeeK);
+
+            // Persist fee_k when selection is made
+            if (transaction.Type == TransactionType.Withdraw)
+            {
+                transactionsService.UpdateTransactionFee(transaction.Id, feeK);
+            }
 
             // Update staff message description with chosen deposit type and enable buttons
             if (transaction.StaffChannelId.HasValue && transaction.StaffMessageId.HasValue)
@@ -78,11 +96,36 @@ namespace Server.Communication.Discord.Interactions
                         var lines = desc.Split('\n');
                         for (int i = 0; i < lines.Length; i++)
                         {
-                            if (lines[i].StartsWith("Deposit Type:", StringComparison.OrdinalIgnoreCase))
+                            if (lines[i].StartsWith("Withdraw Type:", StringComparison.OrdinalIgnoreCase))
                             {
-                                lines[i] = $"Deposit Type: **{depositTypeText}**";
+                                lines[i] = $"Withdraw Type: **{depositTypeText}**";
                             }
                         }
+
+                        // If in-game is selected, append fee breakdown for staff only
+                        if (typeToken.Equals("ingame", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Ensure the Amount line shows the formatted amount
+                            for (int i = 0; i < lines.Length; i++)
+                            {
+                                if (lines[i].StartsWith("Amount:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    lines[i] = $"Amount: **{prettyAmount}**";
+                                }
+                            }
+
+                            // Remove any existing fee lines first
+                            lines = lines
+                                .Where(l => !l.StartsWith("Fee:", StringComparison.OrdinalIgnoreCase) &&
+                                            !l.StartsWith("Amount After Fees:", StringComparison.OrdinalIgnoreCase))
+                                .ToArray();
+
+                            var list = lines.ToList();
+                            list.Add($"Fee: **{prettyFee}**");
+                            list.Add($"Amount After Fees: **{prettyAfterFee}**");
+                            lines = list.ToArray();
+                        }
+
                         desc = string.Join("\n", lines);
                     }
 
@@ -129,7 +172,7 @@ namespace Server.Communication.Discord.Interactions
 
                     var originalEmbed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
                     var updatedEmbed = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder())
-                        .WithDescription("Your deposit request was sent for staff review.");
+                        .WithDescription("Your withdrawal request was sent for staff review.");
 
                     await originalMessage.ModifyAsync(builder =>
                     {
@@ -141,7 +184,7 @@ namespace Server.Communication.Discord.Interactions
 
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
-                        .WithContent($"You selected **{depositTypeText}** for this deposit.")
+                        .WithContent($"You selected **{depositTypeText}** for this withdrawal.")
                         .AsEphemeral(true));
             }
             catch (Exception ex)
@@ -309,9 +352,11 @@ namespace Server.Communication.Discord.Interactions
 
                     var title = isWithdraw ? "Withdraw Request" : "Deposit Request";
 
-                    var thumbnailUrl = !isWithdraw && newStatus == TransactionStatus.Accepted
-                        ? "https://i.imgur.com/0qEQpNC.gif"
-                        : "https://i.imgur.com/DHXgtn5.gif";
+                    var thumbnailUrl = isWithdraw
+                        ? "https://i.imgur.com/A4tPGOW.gif"
+                        : (newStatus == TransactionStatus.Accepted
+                            ? "https://i.imgur.com/0qEQpNC.gif"
+                            : "https://i.imgur.com/DHXgtn5.gif");
 
                     var processedEmbed = new DiscordEmbedBuilder()
                         .WithTitle(title)
@@ -462,7 +507,7 @@ namespace Server.Communication.Discord.Interactions
                         .WithTitle($"{typeLabel} 🔁")
                         .WithDescription($"Your {typeLabel.ToLowerInvariant()} request was cancelled.")
                         .WithColor(DiscordColor.Orange)
-                        .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                        .WithThumbnail(transaction.Type == TransactionType.Withdraw ? "https://i.imgur.com/A4tPGOW.gif" : "https://i.imgur.com/DHXgtn5.gif")
                         .WithTimestamp(DateTimeOffset.UtcNow);
 
                     await userChannel.SendMessageAsync(new DiscordMessageBuilder()
@@ -514,6 +559,34 @@ namespace Server.Communication.Discord.Interactions
                     var typeLabel = transaction.Type == TransactionType.Withdraw ? "Withdrawal" : "Deposit";
                     var updatedEmbed = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder())
                         .WithTitle($"{typeLabel} Request - {statusText}");
+
+                    // Also update Status: line inside the description so staff see correct status
+                    var desc = originalEmbed?.Description ?? string.Empty;
+                    if (!string.IsNullOrEmpty(desc))
+                    {
+                        var newStatusLine = $"Status: **{statusText}**";
+                        if (desc.Contains("Status:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var lines = desc.Split('\n');
+                            for (int i = 0; i < lines.Length; i++)
+                            {
+                                if (lines[i].StartsWith("Status:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    lines[i] = newStatusLine;
+                                }
+                            }
+                            desc = string.Join("\n", lines);
+                        }
+                        else
+                        {
+                            if (!string.IsNullOrEmpty(desc))
+                                desc += "\n" + newStatusLine;
+                            else
+                                desc = newStatusLine;
+                        }
+
+                        updatedEmbed.WithDescription(desc);
+                    }
 
                     var components = new DiscordComponent[]
                     {

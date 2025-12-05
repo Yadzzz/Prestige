@@ -46,7 +46,7 @@ namespace Server.Infrastructure
                 GuildId = Discord.DiscordIds.GuildId
             };
 
-            this.DiscordBotHost = new DiscordBotHost(discordOptions);
+            this.DiscordBotHost = new DiscordBotHost(discordOptions, this.UsersService);
 
             Console.WriteLine("ServerManager Initialized ->");
         }

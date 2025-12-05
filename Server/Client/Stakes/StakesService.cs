@@ -23,10 +23,11 @@ namespace Server.Client.Stakes
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO stakes (user_id, identifier, amount_k, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @status, @created_at, @updated_at)");
+                    command.SetCommand("INSERT INTO stakes (user_id, identifier, amount_k, fee_k, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @fee_k, @status, @created_at, @updated_at)");
                     command.AddParameter("user_id", user.Id);
                     command.AddParameter("identifier", user.Identifier);
                     command.AddParameter("amount_k", amountK);
+                    command.AddParameter("fee_k", 0L);
                     command.AddParameter("status", (int)StakeStatus.Pending);
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
@@ -164,6 +165,37 @@ namespace Server.Client.Stakes
             return false;
         }
 
+        public bool UpdateStakeFee(int id, long feeK)
+        {
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("UPDATE stakes SET fee_k = @fee_k, updated_at = @updated_at WHERE id = @id");
+                    command.AddParameter("fee_k", feeK);
+                    command.AddParameter("updated_at", DateTime.UtcNow);
+                    command.AddParameter("id", id);
+
+                    var rows = command.ExecuteQuery();
+                    return rows > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateStakeFee failed: {ex}");
+                env.ServerManager.LogsService.Log(
+                    source: nameof(StakesService),
+                    level: "Error",
+                    userIdentifier: null,
+                    action: "UpdateStakeFeeException",
+                    message: $"Unhandled exception while updating fee for stake id={id}",
+                    exception: ex.ToString());
+            }
+
+            return false;
+        }
+
         private Stake MapStake(System.Data.IDataRecord reader)
         {
             return new Stake
@@ -172,6 +204,7 @@ namespace Server.Client.Stakes
                 UserId = Convert.ToInt32(reader["user_id"]),
                 Identifier = reader["identifier"].ToString(),
                 AmountK = Convert.ToInt64(reader["amount_k"]),
+                FeeK = reader["fee_k"] == DBNull.Value ? 0L : Convert.ToInt64(reader["fee_k"]),
                 Status = (StakeStatus)Convert.ToInt32(reader["status"]),
                 UserMessageId = reader["user_message_id"] == DBNull.Value ? (ulong?)null : Convert.ToUInt64(reader["user_message_id"]),
                 UserChannelId = reader["user_channel_id"] == DBNull.Value ? (ulong?)null : Convert.ToUInt64(reader["user_channel_id"]),
