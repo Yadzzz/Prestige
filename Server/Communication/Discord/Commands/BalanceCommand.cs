@@ -15,7 +15,7 @@ namespace Server.Communication.Discord.Commands
     public class BalanceCommand : BaseCommandModule
     {
         [Command("balance")]
-        [Aliases("bal", "wallet", "money", "gp")]
+        [Aliases("bal", "wallet", "money", "gp", "b", "wd")]
         public async Task Balance(CommandContext ctx)
         {
             var env = ServerEnvironment.GetServerEnvironment();
