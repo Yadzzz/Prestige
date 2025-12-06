@@ -40,6 +40,12 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            if (amountK < GpFormatter.MinimumBetAmountK)
+            {
+                await ctx.RespondAsync($"Minimum stake is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
+                return;
+            }
+
             if (user.Balance < amountK)
             {
                 await ctx.RespondAsync("You don't have enough balance for this stake.");

@@ -19,15 +19,27 @@ namespace Server.Infrastructure.Discord
         public const ulong DepositStaffChannelId = 1446212804737503494UL;
         public const ulong WithdrawStaffChannelId = 1446212852388991118UL;
         public const ulong StakeStaffChannelId = 1446157757106491404UL;
+        public const ulong LiveFeedChannelId = 1446877400318349352UL;
 
         // Coinflip custom emoji IDs
         public const ulong CoinflipHeadsEmojiId = 1446593042705285312UL;
         public const ulong CoinflipTailsEmojiId = 1446593047977660457UL;
-        public const ulong CoinflipRmEmojiId    = 1446593046409117780UL;
-        public const ulong CoinflipHalfEmojiId  = 1446593040889413702UL;
-        public const ulong CoinflipMaxEmojiId   = 1446593044219560111UL;
-        public const ulong CoinflipX2EmojiId    = 1446655759575416942UL;
-        public const ulong CoinflipExitEmojiId  = 1446867079578914816UL;
+        public const ulong CoinflipRmEmojiId = 1446593046409117780UL;
+        public const ulong CoinflipHalfEmojiId = 1446593040889413702UL;
+        public const ulong CoinflipMaxEmojiId = 1446593044219560111UL;
+        public const ulong CoinflipX2EmojiId = 1446655759575416942UL;
+        public const ulong CoinflipExitEmojiId = 1446867079578914816UL;
+
+        // Live feed icon emoji(s)
+        public const ulong DdpEmojiId = 1446887716305244280UL;
+        public const ulong WprayEmojiId = 1446888742651433091UL;
+
+        // Big win emoji (MVPP)
+        public const ulong BigWinMvppEmojiId = 1446889114514493530UL;
+
+        // Coinflip result emojis
+        public const ulong CoinflipGoldEmojiId = 1446889072537894994UL; // win
+        public const ulong CoinflipSilverEmojiId = 1446889057874346124UL; // loss
 
 
 
@@ -44,6 +56,7 @@ namespace Server.Infrastructure.Discord
         //public const ulong DepositStaffChannelId = 1430501307034107987;
         //public const ulong WithdrawStaffChannelId = 1430501307034107988;
         //public const ulong StakeStaffChannelId = 1430501307034107989;
+        //public const ulong LiveFeedChannelId = 1430501307629703266;
 
         //public const ulong CoinflipHeadsEmojiId = 1446593382506958888UL;
         //public const ulong CoinflipTailsEmojiId = 1446593388081058054UL;
@@ -52,5 +65,16 @@ namespace Server.Infrastructure.Discord
         //public const ulong CoinflipMaxEmojiId = 1446593383920439457UL;
         //public const ulong CoinflipX2EmojiId = 1446656711615320155UL;
         //public const ulong CoinflipExitEmojiId = 1446867519318003732UL;
+
+        //// Live feed icon emoji(s)
+        //public const ulong DdpEmojiId = 1446892417260322887;
+        //public const ulong WprayEmojiId = 1446892401078698194;
+
+        //// Big win emoji (MVPP)
+        //public const ulong BigWinMvppEmojiId = 1446892382531489792;
+
+        //// Coinflip result emojis
+        //public const ulong CoinflipGoldEmojiId = 1446892366316306585; // win
+        //public const ulong CoinflipSilverEmojiId = 1446892440001974424; // loss
     }
 }

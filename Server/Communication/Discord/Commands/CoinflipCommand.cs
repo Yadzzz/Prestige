@@ -48,9 +48,9 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (amountK <= 0)
+            if (amountK < GpFormatter.MinimumBetAmountK)
             {
-                await ctx.RespondAsync("You must bet more than 0.");
+                await ctx.RespondAsync($"Minimum bet is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
                 return;
             }
 
@@ -90,14 +90,14 @@ namespace Server.Communication.Discord.Commands
             //var exitButton = new DiscordButtonComponent(ButtonStyle.Danger, $"cf_exit_{flip.Id}", "Exit");
 
             var headsButton = new DiscordButtonComponent(
-                ButtonStyle.Success,
+                ButtonStyle.Secondary,
                 $"cf_heads_{flip.Id}",
                 "Heads",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId)
             );
 
             var tailsButton = new DiscordButtonComponent(
-                ButtonStyle.Primary,
+                ButtonStyle.Secondary,
                 $"cf_tails_{flip.Id}",
                 "Tails",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId)

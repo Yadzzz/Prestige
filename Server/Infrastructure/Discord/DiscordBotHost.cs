@@ -24,6 +24,8 @@ namespace Server.Infrastructure.Discord
             ConfigureCommands();
         }
 
+        public DiscordClient Client => _client;
+
         private void WireEvents()
         {
             _client.ClientErrored += async (s, e) =>

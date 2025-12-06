@@ -252,6 +252,16 @@ namespace Server.Communication.Discord.Interactions
                         .WithContent($"<@{stake.Identifier}>")
                         .AddEmbed(userEmbed));
 
+                    // Fire-and-forget live feed entry for stake games
+                    try
+                    {
+                        envInner.ServerManager.LiveFeedService?.PublishStake(stake.AmountK, newStatus == StakeStatus.Won);
+                    }
+                    catch
+                    {
+                        // Live feed must never affect gameplay
+                    }
+
                     // Also disable the original user cancel button on the pending stake message, if present
                     if (stake.UserMessageId.HasValue)
                     {

@@ -129,13 +129,13 @@ namespace Server.Communication.Discord.Interactions
                     .WithTimestamp(DateTimeOffset.UtcNow);
 
                 var headsButtonRematch = new DiscordButtonComponent(
-                    ButtonStyle.Success,
+                    ButtonStyle.Secondary,
                     $"cf_heads_{newFlip.Id}",
                     "Heads",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId));
 
                 var tailsButtonRematch = new DiscordButtonComponent(
-                    ButtonStyle.Primary,
+                    ButtonStyle.Secondary,
                     $"cf_tails_{newFlip.Id}",
                     "Tails",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId));
@@ -146,13 +146,50 @@ namespace Server.Communication.Discord.Interactions
                     "Exit",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
 
-                // Disable buttons on the old result/rematch message
+                // Disable buttons on the old result/rematch message but keep them visible
                 var updateBuilder = new DiscordInteractionResponseBuilder();
                 if (e.Message.Embeds.Count > 0)
                 {
                     updateBuilder.AddEmbed(e.Message.Embeds[0]);
                 }
+
+                var disabledRmButton = new DiscordButtonComponent(
+                    string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    $"cf_rm_{flip.Id}",
+                    "RM",
+                    true,
+                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId));
+
+                var disabledHalfButton = new DiscordButtonComponent(
+                    string.Equals(action, "half", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    $"cf_half_{flip.Id}",
+                    "1/2",
+                    true,
+                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId));
+
+                var disabledX2Button = new DiscordButtonComponent(
+                    string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    $"cf_x2_{flip.Id}",
+                    "X2",
+                    true,
+                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId));
+
+                var disabledMaxButton = new DiscordButtonComponent(
+                    string.Equals(action, "max", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    $"cf_max_{flip.Id}",
+                    "MAX",
+                    true,
+                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId));
+
+                var disabledExitButton = new DiscordButtonComponent(
+                    ButtonStyle.Danger,
+                    $"cf_exit_{flip.Id}",
+                    "Exit",
+                    true,
+                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
+
                 updateBuilder.ClearComponents();
+                updateBuilder.AddComponents(disabledRmButton, disabledHalfButton, disabledX2Button, disabledMaxButton, disabledExitButton);
 
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, updateBuilder);
 
@@ -252,9 +289,9 @@ namespace Server.Communication.Discord.Interactions
             if (win)
             {
                 // Stake was already removed up-front.
-                // On win, tax 10% of the winning amount and give back
-                // the original stake plus net profit (same as stakes).
-                feeK = (long)Math.Round(betAmountK * 0.10m, MidpointRounding.AwayFromZero);
+                // On win, tax 5% of the winning amount and give back
+                // the original stake plus net profit.
+                feeK = (long)Math.Round(betAmountK * 0.05m, MidpointRounding.AwayFromZero);
                 payoutK = betAmountK - feeK;
 
                 if (payoutK < 0)
@@ -266,6 +303,16 @@ namespace Server.Communication.Discord.Interactions
 
                 // Total returned to user: original stake + net profit.
                 usersService.AddBalance(user.Identifier, totalWinK);
+            }
+
+            // Fire-and-forget live feed entry for coinflip games
+            try
+            {
+                env.ServerManager.LiveFeedService?.PublishCoinflip(betAmountK, win, resultHeads);
+            }
+            catch
+            {
+                // Live feed must never affect gameplay
             }
 
             // Persist updated flip baseline

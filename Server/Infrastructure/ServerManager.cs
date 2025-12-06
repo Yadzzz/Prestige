@@ -12,6 +12,7 @@ using Server.Client.Transactions;
 using Server.Client.Stakes;
 using Server.Client.Audit;
 using Server.Client.Coinflips;
+using Server.Client.LiveFeed;
 
 namespace Server.Infrastructure
 {
@@ -26,6 +27,7 @@ namespace Server.Infrastructure
         public StakesService StakesService { get; set; }
         public CoinflipsService CoinflipsService { get; set; }
         public LogsService LogsService { get; set; }
+        public LiveFeedService LiveFeedService { get; set; }
 
         public ServerManager()
         {
@@ -51,6 +53,7 @@ namespace Server.Infrastructure
             };
 
             this.DiscordBotHost = new DiscordBotHost(discordOptions, this.UsersService);
+            this.LiveFeedService = new LiveFeedService(this.DiscordBotHost);
 
             Console.WriteLine("ServerManager Initialized ->");
         }
