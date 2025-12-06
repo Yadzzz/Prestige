@@ -283,20 +283,39 @@ namespace Server.Communication.Discord.Interactions
                 //new DiscordButtonComponent(ButtonStyle.Danger,    $"cf_exit_{flip.Id}", "Exit", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))
             };
 
-            // Disable buttons on the original request message
+            // Replace the original request message with the result embed + rematch buttons
             if (flip.ChannelId.HasValue && flip.MessageId.HasValue)
             {
-                var channel = await client.GetChannelAsync(flip.ChannelId.Value);
-                var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value);
-
-                await originalMessage.ModifyAsync(mb =>
+                try
                 {
-                    mb.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
-                    mb.ClearComponents();
-                });
+                    var channel = await client.GetChannelAsync(flip.ChannelId.Value);
+                    var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value);
+
+                    await originalMessage.ModifyAsync(mb =>
+                    {
+                        mb.Embed = embed;
+                        mb.ClearComponents();
+                        mb.AddComponents(rematchRow);
+                    });
+
+                    // Acknowledge the interaction by updating the same message (no new message sent)
+                    var responseBuilder = new DiscordInteractionResponseBuilder()
+                        .AddEmbed(embed)
+                        .AddComponents(rematchRow);
+
+                    await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, responseBuilder);
+                    return;
+                }
+                catch (DSharpPlus.Exceptions.NotFoundException)
+                {
+                    // If the channel or message no longer exists (deleted, etc.),
+                    // fall through to the fallback below without breaking the flip
+                    // logic or the user's balance.
+                }
             }
 
-            // Send result as a new message (no Heads/Tails buttons here)
+            // Fallback: if we somehow don't have stored IDs or the original message
+            // is gone, respond with a new message showing the result + rematch row.
             await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder()
                     .AddEmbed(embed)
