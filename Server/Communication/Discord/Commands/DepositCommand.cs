@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
@@ -37,9 +36,9 @@ namespace Server.Communication.Discord.Commands
             if (user == null)
                 return;
 
-            if (!TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Example: `!d 100` or `!d 0.5`");
+                await ctx.RespondAsync("Invalid amount. Examples: `!d 100`, `!d 0.5`, `!d 1b`, `!d 1000m`.");
                 return;
             }
 
@@ -64,9 +63,9 @@ namespace Server.Communication.Discord.Commands
             var pendingEmbed = new DiscordEmbedBuilder()
                 .WithTitle("Deposit Request")
                 .WithDescription("Your deposit request was sent for staff review.")
-                .AddField("Balance", balanceText, true)
-                .AddField("Deposit", prettyAmount, true)
-                .AddField("Expected Balance", expectedBalanceText, true)
+                .AddField("Balance", $"**{balanceText}**", true)
+                .AddField("Deposit", $"**{prettyAmount}**", true)
+                .AddField("Expected Balance", $"**{expectedBalanceText}**", true)
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/1hkVfFD.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
@@ -120,23 +119,5 @@ namespace Server.Communication.Discord.Commands
             return false;
         }
 
-        private bool TryParseAmountInK(string input, out long amountK)
-        {
-            amountK = 0;
-
-            if (string.IsNullOrWhiteSpace(input))
-                return false;
-
-            if (!decimal.TryParse(input, NumberStyles.Number, CultureInfo.InvariantCulture, out var amountM))
-                return false;
-
-            if (amountM <= 0)
-                return false;
-
-            var result = amountM * 1000m; // millions to thousands
-
-            amountK = (long)Math.Round(result, MidpointRounding.AwayFromZero);
-            return amountK > 0;
-        }
     }
 }

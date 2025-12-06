@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
@@ -36,13 +35,11 @@ namespace Server.Communication.Discord.Commands
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
 
-            if (!decimal.TryParse(amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var amountM) || amountM <= 0)
+            if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Example: `!add 10 @user` (10M)");
+                await ctx.RespondAsync("Invalid amount. Examples: `!add 10 @user`, `!add 0.5 @user`, `!add 1b @user`, `!add 1000m @user`.");
                 return;
             }
-
-            var amountK = (long)Math.Round(amountM * 1000m, MidpointRounding.AwayFromZero);
             if (amountK <= 0)
             {
                 await ctx.RespondAsync("Amount must be greater than zero.");
@@ -67,17 +64,12 @@ namespace Server.Communication.Discord.Commands
             var prettyAmount = GpFormatter.Format(amountK);
             var newBalanceText = updatedUser != null ? GpFormatter.Format(updatedUser.Balance) : "unknown";
 
-            var prettyAmountText = prettyAmount;
             var staffName = ctx.Member?.DisplayName ?? ctx.User.Username;
 
-            var title = isGift ? "Gift" : "Balance Added";
-            var description = isGift
-                ? $"Congratulations 🎉 You have just received {prettyAmountText} from {staffName}."
-                : $"Your balance was increased by {prettyAmountText} by {staffName}.";
-
+            var title = isGift ? "Gifted Balance" : "Added Balance";
             var embed = new DiscordEmbedBuilder()
                 .WithTitle(title)
-                .WithDescription(description)
+                .AddField("Amount", $"**{prettyAmount}**", true)
                 .AddField("Member", targetMember.Username, true)
                 .AddField("Staff", staffName, true)
                 .WithColor(DiscordColor.Green)
@@ -95,13 +87,11 @@ namespace Server.Communication.Discord.Commands
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
 
-            if (!decimal.TryParse(amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var amountM) || amountM <= 0)
+            if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Example: `!remove 10 @user` (10M)");
+                await ctx.RespondAsync("Invalid amount. Examples: `!remove 10 @user`, `!remove 0.5 @user`, `!remove 1b @user`, `!remove 1000m @user`.");
                 return;
             }
-
-            var amountK = (long)Math.Round(amountM * 1000m, MidpointRounding.AwayFromZero);
             if (amountK <= 0)
             {
                 await ctx.RespondAsync("Amount must be greater than zero.");

@@ -35,19 +35,8 @@ namespace Server.Communication.Discord.Interactions
 
             // Only staff should be able to resolve stakes via these buttons.
             // If the interaction user is not in the staff role, block it.
-            try
-            {
-                var member = e.Guild?.GetMemberAsync(e.User.Id).Result;
-                if (member == null || !member.Roles.Any(r => r.Id == Server.Infrastructure.Discord.DiscordIds.StaffRoleId))
-                {
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-                        new DiscordInteractionResponseBuilder()
-                            .WithContent("You are not allowed to resolve stakes.")
-                            .AsEphemeral(true));
-                    return;
-                }
-            }
-            catch
+            var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
+            if (member == null || !member.Roles.Any(r => r.Id == Server.Infrastructure.Discord.DiscordIds.StaffRoleId))
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
@@ -159,10 +148,10 @@ namespace Server.Communication.Discord.Interactions
             {
                 StakeStatus.Won =>
                     feeK > 0 && payoutK > 0
-                        ? $"Congratulations 🎉\nYou won the {amountText} stake."
-                        : $"Congratulations 🎉\nYou won the {amountText} stake.",
-                StakeStatus.Lost => $"You lost the {amountText} stake.",
-                StakeStatus.Cancelled => $"The {amountText} stake was cancelled.",
+                        ? $"Congratulations 🎉\nYou won the **{amountText}** stake."
+                        : $"Congratulations 🎉\nYou won the **{amountText}** stake.",
+                StakeStatus.Lost => $"You lost the **{amountText}** stake.",
+                StakeStatus.Cancelled => $"The **{amountText}** stake was cancelled.",
                 _ => string.Empty
             };
 
@@ -177,9 +166,9 @@ namespace Server.Communication.Discord.Interactions
                 .WithTitle(resultTitle)
                 .WithDescription(newStatus switch
                 {
-                    StakeStatus.Won => $"User: {staffDisplay} won the {amountText} stake.",
-                    StakeStatus.Lost => $"User: {staffDisplay} lost the {amountText} stake.",
-                    StakeStatus.Cancelled => $"User: {staffDisplay} – the {amountText} stake was cancelled.",
+                    StakeStatus.Won => $"User: {staffDisplay} won the **{amountText}** stake.",
+                    StakeStatus.Lost => $"User: {staffDisplay} lost the **{amountText}** stake.",
+                    StakeStatus.Cancelled => $"User: {staffDisplay} – the **{amountText}** stake was cancelled.",
                     _ => resultDescription
                 })
                 .WithColor(newStatus == StakeStatus.Won ? DiscordColor.Green : newStatus == StakeStatus.Lost ? DiscordColor.Red : DiscordColor.Orange)
@@ -232,7 +221,7 @@ namespace Server.Communication.Discord.Interactions
                     var userEmbed = new DiscordEmbedBuilder()
                         .WithTitle(resultTitle)
                         .WithDescription(newStatus == StakeStatus.Won && payoutK > 0
-                            ? $"Congratulations 🎉\nYou won the {totalWinText} stake."
+                            ? $"Congratulations 🎉\nYou won the **{totalWinText}** stake."
                             : resultDescription)
                         .WithColor(newStatus == StakeStatus.Won ? DiscordColor.SpringGreen :
                                    newStatus == StakeStatus.Lost ? DiscordColor.Red : DiscordColor.Orange)
@@ -255,7 +244,7 @@ namespace Server.Communication.Discord.Interactions
                         // Extra field for lost outcome
                         if (newStatus == StakeStatus.Lost)
                         {
-                            userEmbed.AddField("You lost", amountText, true);
+                            userEmbed.AddField("You lost", $"**{amountText}**", true);
                         }
                     }
 

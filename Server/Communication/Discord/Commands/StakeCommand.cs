@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -35,9 +34,9 @@ namespace Server.Communication.Discord.Commands
             if (user == null)
                 return;
 
-            if (!TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Example: `!stake 100` or `!stake 0.5`");
+                await ctx.RespondAsync("Invalid amount. Examples: `!stake 100`, `!stake 0.5`, `!stake 1b`, `!stake 1000m`.");
                 return;
             }
 
@@ -120,25 +119,6 @@ namespace Server.Communication.Discord.Commands
                 .AddComponents(winButton, cancelButton, loseButton));
 
             stakesService.UpdateStakeMessages(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
-        }
-
-        private bool TryParseAmountInK(string input, out long amountK)
-        {
-            amountK = 0;
-
-            if (string.IsNullOrWhiteSpace(input))
-                return false;
-
-            if (!decimal.TryParse(input, NumberStyles.Number, CultureInfo.InvariantCulture, out var amountM))
-                return false;
-
-            if (amountM <= 0)
-                return false;
-
-            var result = amountM * 1000m;
-
-            amountK = (long)Math.Round(result, MidpointRounding.AwayFromZero);
-            return amountK > 0;
         }
     }
 }

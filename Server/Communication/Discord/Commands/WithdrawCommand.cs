@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -40,9 +39,9 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Example: `!w 100` or `!w 0.5`");
+                await ctx.RespondAsync("Invalid amount. Examples: `!w 100`, `!w 0.5`, `!w 1b`, `!w 1000m`.");
                 return;
             }
 
@@ -85,8 +84,8 @@ namespace Server.Communication.Discord.Commands
                 .WithTitle("Withdraw Request")
                 .WithDescription("Your withdrawal request was submitted. Please choose a withdrawal method below.")
                 .AddField("Member", ctx.User.Username, true)
-                .AddField("Amount", prettyAmount, true)
-                .AddField("Remaining", remainingText, true)
+                .AddField("Amount", $"**{prettyAmount}**", true)
+                .AddField("Remaining", $"**{remainingText}**", true)
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/A4tPGOW.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
@@ -136,23 +135,5 @@ namespace Server.Communication.Discord.Commands
             return false;
         }
 
-        private bool TryParseAmountInK(string input, out long amountK)
-        {
-            amountK = 0;
-
-            if (string.IsNullOrWhiteSpace(input))
-                return false;
-
-            if (!decimal.TryParse(input, NumberStyles.Number, CultureInfo.InvariantCulture, out var amountM))
-                return false;
-
-            if (amountM <= 0)
-                return false;
-
-            var result = amountM * 1000m; // millions to thousands
-
-            amountK = (long)Math.Round(result, MidpointRounding.AwayFromZero);
-            return amountK > 0;
-        }
     }
 }

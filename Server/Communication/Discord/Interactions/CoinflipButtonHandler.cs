@@ -143,7 +143,8 @@ namespace Server.Communication.Discord.Interactions
                 var exitButtonRematch = new DiscordButtonComponent(
                     ButtonStyle.Danger,
                     $"cf_exit_{newFlip.Id}",
-                    "Exit");
+                    "Exit",
+                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
 
                 // Disable buttons on the old result/rematch message
                 var updateBuilder = new DiscordInteractionResponseBuilder();
@@ -244,6 +245,10 @@ namespace Server.Communication.Discord.Interactions
             long payoutK = 0;
             long totalWinK = 0;
 
+            // Capture balance before resolving the flip so we can
+            // correctly detect true all-in wins for visuals.
+            long preFlipBalanceK = user.Balance;
+
             if (win)
             {
                 // Stake was already removed up-front.
@@ -267,38 +272,15 @@ namespace Server.Communication.Discord.Interactions
             coinflipsService.UpdateCoinflipOutcome(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0);
 
             usersService.TryGetUser(user.Identifier, out user);
-            var balancePretty = user != null ? GpFormatter.Format(user.Balance) : "-";
-            var amountPretty = GpFormatter.Format(betAmountK);
-            var totalWinPretty = win && totalWinK > 0 ? GpFormatter.Format(totalWinK) : amountPretty;
-
-            var title = win ? $"Coinflip won #{flip.Id}" : $"Coinflip lost #{flip.Id}";
-            var description = win
-                ? "RNGesus is with you!"
-                : "Haha, tough luck.";
-
-            var body = win
-                ? $"You ~~scammed~~ won {totalWinPretty} shiny coins, which I regret losing :(\nYour gold bag holds now {balancePretty}."
-                : $"You lost {amountPretty} shiny coins, I bet that hurt your pocket ;)\nYour gold bag holds now {balancePretty}.";
-
-            var thumbnailUrl = win
-                ? (choseHeads ? "https://i.imgur.com/xud6Yuc.gif" : "https://i.imgur.com/jSIsAPV.gif")
-                : (choseHeads ? "https://i.imgur.com/E0T9ZXM.gif" : "https://i.imgur.com/COKLFCI.gif");
-
-            var embed = new DiscordEmbedBuilder()
-                .WithTitle(title)
-                .WithDescription($"{description}\n\n{body}")
-                .WithColor(win ? DiscordColor.SpringGreen : DiscordColor.Red)
-                .WithThumbnail(thumbnailUrl)
-                .WithFooter("Prestige Bets")
-                .WithTimestamp(DateTimeOffset.UtcNow);
+            var embed = BuildResultEmbed(user, flip, betAmountK, totalWinK, preFlipBalanceK, win, choseHeads, resultHeads);
 
             var rematchRow = new DiscordComponent[]
             {
-                new DiscordButtonComponent(ButtonStyle.Success,   $"cf_rm_{flip.Id}",   "RM",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_rm_{flip.Id}",   "RM",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)),
                 new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_half_{flip.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Primary,   $"cf_x2_{flip.Id}",   "X2",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_x2_{flip.Id}",   "X2",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)),
                 new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_max_{flip.Id}",  "MAX", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Danger,    $"cf_exit_{flip.Id}", "Exit")
+                //new DiscordButtonComponent(ButtonStyle.Danger,    $"cf_exit_{flip.Id}", "Exit", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))
             };
 
             // Disable buttons on the original request message
@@ -319,6 +301,107 @@ namespace Server.Communication.Discord.Interactions
                 new DiscordInteractionResponseBuilder()
                     .AddEmbed(embed)
                     .AddComponents(rematchRow));
+        }
+
+        private static DiscordEmbedBuilder BuildResultEmbed(User user, Coinflip flip, long betAmountK, long totalWinK, long preFlipBalanceK, bool win, bool choseHeads, bool resultHeads)
+        {
+            var balanceK = user?.Balance ?? 0L;
+            var balancePretty = GpFormatter.Format(balanceK);
+            var amountPretty = GpFormatter.Format(betAmountK);
+            var totalWinPretty = win && totalWinK > 0 ? GpFormatter.Format(totalWinK) : amountPretty;
+
+            // All-in means user had 0 left before this flip resolved.
+            bool isAllInWin = win && preFlipBalanceK == 0;
+            bool isBigBet = betAmountK >= 1_000_000L; // >= 1B
+
+            var title = win ? $"Coinflip won #{flip.Id}" : $"Coinflip lost #{flip.Id}";
+
+            string description;
+            if (win && isAllInWin)
+            {
+                description = "OMG! It's a max win!";
+            }
+            else if (win && isBigBet)
+            {
+                description = "HUGE! Amazing big win!";
+            }
+            else if (win)
+            {
+                description = "RNGesus is with you!";
+            }
+            else
+            {
+                description = "Haha, tough luck...";
+            }
+
+            var body = win
+                ? $"You won **{totalWinPretty}**.\nYour gold bag now holds **{balancePretty}**."
+                : $"You lost **{amountPretty}**.\nYour gold bag now holds **{balancePretty}**.";
+
+            var thumbnailUrl = SelectThumbnailUrl(win, choseHeads, isBigBet, isAllInWin);
+
+            // Color bar logic:
+            // - normal win: green
+            // - all-in win: light blue (match all-in icon vibe)
+            // - big win (1B+): purple
+            // - loss: red
+            var color = DiscordColor.Red;
+            if (win)
+            {
+                if (isAllInWin)
+                {
+                    color = new DiscordColor("#4FAEDD"); // light blue
+                }
+                else if (isBigBet)
+                {
+                    color = new DiscordColor("#AA66FF"); // purple
+                }
+                else
+                {
+                    color = DiscordColor.SpringGreen;
+                }
+            }
+
+            return new DiscordEmbedBuilder()
+                .WithTitle(title)
+                .WithDescription($"{description}\n\n{body}")
+                .WithColor(color)
+                .WithThumbnail(thumbnailUrl)
+                .WithFooter("Prestige Bets")
+                .WithTimestamp(DateTimeOffset.UtcNow);
+        }
+
+        private static string SelectThumbnailUrl(bool win, bool choseHeads, bool isBigBet, bool isAllInWin)
+        {
+            // Stake-like mapping using the provided GIFs.
+            if (win)
+            {
+                if (isAllInWin)
+                {
+                    // All-in win
+                    return choseHeads
+                        ? "https://i.imgur.com/umfkRzp.gif"   // all-in heads win
+                        : "https://i.imgur.com/YWD0RG4.gif";  // all-in tails win
+                }
+
+                if (isBigBet)
+                {
+                    // Big win >= 1B
+                    return choseHeads
+                        ? "https://i.imgur.com/snYXA01.gif"   // big heads win
+                        : "https://i.imgur.com/EEbdZr1.gif";  // big tails win
+                }
+
+                // Regular win under 1B
+                return choseHeads
+                    ? "https://i.imgur.com/pjbK9Cf.gif"       // small heads win
+                    : "https://i.imgur.com/XwVz5Ng.gif";      // small tails win
+            }
+
+            // Losses
+            return choseHeads
+                ? "https://i.imgur.com/r7vmMon.gif"           // heads loss
+                : "https://i.imgur.com/q8e2eXR.gif";          // tails loss
         }
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -18,8 +17,8 @@ namespace Server.Communication.Discord.Commands
         private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
 
         [Command("coinflip")]
-        [Aliases("cf")] 
-        public async Task Coinflip(CommandContext ctx, string amount)
+        [Aliases("cf")]
+        public async Task Coinflip(CommandContext ctx, string amount = null)
         {
             if (RateLimiter.IsRateLimited(ctx.User.Id, "coinflip", RateLimitInterval))
             {
@@ -36,9 +35,22 @@ namespace Server.Communication.Discord.Commands
             if (user == null)
                 return;
 
-            if (!TryParseAmountInK(amount, out var amountK))
+            long amountK;
+
+            if (string.IsNullOrWhiteSpace(amount))
             {
-                await ctx.RespondAsync("Invalid amount. Example: `!coinflip 100` or `!cf 0.5`");
+                // No amount specified -> all-in
+                amountK = user.Balance;
+            }
+            else if (!GpParser.TryParseAmountInK(amount, out amountK))
+            {
+                await ctx.RespondAsync("Invalid amount. Examples: `!coinflip 100`, `!cf 0.5`, `!cf 1b`, `!cf 1000m`, or `!coinflip` for all-in.");
+                return;
+            }
+
+            if (amountK <= 0)
+            {
+                await ctx.RespondAsync("You must bet more than 0.");
                 return;
             }
 
@@ -94,7 +106,8 @@ namespace Server.Communication.Discord.Commands
             var exitButton = new DiscordButtonComponent(
                 ButtonStyle.Danger,
                 $"cf_exit_{flip.Id}",
-                "Exit"
+                "Exit",
+                emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)
             );
 
             var message = await ctx.RespondAsync(new DiscordMessageBuilder()
@@ -102,25 +115,6 @@ namespace Server.Communication.Discord.Commands
                 .AddComponents(headsButton, tailsButton, exitButton));
 
             coinflipsService.UpdateCoinflipOutcome(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id);
-        }
-
-        private bool TryParseAmountInK(string input, out long amountK)
-        {
-            amountK = 0;
-
-            if (string.IsNullOrWhiteSpace(input))
-                return false;
-
-            if (!decimal.TryParse(input, NumberStyles.Number, CultureInfo.InvariantCulture, out var amountM))
-                return false;
-
-            if (amountM <= 0)
-                return false;
-
-            var result = amountM * 1000m;
-
-            amountK = (long)Math.Round(result, MidpointRounding.AwayFromZero);
-            return amountK > 0;
         }
     }
 }

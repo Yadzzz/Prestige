@@ -27,6 +27,7 @@ namespace Server.Infrastructure.Discord
         public const ulong CoinflipHalfEmojiId  = 1446593040889413702UL;
         public const ulong CoinflipMaxEmojiId   = 1446593044219560111UL;
         public const ulong CoinflipX2EmojiId    = 1446655759575416942UL;
+        public const ulong CoinflipExitEmojiId  = 1446867079578914816UL;
 
 
 
@@ -50,5 +51,6 @@ namespace Server.Infrastructure.Discord
         //public const ulong CoinflipHalfEmojiId = 1446593380946677981UL;
         //public const ulong CoinflipMaxEmojiId = 1446593383920439457UL;
         //public const ulong CoinflipX2EmojiId = 1446656711615320155UL;
+        //public const ulong CoinflipExitEmojiId = 1446867519318003732UL;
     }
 }
