@@ -15,10 +15,18 @@ namespace Server.Communication.Discord.Commands
 {
     public class CoinflipCommand : BaseCommandModule
     {
+        private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
+
         [Command("coinflip")]
         [Aliases("cf")] 
         public async Task Coinflip(CommandContext ctx, string amount)
         {
+            if (RateLimiter.IsRateLimited(ctx.User.Id, "coinflip", RateLimitInterval))
+            {
+                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                return;
+            }
+
             var env = ServerEnvironment.GetServerEnvironment();
             var serverManager = env.ServerManager;
             var usersService = serverManager.UsersService;

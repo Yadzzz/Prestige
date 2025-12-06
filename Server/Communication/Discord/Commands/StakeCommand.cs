@@ -16,13 +16,11 @@ namespace Server.Communication.Discord.Commands
     public class StakeCommand : BaseCommandModule
     {
         private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, DateTime> LastUsed = new();
-
         [Command("stake")]
         [Aliases("s")]
         public async Task Stake(CommandContext ctx, string amount)
         {
-            if (IsRateLimited(ctx.User.Id))
+            if (RateLimiter.IsRateLimited(ctx.User.Id, "stake", RateLimitInterval))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
                 return;
@@ -122,18 +120,6 @@ namespace Server.Communication.Discord.Commands
                 .AddComponents(winButton, cancelButton, loseButton));
 
             stakesService.UpdateStakeMessages(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
-        }
-
-        private bool IsRateLimited(ulong userId)
-        {
-            var now = DateTime.UtcNow;
-            if (LastUsed.TryGetValue(userId, out var last) && (now - last) < RateLimitInterval)
-            {
-                return true;
-            }
-
-            LastUsed[userId] = now;
-            return false;
         }
 
         private bool TryParseAmountInK(string input, out long amountK)

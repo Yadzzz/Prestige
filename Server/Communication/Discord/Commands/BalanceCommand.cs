@@ -14,10 +14,17 @@ namespace Server.Communication.Discord.Commands
 {
     public class BalanceCommand : BaseCommandModule
     {
+        private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
         [Command("balance")]
-        [Aliases("bal", "wallet", "money", "gp", "b", "wd")]
+        [Aliases("bal", "wallet", "money", "gp", "b")]
         public async Task Balance(CommandContext ctx)
         {
+            if (RateLimiter.IsRateLimited(ctx.User.Id, "balance", RateLimitInterval))
+            {
+                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                return;
+            }
+
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
             var transactionsService = env.ServerManager.TransactionsService;

@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
@@ -13,8 +14,6 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class CoinflipButtonHandler
     {
-        private static readonly Random Rng = new Random();
-
         public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
         {
             var parts = e.Id.Split('_');
@@ -236,13 +235,32 @@ namespace Server.Communication.Discord.Interactions
 
             // At this point the stake is already locked in CoinflipCommand; do NOT remove balance again
 
-            var resultHeads = Rng.Next(0, 2) == 0; // 50/50
+            // Use cryptographically strong RNG for a fair 50/50 outcome
+            int roll = RandomNumberGenerator.GetInt32(0, 100); // 0–99
+            var resultHeads = roll < 50; // 50/50
             var win = choseHeads == resultHeads;
+
+            long feeK = 0;
+            long payoutK = 0;
+            long totalWinK = 0;
 
             if (win)
             {
-                // Stake was already removed up-front; on win, return stake + profit.
-                usersService.AddBalance(user.Identifier, betAmountK * 2);
+                // Stake was already removed up-front.
+                // On win, tax 10% of the winning amount and give back
+                // the original stake plus net profit (same as stakes).
+                feeK = (long)Math.Round(betAmountK * 0.10m, MidpointRounding.AwayFromZero);
+                payoutK = betAmountK - feeK;
+
+                if (payoutK < 0)
+                {
+                    payoutK = 0;
+                }
+
+                totalWinK = betAmountK + payoutK;
+
+                // Total returned to user: original stake + net profit.
+                usersService.AddBalance(user.Identifier, totalWinK);
             }
 
             // Persist updated flip baseline
@@ -251,6 +269,7 @@ namespace Server.Communication.Discord.Interactions
             usersService.TryGetUser(user.Identifier, out user);
             var balancePretty = user != null ? GpFormatter.Format(user.Balance) : "-";
             var amountPretty = GpFormatter.Format(betAmountK);
+            var totalWinPretty = win && totalWinK > 0 ? GpFormatter.Format(totalWinK) : amountPretty;
 
             var title = win ? $"Coinflip won #{flip.Id}" : $"Coinflip lost #{flip.Id}";
             var description = win
@@ -258,7 +277,7 @@ namespace Server.Communication.Discord.Interactions
                 : "Haha, tough luck.";
 
             var body = win
-                ? $"You ~~scammed~~ won {amountPretty} shiny coins, which I regret losing :(\nYour gold bag holds now {balancePretty}."
+                ? $"You ~~scammed~~ won {totalWinPretty} shiny coins, which I regret losing :(\nYour gold bag holds now {balancePretty}."
                 : $"You lost {amountPretty} shiny coins, I bet that hurt your pocket ;)\nYour gold bag holds now {balancePretty}.";
 
             var thumbnailUrl = win

@@ -33,6 +33,29 @@ namespace Server.Communication.Discord.Interactions
             var stakesService = env.ServerManager.StakesService;
             var usersService = env.ServerManager.UsersService;
 
+            // Only staff should be able to resolve stakes via these buttons.
+            // If the interaction user is not in the staff role, block it.
+            try
+            {
+                var member = e.Guild?.GetMemberAsync(e.User.Id).Result;
+                if (member == null || !member.Roles.Any(r => r.Id == Server.Infrastructure.Discord.DiscordIds.StaffRoleId))
+                {
+                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder()
+                            .WithContent("You are not allowed to resolve stakes.")
+                            .AsEphemeral(true));
+                    return;
+                }
+            }
+            catch
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder()
+                        .WithContent("You are not allowed to resolve stakes.")
+                        .AsEphemeral(true));
+                return;
+            }
+
             var stake = stakesService.GetStakeById(stakeId);
             if (stake == null)
             {

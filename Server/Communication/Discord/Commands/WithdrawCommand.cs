@@ -19,7 +19,7 @@ namespace Server.Communication.Discord.Commands
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, DateTime> LastUsed = new();
 
         [Command("w")]
-        [Aliases("withdraw")]
+        [Aliases("withdraw", "wd")]
         public async Task Withdraw(CommandContext ctx, string amount)
         {
             if (IsRateLimited(ctx.User.Id))
