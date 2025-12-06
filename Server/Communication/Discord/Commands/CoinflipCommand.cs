@@ -20,6 +20,11 @@ namespace Server.Communication.Discord.Commands
         [Aliases("cf")]
         public async Task Coinflip(CommandContext ctx, string amount = null)
         {
+            if (!await DiscordChannelPermissionService.EnforceCoinflipChannelAsync(ctx))
+            {
+                return;
+            }
+
             if (RateLimiter.IsRateLimited(ctx.User.Id, "coinflip", RateLimitInterval))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");

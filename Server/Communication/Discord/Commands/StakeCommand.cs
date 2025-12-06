@@ -19,6 +19,11 @@ namespace Server.Communication.Discord.Commands
         [Aliases("s")]
         public async Task Stake(CommandContext ctx, string amount)
         {
+            if (!await DiscordChannelPermissionService.EnforceStakeChannelAsync(ctx))
+            {
+                return;
+            }
+
             if (RateLimiter.IsRateLimited(ctx.User.Id, "stake", RateLimitInterval))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");

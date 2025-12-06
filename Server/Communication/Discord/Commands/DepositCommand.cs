@@ -21,6 +21,11 @@ namespace Server.Communication.Discord.Commands
         [Aliases("deposit")] 
         public async Task Deposit(CommandContext ctx, string amount)
         {
+            if (!await DiscordChannelPermissionService.EnforceDepositChannelAsync(ctx))
+            {
+                return;
+            }
+
             if (IsRateLimited(ctx.User.Id))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");

@@ -21,6 +21,11 @@ namespace Server.Communication.Discord.Commands
         [Aliases("withdraw", "wd")]
         public async Task Withdraw(CommandContext ctx, string amount)
         {
+            if (!await DiscordChannelPermissionService.EnforceWithdrawChannelAsync(ctx))
+            {
+                return;
+            }
+
             if (IsRateLimited(ctx.User.Id))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
