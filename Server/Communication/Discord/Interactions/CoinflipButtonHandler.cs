@@ -305,10 +305,11 @@ namespace Server.Communication.Discord.Interactions
                 usersService.AddBalance(user.Identifier, totalWinK);
             }
 
-            // Fire-and-forget live feed entry for coinflip games
+            // Fire-and-forget live feed entry for coinflip games.
+            // Pass the same amount we show to the user.
             try
             {
-                env.ServerManager.LiveFeedService?.PublishCoinflip(betAmountK, win, resultHeads);
+                env.ServerManager.LiveFeedService?.PublishCoinflip(win && totalWinK > 0 ? totalWinK : betAmountK, win, resultHeads);
             }
             catch
             {
@@ -378,7 +379,9 @@ namespace Server.Communication.Discord.Interactions
 
             // All-in means user had 0 left before this flip resolved.
             bool isAllInWin = win && preFlipBalanceK == 0;
-            bool isBigBet = betAmountK >= 1_000_000L; // >= 1B
+            // Big bet is determined by the total returned amount (stake + winnings)
+            long totalReturnedK = win && totalWinK > 0 ? totalWinK : betAmountK;
+            bool isBigBet = totalReturnedK >= 1_000_000L; // >= 1B
 
             var title = win ? $"Coinflip won #{flip.Id}" : $"Coinflip lost #{flip.Id}";
 

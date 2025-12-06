@@ -47,7 +47,8 @@ namespace Server.Client.LiveFeed
                     var amountPretty = GpFormatter.Format(amountK);
                     var sideText = resultHeads ? "Heads" : "Tails";
 
-                    var isBigWin = win && amountK >= 1_000_000L; // >= 1B bet
+                    // Big win is based on the total returned amount (amountK).
+                    var isBigWin = win && amountK >= 1_000_000L; // >= 1B
 
                     string description;
                     DiscordColor color;
@@ -94,7 +95,8 @@ namespace Server.Client.LiveFeed
                     var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
                     var amountPretty = GpFormatter.Format(amountK);
 
-                    var isBigWin = win && amountK >= 1_000_000L; // >= 1B stake
+                    // Big win is based on the total returned amount (amountK).
+                    var isBigWin = win && amountK >= 1_000_000L; // >= 1B
 
                     string description;
                     DiscordColor color;

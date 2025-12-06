@@ -252,10 +252,13 @@ namespace Server.Communication.Discord.Interactions
                         .WithContent($"<@{stake.Identifier}>")
                         .AddEmbed(userEmbed));
 
-                    // Fire-and-forget live feed entry for stake games
+                    // Fire-and-forget live feed entry for stake games.
+                    // Pass the same amount we show to the user.
                     try
                     {
-                        envInner.ServerManager.LiveFeedService?.PublishStake(stake.AmountK, newStatus == StakeStatus.Won);
+                        envInner.ServerManager.LiveFeedService?.PublishStake(
+                            newStatus == StakeStatus.Won && payoutK > 0 ? totalWinK : stake.AmountK,
+                            newStatus == StakeStatus.Won);
                     }
                     catch
                     {
