@@ -8,12 +8,12 @@ namespace Server.Infrastructure.Discord
     {
         public static bool IsInDepositTicketChannel(CommandContext ctx)
         {
-            return IsInCategory(ctx.Channel, DiscordIds.DepositTicketCategoryId);
+            return IsInAnyCategory(ctx.Channel, DiscordIds.DepositTicketCategoryIds);
         }
 
         public static bool IsInWithdrawTicketChannel(CommandContext ctx)
         {
-            return IsInCategory(ctx.Channel, DiscordIds.WithdrawTicketCategoryId);
+            return IsInAnyCategory(ctx.Channel, DiscordIds.WithdrawTicketCategoryIds);
         }
 
         public static bool IsInCoinflipTicketChannel(CommandContext ctx)
@@ -24,12 +24,6 @@ namespace Server.Infrastructure.Discord
         public static bool IsInStakeTicketChannel(CommandContext ctx)
         {
             return IsInAnyCategory(ctx.Channel, DiscordIds.StakeTicketCategoryIds);
-        }
-
-        private static bool IsInCategory(DiscordChannel channel, ulong categoryId)
-        {
-            // If the channel has a parent, compare against the required category.
-            return channel.ParentId.HasValue && channel.ParentId.Value == categoryId;
         }
 
         private static bool IsInAnyCategory(DiscordChannel channel, ulong[] categoryIds)
@@ -70,7 +64,7 @@ namespace Server.Infrastructure.Discord
             if (IsInCoinflipTicketChannel(ctx))
                 return true;
 
-            await ctx.RespondAsync("You can only use this command inside a coinflip ticket channel.");
+            await ctx.RespondAsync("You can only use this command inside a games channel.");
             return false;
         }
 
@@ -79,7 +73,7 @@ namespace Server.Infrastructure.Discord
             if (IsInStakeTicketChannel(ctx))
                 return true;
 
-            await ctx.RespondAsync("You can only use this command inside a stake ticket channel.");
+            await ctx.RespondAsync("You can only use this command inside a games channel.");
             return false;
         }
     }

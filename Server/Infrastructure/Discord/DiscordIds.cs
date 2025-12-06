@@ -26,9 +26,16 @@ namespace Server.Infrastructure.Discord
         public const ulong StakeStaffChannelId = 1446157757106491404UL;
         public const ulong LiveFeedChannelId = 1446877400318349352UL;
 
-        // Ticket categories (single-category commands)
-        public const ulong DepositTicketCategoryId = 1446849201269899306UL;
-        public const ulong WithdrawTicketCategoryId = 1446849201269899306UL;
+        // Ticket categories (single or multi)
+        public static readonly ulong[] DepositTicketCategoryIds =
+        {
+            1446849201269899306UL,
+        };
+
+        public static readonly ulong[] WithdrawTicketCategoryIds =
+        {
+            1446849201269899306UL,
+        };
 
         // Multi-category commands (can be extended with more IDs)
         public static readonly ulong[] CoinflipTicketCategoryIds =
@@ -84,6 +91,29 @@ namespace Server.Infrastructure.Discord
         ////Ticket categories
         //public const ulong DepositTicketCategoryId = 1430501307193495609UL;
         //public const ulong WithdrawTicketCategoryId = 1430501307491287110UL;
+
+        //// Ticket categories (single or multi)
+        //public static readonly ulong[] DepositTicketCategoryIds =
+        //{
+        //    1430501307193495609UL,
+        //    1430501307491287110UL,
+        //    1430501307034107995UL,
+        //    1430501307193495609UL,
+        //    1430501307491287110UL,
+        //    1430501307491287116UL,
+        //    1430501307491287118UL
+        //};
+
+        //public static readonly ulong[] WithdrawTicketCategoryIds =
+        //{
+        //    1430501307491287110UL,
+        //    1430501307193495609UL,
+        //    1430501307034107995UL,
+        //    1430501307193495609UL,
+        //    1430501307491287110UL,
+        //    1430501307491287116UL,
+        //    1430501307491287118UL
+        //};
 
         ////Multi-category commands(can be extended with more IDs)
         //public static readonly ulong[] CoinflipTicketCategoryIds =
@@ -142,11 +172,20 @@ namespace Server.Infrastructure.Discord
         //public const ulong StakeStaffChannelId = 1096096459063046188UL;
         //public const ulong LiveFeedChannelId = 1096096457695703127UL;
 
-        ////Ticket categories
-        //public const ulong DepositTicketCategoryId = 1430501307193495609UL;
-        //public const ulong WithdrawTicketCategoryId = 1430501307491287110UL;
+        //// Ticket categories (single or multi)
+        //public static readonly ulong[] DepositTicketCategoryIds =
+        //{
+        //    1096096459063046192UL,
+        //    1179586576674726010UL
+        //};
 
-        ////Multi-category commands(can be extended with more IDs)
+        //public static readonly ulong[] WithdrawTicketCategoryIds =
+        //{
+        //    1096096459063046192UL,
+        //    1179586576674726010UL
+        //};
+
+        //// Multi-category commands (can be extended with more IDs)
         //public static readonly ulong[] CoinflipTicketCategoryIds =
         //{
         //    1096096458157072526UL,
