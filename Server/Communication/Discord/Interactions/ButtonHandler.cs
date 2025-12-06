@@ -31,6 +31,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Coinflip buttons
+            if (e.Id.StartsWith("cf_", StringComparison.OrdinalIgnoreCase))
+            {
+                await CoinflipButtonHandler.Handle(client, e);
+                return;
+            }
+
             // Other button namespaces (game_, etc.) can be routed here later
         }
     }

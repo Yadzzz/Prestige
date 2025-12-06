@@ -53,6 +53,16 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Only the user who created this withdrawal may choose deposit type
+            if (e.User == null || !string.Equals(e.User.Id.ToString(), transaction.Identifier, StringComparison.Ordinal))
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder()
+                        .WithContent("This withdrawal doesn't belong to you.")
+                        .AsEphemeral(true));
+                return;
+            }
+
             if (transaction.Status != TransactionStatus.Pending)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,

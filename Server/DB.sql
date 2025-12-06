@@ -80,3 +80,20 @@
 
 --ALTER TABLE `users`
 --  ADD COLUMN `stake_lose_streak` INT NOT NULL DEFAULT 0 AFTER `stake_streak`;
+
+--CREATE TABLE coinflips (
+--    id          INT AUTO_INCREMENT PRIMARY KEY,
+--    user_id     INT NOT NULL,
+--    identifier  VARCHAR(64) NOT NULL,
+--    amount_k    BIGINT NOT NULL,
+--    chose_heads TINYINT(1) NULL,
+--    result_heads TINYINT(1) NULL,
+--    status      INT NOT NULL,
+--    message_id  BIGINT NULL,
+--    channel_id  BIGINT NULL,
+--    created_at  DATETIME NOT NULL,
+--    updated_at  DATETIME NOT NULL
+--);
+
+--CREATE INDEX idx_coinflips_user_id ON coinflips(user_id);
+--CREATE INDEX idx_coinflips_identifier ON coinflips(identifier);

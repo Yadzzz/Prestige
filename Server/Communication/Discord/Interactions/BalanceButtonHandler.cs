@@ -15,6 +15,11 @@ namespace Server.Communication.Discord.Interactions
     {
         public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
         {
+            // All balance buttons are user-side; only the invoker may use them
+            var identifier = e.User?.Id.ToString();
+            if (string.IsNullOrEmpty(identifier))
+                return;
+
             if (e.Id.StartsWith("bal_history", StringComparison.OrdinalIgnoreCase))
             {
                 await HandleHistoryAsync(e);
