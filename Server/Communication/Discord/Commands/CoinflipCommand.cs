@@ -97,21 +97,21 @@ namespace Server.Communication.Discord.Commands
             var headsButton = new DiscordButtonComponent(
                 ButtonStyle.Secondary,
                 $"cf_heads_{flip.Id}",
-                "Heads",
+                " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId)
             );
 
             var tailsButton = new DiscordButtonComponent(
                 ButtonStyle.Secondary,
                 $"cf_tails_{flip.Id}",
-                "Tails",
+                " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId)
             );
 
             var exitButton = new DiscordButtonComponent(
                 ButtonStyle.Secondary,
                 $"cf_exit_{flip.Id}",
-                "Exit",
+                "Refund",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)
             );
 

@@ -7,7 +7,7 @@ using DSharpPlus.EventArgs;
 using Server.Client.Transactions;
 using Server.Client.Users;
 using Server.Client.Utils;
-using Server.Infrastructure;
+using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Interactions
 {
@@ -26,6 +26,12 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            if (e.Id.Equals("bal_wallet", StringComparison.OrdinalIgnoreCase))
+            {
+                await HandleWalletAsync(e);
+                return;
+            }
+
             if (e.Id.Equals("bal_deposit", StringComparison.OrdinalIgnoreCase))
             {
                 await HandleDepositInfoAsync(e);
@@ -37,6 +43,41 @@ namespace Server.Communication.Discord.Interactions
                 await HandleWithdrawInfoAsync(e);
                 return;
             }
+        }
+
+        private static async Task HandleWalletAsync(ComponentInteractionCreateEventArgs e)
+        {
+            var env = ServerEnvironment.GetServerEnvironment();
+            var usersService = env.ServerManager.UsersService;
+
+            var user = await usersService.EnsureUserAsync(e.User.Id.ToString(), e.User.Username, e.User.Username);
+            if (user == null)
+                return;
+
+            var formatted = GpFormatter.Format(user.Balance);
+
+            // Build embed
+            var embed = new DiscordEmbedBuilder()
+                .WithTitle("Balance")
+                .WithDescription($"{e.User.Username}, you have **{formatted}**.")
+                .WithColor(DiscordColor.Gold)
+                .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                .WithFooter($"Prestige Bets")
+                .WithTimestamp(System.DateTimeOffset.UtcNow);
+
+            // Buttons row 1
+            var row1 = new[]
+            {
+                new DiscordButtonComponent(ButtonStyle.Primary, "bal_deposit", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, "bal_history", "History", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Primary, "bal_withdraw", "Withdraw", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
+            };
+
+            var builder = new DiscordInteractionResponseBuilder()
+                .AddEmbed(embed)
+                .AddComponents(row1);
+
+            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, builder);
         }
 
         private static async Task HandleHistoryAsync(ComponentInteractionCreateEventArgs e)
@@ -63,6 +104,8 @@ namespace Server.Communication.Discord.Interactions
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Transaction History")
                 .WithColor(DiscordColor.Blurple)
+                //.WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                .WithThumbnail("https://i.imgur.com/Axcs6YE.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             if (user != null)
@@ -98,6 +141,10 @@ namespace Server.Communication.Discord.Interactions
             {
                 components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{page - 1}", "⏮ Prev"));
             }
+            
+            // Add Wallet button in the middle
+            components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, "bal_wallet", "Wallet", emoji: new DiscordComponentEmoji(DiscordIds.WalletEmojiId)));
+
             if (txs != null && txs.Count == pageSize && page * pageSize < totalCount)
             {
                 components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{page + 1}", "Next ⏭"));
@@ -111,8 +158,8 @@ namespace Server.Communication.Discord.Interactions
                 builder.AddComponents(components);
             }
 
-            // Send a new message for history instead of editing the original
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, builder);
+            // Update the message instead of sending a new one
+            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, builder);
         }
 
         private static async Task HandleDepositInfoAsync(ComponentInteractionCreateEventArgs e)

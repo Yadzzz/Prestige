@@ -70,6 +70,12 @@ namespace Server.Infrastructure.Discord
         public const ulong CoinflipGoldEmojiId = 1446889072537894994UL; // win
         public const ulong CoinflipSilverEmojiId = 1446889057874346124UL; // loss
 
+        // Balance
+        public const ulong BalanceSheetEmojiId = 1447330999812755557UL;
+        public const ulong WithdrawEmojiId = 1447330230237659287UL;
+        public const ulong DepositEmojiId = 1447330227360502013UL;
+        public const ulong WalletEmojiId = 1447335171387949127UL;
+
 
 
 

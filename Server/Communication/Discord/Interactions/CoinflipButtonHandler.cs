@@ -131,19 +131,19 @@ namespace Server.Communication.Discord.Interactions
                 var headsButtonRematch = new DiscordButtonComponent(
                     ButtonStyle.Secondary,
                     $"cf_heads_{newFlip.Id}",
-                    "Heads",
+                    " ",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId));
 
                 var tailsButtonRematch = new DiscordButtonComponent(
                     ButtonStyle.Secondary,
                     $"cf_tails_{newFlip.Id}",
-                    "Tails",
+                    " ",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId));
 
                 var exitButtonRematch = new DiscordButtonComponent(
                     ButtonStyle.Danger,
                     $"cf_exit_{newFlip.Id}",
-                    "Exit",
+                    "Refund",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
 
                 // Disable buttons on the old result/rematch message but keep them visible
@@ -184,7 +184,7 @@ namespace Server.Communication.Discord.Interactions
                 var disabledExitButton = new DiscordButtonComponent(
                     ButtonStyle.Danger,
                     $"cf_exit_{flip.Id}",
-                    "Exit",
+                    "Refund",
                     true,
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
 
@@ -468,9 +468,11 @@ namespace Server.Communication.Discord.Interactions
             }
 
             // Losses
+            // If user chose heads and lost, result was tails -> show tails loss
+            // If user chose tails and lost, result was heads -> show heads loss
             return choseHeads
-                ? "https://i.imgur.com/r7vmMon.gif"           // heads loss
-                : "https://i.imgur.com/q8e2eXR.gif";          // tails loss
+                ? "https://i.imgur.com/q8e2eXR.gif"           // chose heads, lost -> result tails
+                : "https://i.imgur.com/r7vmMon.gif";          // chose tails, lost -> result heads
         }
     }
 }

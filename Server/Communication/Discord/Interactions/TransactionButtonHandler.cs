@@ -290,14 +290,37 @@ namespace Server.Communication.Discord.Interactions
 
             if (newStatus == TransactionStatus.Accepted)
             {
+                var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
+                usersService.TryGetUser(transaction.Identifier, out var targetUser);
+
                 if (transaction.Type == TransactionType.Deposit)
                 {
                     usersService.AddBalance(transaction.Identifier, transaction.AmountK);
+                    if (targetUser != null)
+                    {
+                        balanceAdjustmentsService.RecordAdjustment(
+                            targetUser,
+                            e.User.Id.ToString(),
+                            BalanceAdjustmentType.Deposit,
+                            transaction.AmountK,
+                            source: "TransactionButtonHandler",
+                            reason: $"Deposit Accepted (TxId: {txId})");
+                    }
                 }
                 else if (transaction.Type == TransactionType.Withdraw)
                 {
                     // For withdrawals, the amount was already locked when the request was created.
                     // On accept we don't change balance again; on cancel/deny we refund below.
+                    if (targetUser != null)
+                    {
+                        balanceAdjustmentsService.RecordAdjustment(
+                            targetUser,
+                            e.User.Id.ToString(),
+                            BalanceAdjustmentType.Withdraw,
+                            transaction.AmountK,
+                            source: "TransactionButtonHandler",
+                            reason: $"Withdrawal Accepted (TxId: {txId})");
+                    }
                 }
             }
             else if ((newStatus == TransactionStatus.Cancelled || newStatus == TransactionStatus.Denied)

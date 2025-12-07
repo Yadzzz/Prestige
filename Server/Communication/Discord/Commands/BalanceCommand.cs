@@ -6,10 +6,10 @@ using Server.Client.Users;
 using Server.Client.Transactions;
 using Server.Infrastructure;
 using Server.Client.Utils;
-using Server.Communication.Discord.Interactions;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
 {
@@ -29,7 +29,6 @@ namespace Server.Communication.Discord.Commands
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
             var transactionsService = env.ServerManager.TransactionsService;
-            var adjustmentsService = env.ServerManager.BalanceAdjustmentsService;
 
             var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
             if (user == null)
@@ -40,7 +39,7 @@ namespace Server.Communication.Discord.Commands
             // Build embed
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Balance")
-                .WithDescription($"{ctx.Member.DisplayName}, you have **{formatted}** in your wallet.")
+                .WithDescription($"{ctx.Member.DisplayName}, you have **{formatted}**.")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
                 .WithFooter($"Prestige Bets")
@@ -50,11 +49,11 @@ namespace Server.Communication.Discord.Commands
             // Buttons row 1
             var row1 = new[]
             {
-            new DiscordButtonComponent(ButtonStyle.Primary, "bal_deposit", "Deposit", emoji: new DiscordComponentEmoji("💳")),
-            new DiscordButtonComponent(ButtonStyle.Secondary, "bal_history", "History", emoji: new DiscordComponentEmoji("📜")),
-            new DiscordButtonComponent(ButtonStyle.Primary, "bal_withdraw", "Withdraw", emoji: new DiscordComponentEmoji("🏧")),
-            //new DiscordButtonComponent(ButtonStyle.Success, "bal_buy", "Buy", emoji: new DiscordComponentEmoji("🛒"))
-        };
+                new DiscordButtonComponent(ButtonStyle.Primary, "bal_deposit", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, "bal_history", "History", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Primary, "bal_withdraw", "Withdraw", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
+                //new DiscordButtonComponent(ButtonStyle.Success, "bal_buy", "Buy", emoji: new DiscordComponentEmoji("🛒"))
+            };
 
             // Buttons row 2
         //    var row2 = new[]
@@ -72,7 +71,7 @@ namespace Server.Communication.Discord.Commands
             );
         }
 
-        [Command("b")]
+        [Command("balance")]
         [RequireRoles(RoleCheckMode.Any, "Staff", "Admin", "Moderator")]
         public async Task Balance(CommandContext ctx, DiscordMember member)
         {
@@ -100,50 +99,6 @@ namespace Server.Communication.Discord.Commands
             await ctx.RespondAsync(new DiscordMessageBuilder()
                 .WithContent(member.Mention)
                 .AddEmbed(embed));
-        }
-
-        [Command("history")]
-        [Aliases("transactions", "tx", "txs")]
-        public async Task History(CommandContext ctx, int page = 1)
-        {
-            if (page < 1)
-            {
-                page = 1;
-            }
-
-            var env = ServerEnvironment.GetServerEnvironment();
-            var usersService = env.ServerManager.UsersService;
-            var transactionsService = env.ServerManager.TransactionsService;
-
-            var identifier = ctx.User.Id.ToString();
-
-            const int pageSize = 10;
-
-            usersService.TryGetUser(identifier, out var user);
-            var txs = transactionsService.GetTransactionsPageForUser(identifier, page, pageSize, out var totalTxCount);
-            var adjustments = adjustmentsService.GetAdminAddAdjustmentsForUser(identifier, page, pageSize, out var totalAdjCount);
-
-            var totalCount = totalTxCount + totalAdjCount;
-
-            var (embed, components) = HistoryViewBuilder.BuildHistoryView(
-                discordUserName: ctx.User.Username,
-                user,
-                txs,
-                adjustments,
-                page,
-                pageSize,
-                totalCount,
-                historyCustomIdPrefix: "bal_history");
-
-            var builder = new DiscordMessageBuilder()
-                .AddEmbed(embed);
-
-            if (components != null && components.Count > 0)
-            {
-                builder.AddComponents(components);
-            }
-
-            await ctx.RespondAsync(builder);
         }
     }
 }
