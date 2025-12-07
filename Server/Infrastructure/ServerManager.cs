@@ -24,6 +24,7 @@ namespace Server.Infrastructure
         public DiscordBotHost DiscordBotHost { get; set; }
         public UsersService UsersService { get; set; }
         public TransactionsService TransactionsService { get; set; }
+        public BalanceAdjustmentsService BalanceAdjustmentsService { get; set; }
         public StakesService StakesService { get; set; }
         public CoinflipsService CoinflipsService { get; set; }
         public LogsService LogsService { get; set; }
@@ -41,6 +42,7 @@ namespace Server.Infrastructure
             });
             this.UsersService = new UsersService(this.DatabaseManager);
             this.TransactionsService = new TransactionsService(this.DatabaseManager, this.UsersService);
+            this.BalanceAdjustmentsService = new BalanceAdjustmentsService(this.DatabaseManager, this.UsersService);
             this.StakesService = new StakesService(this.DatabaseManager);
             this.CoinflipsService = new CoinflipsService(this.DatabaseManager);
             this.LogsService = new LogsService(this.DatabaseManager);

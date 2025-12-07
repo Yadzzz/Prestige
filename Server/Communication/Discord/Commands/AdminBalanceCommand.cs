@@ -5,6 +5,7 @@ using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using Server.Client.Users;
 using Server.Client.Utils;
+using Server.Client.Transactions;
 using Server.Infrastructure;
 
 namespace Server.Communication.Discord.Commands
@@ -15,13 +16,13 @@ namespace Server.Communication.Discord.Commands
         [Command("add")]
         public async Task AddAsync(CommandContext ctx, string amount, DiscordMember member)
         {
-            await HandleBalanceChangeAsync(ctx, amount, member, isGift: false);
+            await HandleBalanceChangeAsync(ctx, amount, member, BalanceAdjustmentType.AdminAdd);
         }
 
         [Command("gift")]
         public async Task GiftAsync(CommandContext ctx, string amount, DiscordMember member)
         {
-            await HandleBalanceChangeAsync(ctx, amount, member, isGift: true);
+            await HandleBalanceChangeAsync(ctx, amount, member, BalanceAdjustmentType.AdminGift);
         }
 
         [Command("remove")]
@@ -30,10 +31,11 @@ namespace Server.Communication.Discord.Commands
             await HandleBalanceRemovalAsync(ctx, amount, member);
         }
 
-        private async Task HandleBalanceChangeAsync(CommandContext ctx, string amount, DiscordMember targetMember, bool isGift)
+        private async Task HandleBalanceChangeAsync(CommandContext ctx, string amount, DiscordMember targetMember, BalanceAdjustmentType adjustmentType)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
+            var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
 
             if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
@@ -60,20 +62,28 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            var staffIdentifier = ctx.Member?.Id.ToString() ?? ctx.User.Id.ToString();
+            balanceAdjustmentsService.RecordAdjustment(
+                targetUser,
+                staffIdentifier,
+                adjustmentType,
+                amountK,
+                source: "AdminCommand");
+
             usersService.TryGetUser(targetUser.Identifier, out var updatedUser);
             var prettyAmount = GpFormatter.Format(amountK);
             var newBalanceText = updatedUser != null ? GpFormatter.Format(updatedUser.Balance) : "unknown";
 
             var staffName = ctx.Member?.DisplayName ?? ctx.User.Username;
 
-            var title = isGift ? "Gifted Balance" : "Added Balance";
+            var title = adjustmentType == BalanceAdjustmentType.AdminGift ? "Gifted Balance" : "Added Balance";
             var embed = new DiscordEmbedBuilder()
                 .WithTitle(title)
                 .AddField("Amount", $"**{prettyAmount}**", true)
                 .AddField("Member", targetMember.Username, true)
                 .AddField("Staff", staffName, true)
                 .WithColor(DiscordColor.Green)
-                .WithThumbnail(isGift ? "https://i.imgur.com/vFstFPx.gif" : "https://i.imgur.com/0qEQpNC.gif")
+                .WithThumbnail(adjustmentType == BalanceAdjustmentType.AdminGift ? "https://i.imgur.com/vFstFPx.gif" : "https://i.imgur.com/0qEQpNC.gif")
                 .WithFooter("Prestige Bets")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
@@ -86,6 +96,7 @@ namespace Server.Communication.Discord.Commands
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
+            var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
 
             if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
@@ -111,6 +122,14 @@ namespace Server.Communication.Discord.Commands
                 await ctx.RespondAsync("Failed to update user balance. Please try again later.");
                 return;
             }
+
+            var staffIdentifier = ctx.Member?.Id.ToString() ?? ctx.User.Id.ToString();
+            balanceAdjustmentsService.RecordAdjustment(
+                targetUser,
+                staffIdentifier,
+                BalanceAdjustmentType.AdminRemove,
+                amountK,
+                source: "AdminCommand");
 
             usersService.TryGetUser(targetUser.Identifier, out var updatedUser);
             var prettyAmount = GpFormatter.Format(amountK);

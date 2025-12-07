@@ -109,7 +109,7 @@ namespace Server.Communication.Discord.Commands
             );
 
             var exitButton = new DiscordButtonComponent(
-                ButtonStyle.Danger,
+                ButtonStyle.Secondary,
                 $"cf_exit_{flip.Id}",
                 "Exit",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)

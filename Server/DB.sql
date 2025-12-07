@@ -97,3 +97,25 @@
 
 --CREATE INDEX idx_coinflips_user_id ON coinflips(user_id);
 --CREATE INDEX idx_coinflips_identifier ON coinflips(identifier);
+
+--CREATE TABLE balance_adjustments (
+--    id               SERIAL PRIMARY KEY,
+--    user_id          INT NOT NULL,
+--    user_identifier  VARCHAR(64) NOT NULL,  -- mirrors users.identifier
+--    staff_id         INT NULL,              -- optional link to staff user
+--    staff_identifier VARCHAR(64) NULL,      -- discord id of staff
+--    adjustment_type  SMALLINT NOT NULL,     -- 0 = AdminAdd, 1 = AdminGift, 2 = AdminRemove
+--    amount_k         BIGINT NOT NULL,       -- always positive
+--    source           VARCHAR(64) NOT NULL,  -- e.g. 'AdminCommand', 'System', ...
+--    created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--    reason           TEXT NULL
+--);
+
+--CREATE INDEX idx_balance_adjustments_user_created_at
+--    ON balance_adjustments (user_id, created_at DESC);
+
+--CREATE INDEX idx_balance_adjustments_staff_created_at
+--    ON balance_adjustments (staff_id, created_at DESC);
+
+--CREATE INDEX idx_balance_adjustments_type_created_at
+--    ON balance_adjustments (adjustment_type, created_at DESC);
