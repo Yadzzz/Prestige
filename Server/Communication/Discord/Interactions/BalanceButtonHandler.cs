@@ -83,7 +83,7 @@ namespace Server.Communication.Discord.Interactions
         private static async Task HandleHistoryAsync(ComponentInteractionCreateEventArgs e)
         {
             var env = ServerEnvironment.GetServerEnvironment();
-            var transactionsService = env.ServerManager.TransactionsService;
+            var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
             var usersService = env.ServerManager.UsersService;
 
             var identifier = e.User.Id.ToString();
@@ -99,7 +99,7 @@ namespace Server.Communication.Discord.Interactions
             const int pageSize = 10;
 
             usersService.TryGetUser(identifier, out var user);
-            var txs = transactionsService.GetTransactionsPageForUser(identifier, page, pageSize, out var totalCount);
+            var adjustments = balanceAdjustmentsService.GetAdjustmentsPageForUser(identifier, page, pageSize, out var totalCount);
 
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Transaction History")
@@ -114,21 +114,27 @@ namespace Server.Communication.Discord.Interactions
                 embed.WithDescription($"{e.User.Username}, your current balance is **{balanceText}**.");
             }
 
-            if (txs == null || txs.Count == 0)
+            if (adjustments == null || adjustments.Count == 0)
             {
                 embed.AddField("History", "No transactions found yet.");
             }
             else
             {
-                var lines = txs
-                    .OrderByDescending(t => t.Id)
-                    .Select(t =>
+                var lines = adjustments
+                    .OrderByDescending(a => a.Id)
+                    .Select(a =>
                     {
-                        var typeLabel = t.Type == TransactionType.Withdraw ? "Withdraw" : "Deposit";
-                        var status = t.Status.ToString();
-                        var amount = GpFormatter.Format(t.AmountK);
-                        var when = t.CreatedAt.ToString("yyyy-MM-dd HH:mm");
-                        return $"`#{t.Id}` {typeLabel} **{amount}** • {status} • {when}";
+                        var typeLabel = a.AdjustmentType.ToString();
+                        // Simplify labels for display
+                        if (a.AdjustmentType == BalanceAdjustmentType.AdminAdd) typeLabel = "Added";
+                        else if (a.AdjustmentType == BalanceAdjustmentType.AdminGift) typeLabel = "Gift";
+                        else if (a.AdjustmentType == BalanceAdjustmentType.AdminRemove) typeLabel = "Removed";
+                        else if (a.AdjustmentType == BalanceAdjustmentType.Deposit) typeLabel = "Deposit";
+                        else if (a.AdjustmentType == BalanceAdjustmentType.Withdraw) typeLabel = "Withdraw";
+
+                        var amount = GpFormatter.Format(a.AmountK);
+                        var when = a.CreatedAt.ToString("yyyy-MM-dd HH:mm");
+                        return $"`#{a.Id}` {typeLabel} **{amount}** • {when}";
                     });
 
                 var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)pageSize));
@@ -145,7 +151,7 @@ namespace Server.Communication.Discord.Interactions
             // Add Wallet button in the middle
             components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, "bal_wallet", "Wallet", emoji: new DiscordComponentEmoji(DiscordIds.WalletEmojiId)));
 
-            if (txs != null && txs.Count == pageSize && page * pageSize < totalCount)
+            if (adjustments != null && adjustments.Count == pageSize && page * pageSize < totalCount)
             {
                 components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{page + 1}", "Next ⏭"));
             }
