@@ -83,8 +83,7 @@ namespace Server.Communication.Discord.Commands
 
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("One, two, three")
-                .WithDescription("We are gonna see...\n\nWhat's it gonna be?")
-                .AddField("Bet", prettyAmount, true)
+                .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
                 .WithFooter("Prestige Bets")

@@ -121,8 +121,7 @@ namespace Server.Communication.Discord.Interactions
                 var prettyAmount = GpFormatter.Format(newFlip.AmountK);
                 var embedRematch = new DiscordEmbedBuilder()
                     .WithTitle("One, two, three")
-                    .WithDescription("We are gonna see...\n\nWhat's it gonna be?")
-                    .AddField("Bet", prettyAmount, true)
+                    .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
                     .WithColor(DiscordColor.Gold)
                     .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
                     .WithFooter("Prestige Bets")
@@ -404,8 +403,28 @@ namespace Server.Communication.Discord.Interactions
             }
 
             var body = win
-                ? $"You won **{totalWinPretty}**.\nYour gold bag now holds **{balancePretty}**."
-                : $"You lost **{amountPretty}**.\nYour gold bag now holds **{balancePretty}**.";
+                ? $"You won `{totalWinPretty}`.\nYour gold bag now holds `{balancePretty}`."
+                : $"You lost `{amountPretty}`.\nYour gold bag now holds `{balancePretty}`.";
+
+            string suffix;
+            if (!win)
+            {
+                suffix = "Perhaps next time...";
+            }
+            else if (isAllInWin)
+            {
+                suffix = "Will you max success again?";
+            }
+            else if (isBigBet)
+            {
+                suffix = "Just one more?";
+            }
+            else
+            {
+                suffix = "Dare to try your luck again?";
+            }
+
+            body += $"\n\n*{suffix}*";
 
             var thumbnailUrl = SelectThumbnailUrl(win, choseHeads, isBigBet, isAllInWin);
 
@@ -433,7 +452,7 @@ namespace Server.Communication.Discord.Interactions
 
             return new DiscordEmbedBuilder()
                 .WithTitle(title)
-                .WithDescription($"{description}\n\n{body}")
+                .WithDescription($"**{description}**\n\n{body}")
                 .WithColor(color)
                 .WithThumbnail(thumbnailUrl)
                 .WithFooter("Prestige Bets")

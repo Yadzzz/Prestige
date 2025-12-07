@@ -59,7 +59,7 @@ namespace Server.Communication.Discord.Interactions
             // Build embed
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Balance")
-                .WithDescription($"{e.User.Username}, you have **{formatted}**.")
+                .WithDescription($"{e.User.Username}, you have `{formatted}`.")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
                 .WithFooter($"Prestige Bets")
@@ -111,7 +111,7 @@ namespace Server.Communication.Discord.Interactions
             if (user != null)
             {
                 var balanceText = GpFormatter.Format(user.Balance);
-                embed.WithDescription($"{e.User.Username}, your current balance is **{balanceText}**.");
+                embed.WithDescription($"{e.User.Username}, your current balance is `{balanceText}`.");
             }
 
             if (adjustments == null || adjustments.Count == 0)

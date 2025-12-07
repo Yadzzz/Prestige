@@ -39,7 +39,7 @@ namespace Server.Communication.Discord.Commands
             // Build embed
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Balance")
-                .WithDescription($"{ctx.Member.DisplayName}, you have **{formatted}**.")
+                .WithDescription($"{ctx.Member.DisplayName}, you have `{formatted}`.")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
                 .WithFooter($"Prestige Bets")
