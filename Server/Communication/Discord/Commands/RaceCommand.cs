@@ -10,9 +10,14 @@ namespace Server.Communication.Discord.Commands
     public class RaceCommand : BaseCommandModule
     {
         [Command("racecreate")]
-        [RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
         public async Task RaceCreate(CommandContext ctx)
         {
+            if (ctx.Member == null || !ctx.Member.Roles.Any(r => r.Id == DiscordIds.StaffRoleId))
+            {
+                await ctx.RespondAsync("You are not authorized to use this command.");
+                return;
+            }
+
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Race Configuration")
                 .WithDescription("Configure the new race using the menu below.")
@@ -34,9 +39,14 @@ namespace Server.Communication.Discord.Commands
         }
 
         [Command("raceend")]
-        [RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
         public async Task RaceEnd(CommandContext ctx)
         {
+            if (ctx.Member == null || !ctx.Member.Roles.Any(r => r.Id == DiscordIds.StaffRoleId))
+            {
+                await ctx.RespondAsync("You are not authorized to use this command.");
+                return;
+            }
+
             var env = ServerEnvironment.GetServerEnvironment();
             env.ServerManager.RaceService.EndRace();
             await ctx.RespondAsync("Race ended manually.");
