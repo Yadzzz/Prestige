@@ -25,6 +25,7 @@ namespace Server.Infrastructure.Discord
         public const ulong WithdrawStaffChannelId = 1446212852388991118UL;
         public const ulong StakeStaffChannelId = 1446157757106491404UL;
         public const ulong LiveFeedChannelId = 1446877400318349352UL;
+        public const ulong RaceChannelId = 1447522659759030324UL;
 
         // Ticket categories (single or multi)
         public static readonly ulong[] DepositTicketCategoryIds =
@@ -75,6 +76,7 @@ namespace Server.Infrastructure.Discord
         public const ulong WithdrawEmojiId = 1447330230237659287UL;
         public const ulong DepositEmojiId = 1447330227360502013UL;
         public const ulong WalletEmojiId = 1447335171387949127UL;
+        public const ulong BuyEmojiId = 1447583989178302485UL;
 
 
 

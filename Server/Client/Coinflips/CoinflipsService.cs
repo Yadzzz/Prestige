@@ -35,6 +35,10 @@ namespace Server.Client.Coinflips
                         return null;
                 }
 
+                // Register wager for race
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.RaceService?.RegisterWager(user.Identifier, user.DisplayName ?? user.Username, amountK);
+
                 using (var fetch = new DatabaseCommand())
                 {
                     fetch.SetCommand("SELECT * FROM coinflips WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
@@ -132,6 +136,34 @@ namespace Server.Client.Coinflips
             }
 
             return false;
+        }
+
+        public System.Collections.Generic.List<Coinflip> GetPendingCoinflipsByUserId(int userId)
+        {
+            var list = new System.Collections.Generic.List<Coinflip>();
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("SELECT * FROM coinflips WHERE user_id = @user_id AND status = @status");
+                    command.AddParameter("user_id", userId);
+                    command.AddParameter("status", (int)CoinflipStatus.Pending);
+
+                    using (var reader = command.ExecuteDataReader())
+                    {
+                        while (reader != null && reader.Read())
+                        {
+                            list.Add(MapCoinflip(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"GetPendingCoinflipsByUserId failed: {ex}");
+            }
+            return list;
         }
 
         private Coinflip MapCoinflip(System.Data.IDataRecord reader)

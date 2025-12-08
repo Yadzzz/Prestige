@@ -37,6 +37,10 @@ namespace Server.Client.Stakes
                         return null;
                 }
 
+                // Register wager for race
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.RaceService?.RegisterWager(user.Identifier, user.DisplayName ?? user.Username, amountK);
+
                 using (var fetch = new DatabaseCommand())
                 {
                     fetch.SetCommand("SELECT * FROM stakes WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
@@ -194,6 +198,34 @@ namespace Server.Client.Stakes
             }
 
             return false;
+        }
+
+        public System.Collections.Generic.List<Stake> GetPendingStakesByUserId(int userId)
+        {
+            var list = new System.Collections.Generic.List<Stake>();
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("SELECT * FROM stakes WHERE user_id = @user_id AND status = @status");
+                    command.AddParameter("user_id", userId);
+                    command.AddParameter("status", (int)StakeStatus.Pending);
+
+                    using (var reader = command.ExecuteDataReader())
+                    {
+                        while (reader != null && reader.Read())
+                        {
+                            list.Add(MapStake(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"GetPendingStakesByUserId failed: {ex}");
+            }
+            return list;
         }
 
         private Stake MapStake(System.Data.IDataRecord reader)

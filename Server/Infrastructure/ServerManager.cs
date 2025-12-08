@@ -13,6 +13,7 @@ using Server.Client.Stakes;
 using Server.Client.Audit;
 using Server.Client.Coinflips;
 using Server.Client.LiveFeed;
+using Server.Client.Races;
 
 namespace Server.Infrastructure
 {
@@ -29,6 +30,7 @@ namespace Server.Infrastructure
         public CoinflipsService CoinflipsService { get; set; }
         public LogsService LogsService { get; set; }
         public LiveFeedService LiveFeedService { get; set; }
+        public RaceService RaceService { get; set; }
 
         public ServerManager()
         {
@@ -46,6 +48,7 @@ namespace Server.Infrastructure
             this.StakesService = new StakesService(this.DatabaseManager);
             this.CoinflipsService = new CoinflipsService(this.DatabaseManager);
             this.LogsService = new LogsService(this.DatabaseManager);
+            this.RaceService = new RaceService(this);
 
             var discordOptions = new DiscordOptions
             {

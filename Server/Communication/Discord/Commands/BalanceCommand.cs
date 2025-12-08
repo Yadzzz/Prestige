@@ -49,10 +49,10 @@ namespace Server.Communication.Discord.Commands
             // Buttons row 1
             var row1 = new[]
             {
-                new DiscordButtonComponent(ButtonStyle.Primary, "bal_deposit", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, "bal_history", "History", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Primary, "bal_withdraw", "Withdraw", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
-                //new DiscordButtonComponent(ButtonStyle.Success, "bal_buy", "Buy", emoji: new DiscordComponentEmoji("🛒"))
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_buy_{ctx.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_deposit_{ctx.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_withdraw_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
             };
 
             // Buttons row 2

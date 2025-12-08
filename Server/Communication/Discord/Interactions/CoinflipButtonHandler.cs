@@ -140,7 +140,7 @@ namespace Server.Communication.Discord.Interactions
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId));
 
                 var exitButtonRematch = new DiscordButtonComponent(
-                    ButtonStyle.Danger,
+                    ButtonStyle.Secondary,
                     $"cf_exit_{newFlip.Id}",
                     "Refund",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
@@ -180,15 +180,17 @@ namespace Server.Communication.Discord.Interactions
                     true,
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId));
 
+                /*
                 var disabledExitButton = new DiscordButtonComponent(
-                    ButtonStyle.Danger,
+                    string.Equals(action, "exit", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Danger : ButtonStyle.Secondary,
                     $"cf_exit_{flip.Id}",
                     "Refund",
                     true,
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
+                */
 
                 updateBuilder.ClearComponents();
-                updateBuilder.AddComponents(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton, disabledExitButton);
+                updateBuilder.AddComponents(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton /*, disabledExitButton*/);
 
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, updateBuilder);
 
@@ -239,6 +241,7 @@ namespace Server.Communication.Discord.Interactions
 
             // Exit on the result/rematch message: just close those buttons, no money back
             // This is the message that shows win/lose + RM / 1/2 / X2 / MAX / Exit
+            /*
             if (string.Equals(action, "exit", StringComparison.OrdinalIgnoreCase))
             {
                 var builder = new DiscordInteractionResponseBuilder();
@@ -251,6 +254,7 @@ namespace Server.Communication.Discord.Interactions
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, builder);
                 return;
             }
+            */
 
             // From here on, we handle the initial Heads/Tails choice (one bet per command)
 

@@ -41,6 +41,7 @@ namespace Server.Infrastructure.Discord
             };
 
             _client.ComponentInteractionCreated += ButtonHandler.HandleButtons;
+            _client.ModalSubmitted += RaceInteractionHandler.HandleModal;
 
             _client.Ready += async (s, e) =>
             {
@@ -90,6 +91,8 @@ namespace Server.Infrastructure.Discord
             commands.RegisterCommands<StakeCommand>();
             commands.RegisterCommands<AdminBalanceCommand>();
             commands.RegisterCommands<CoinflipCommand>();
+            commands.RegisterCommands<RaceCommand>();
+            commands.RegisterCommands<CancelCommand>();
         }
 
         public async Task StartAsync(CancellationToken cancellationToken = default)

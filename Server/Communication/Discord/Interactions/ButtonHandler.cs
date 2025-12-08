@@ -38,6 +38,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Race interactions
+            if (e.Id.StartsWith("race_", StringComparison.OrdinalIgnoreCase))
+            {
+                await RaceInteractionHandler.HandleComponent(client, e);
+                return;
+            }
+
             // Other button namespaces (game_, etc.) can be routed here later
         }
     }

@@ -20,27 +20,48 @@ namespace Server.Communication.Discord.Interactions
             if (string.IsNullOrEmpty(identifier))
                 return;
 
+            // Check ownership if the ID contains the user ID
+            // Format: bal_{action}_{userId}_{args}
+            var parts = e.Id.Split('_');
+            if (parts.Length >= 3)
+            {
+                var ownerId = parts[2];
+                if (!string.Equals(ownerId, identifier, StringComparison.OrdinalIgnoreCase))
+                {
+                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("This is not your balance menu.").AsEphemeral(true));
+                    return;
+                }
+            }
+
             if (e.Id.StartsWith("bal_history", StringComparison.OrdinalIgnoreCase))
             {
                 await HandleHistoryAsync(e);
                 return;
             }
 
-            if (e.Id.Equals("bal_wallet", StringComparison.OrdinalIgnoreCase))
+            if (e.Id.StartsWith("bal_wallet", StringComparison.OrdinalIgnoreCase))
             {
                 await HandleWalletAsync(e);
                 return;
             }
 
-            if (e.Id.Equals("bal_deposit", StringComparison.OrdinalIgnoreCase))
+            if (e.Id.StartsWith("bal_deposit", StringComparison.OrdinalIgnoreCase))
             {
                 await HandleDepositInfoAsync(e);
                 return;
             }
 
-            if (e.Id.Equals("bal_withdraw", StringComparison.OrdinalIgnoreCase))
+            if (e.Id.StartsWith("bal_withdraw", StringComparison.OrdinalIgnoreCase))
             {
                 await HandleWithdrawInfoAsync(e);
+                return;
+            }
+
+            if (e.Id.StartsWith("bal_buy", StringComparison.OrdinalIgnoreCase))
+            {
+                // Placeholder: do nothing for now
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
                 return;
             }
         }
@@ -68,9 +89,10 @@ namespace Server.Communication.Discord.Interactions
             // Buttons row 1
             var row1 = new[]
             {
-                new DiscordButtonComponent(ButtonStyle.Primary, "bal_deposit", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, "bal_history", "History", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Primary, "bal_withdraw", "Withdraw", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_buy_{e.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_deposit_{e.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_withdraw_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
             };
 
             var builder = new DiscordInteractionResponseBuilder()
@@ -88,10 +110,11 @@ namespace Server.Communication.Discord.Interactions
 
             var identifier = e.User.Id.ToString();
 
-            // Parse page from custom id: bal_history or bal_history_{page}
+            // Parse page from custom id: bal_history_{userId} or bal_history_{userId}_{page}
             var page = 1;
             var idParts = e.Id.Split('_');
-            if (idParts.Length == 3 && int.TryParse(idParts[2], out var parsedPage) && parsedPage > 0)
+            // bal, history, userId, page
+            if (idParts.Length == 4 && int.TryParse(idParts[3], out var parsedPage) && parsedPage > 0)
             {
                 page = parsedPage;
             }
@@ -145,15 +168,15 @@ namespace Server.Communication.Discord.Interactions
             var components = new System.Collections.Generic.List<DiscordComponent>();
             if (page > 1)
             {
-                components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{page - 1}", "⏮ Prev"));
+                components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{identifier}_{page - 1}", "⏮ Prev"));
             }
             
             // Add Wallet button in the middle
-            components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, "bal_wallet", "Wallet", emoji: new DiscordComponentEmoji(DiscordIds.WalletEmojiId)));
+            components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_wallet_{identifier}", "Wallet", emoji: new DiscordComponentEmoji(DiscordIds.WalletEmojiId)));
 
             if (adjustments != null && adjustments.Count == pageSize && page * pageSize < totalCount)
             {
-                components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{page + 1}", "Next ⏭"));
+                components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{identifier}_{page + 1}", "Next ⏭"));
             }
 
             var builder = new DiscordInteractionResponseBuilder()

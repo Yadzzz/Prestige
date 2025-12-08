@@ -98,6 +98,25 @@
 --CREATE INDEX idx_coinflips_user_id ON coinflips(user_id);
 --CREATE INDEX idx_coinflips_identifier ON coinflips(identifier);
 
+--CREATE TABLE races (
+--    Id INT AUTO_INCREMENT PRIMARY KEY,
+--    StartTime DATETIME NOT NULL,
+--    EndTime DATETIME NOT NULL,
+--    Status VARCHAR(32) NOT NULL,
+--    PrizeDistributionJson TEXT NOT NULL,
+--    ChannelId BIGINT NOT NULL,
+--    MessageId BIGINT NOT NULL
+--);
+
+--CREATE TABLE race_participants (
+--    RaceId INT NOT NULL,
+--    UserIdentifier VARCHAR(64) NOT NULL,
+--    TotalWagered BIGINT NOT NULL,
+--    Username VARCHAR(64) NOT NULL,
+--    PRIMARY KEY (RaceId, UserIdentifier),
+--    FOREIGN KEY (RaceId) REFERENCES races(Id) ON DELETE CASCADE
+--);
+
 --CREATE TABLE balance_adjustments (
 --    id               SERIAL PRIMARY KEY,
 --    user_id          INT NOT NULL,
