@@ -98,8 +98,8 @@ namespace Server.Communication.Discord.Commands
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("⚔️ Stake Request")
                 .WithDescription("Your stake was sent.")
-                .AddField("Amount", prettyAmount, true)
-                .AddField("Remaining", remainingPretty, true)
+                .AddField("Amount", $"`{prettyAmount}`", true)
+                .AddField("Remaining", $"`{remainingPretty}`", true)
                 .AddField("Member", ctx.Member.DisplayName, true)
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
@@ -116,7 +116,7 @@ namespace Server.Communication.Discord.Commands
 
             var staffEmbed = new DiscordEmbedBuilder()
                 .WithTitle("New Stake Request ⏳")
-                .WithDescription($"User: {ctx.Member.DisplayName} ({user.Identifier})\nAmount: **{prettyAmount}**\nStake ID: `{stake.Id}`\nStatus: **PENDING**")
+                .WithDescription($"User: {ctx.Member.DisplayName} ({user.Identifier})\nAmount: `{prettyAmount}`\nStake ID: `{stake.Id}`\nStatus: **PENDING**")
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 

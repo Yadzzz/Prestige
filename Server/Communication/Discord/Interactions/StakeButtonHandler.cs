@@ -157,9 +157,9 @@ namespace Server.Communication.Discord.Interactions
 
             var resultDescription = newStatus switch
             {
-                StakeStatus.Won => $"You won the **{totalWinText}** stake.",
-                StakeStatus.Lost => $"You lost the **{amountText}** stake.",
-                StakeStatus.Cancelled => $"The **{amountText}** stake was cancelled.",
+                StakeStatus.Won => $"You won the `{totalWinText}` stake.",
+                StakeStatus.Lost => $"You lost the `{amountText}` stake.",
+                StakeStatus.Cancelled => $"The `{amountText}` stake was cancelled.",
                 _ => string.Empty
             };
 
@@ -174,9 +174,9 @@ namespace Server.Communication.Discord.Interactions
                 .WithTitle(resultTitle)
                 .WithDescription(newStatus switch
                 {
-                    StakeStatus.Won => $"User: {staffDisplay} won the **{amountText}** stake.",
-                    StakeStatus.Lost => $"User: {staffDisplay} lost the **{amountText}** stake.",
-                    StakeStatus.Cancelled => $"User: {staffDisplay} – the **{amountText}** stake was cancelled.",
+                    StakeStatus.Won => $"User: {staffDisplay} won the `{amountText}` stake.",
+                    StakeStatus.Lost => $"User: {staffDisplay} lost the `{amountText}` stake.",
+                    StakeStatus.Cancelled => $"User: {staffDisplay} – the `{amountText}` stake was cancelled.",
                     _ => resultDescription
                 })
                 .WithColor(newStatus == StakeStatus.Won ? DiscordColor.Green : newStatus == StakeStatus.Lost ? DiscordColor.Red : DiscordColor.Orange)
@@ -185,15 +185,15 @@ namespace Server.Communication.Discord.Interactions
 
             if (!string.IsNullOrEmpty(balanceText))
             {
-                staffEmbed.AddField("Balance", balanceText, true);
+                staffEmbed.AddField("Balance", $"`{balanceText}`", true);
             }
 
             if (newStatus == StakeStatus.Won && feeK > 0 && payoutK > 0)
             {
                 staffEmbed
-                    .AddField("Stake", amountText, true)
-                    .AddField("Fee (10%)", feeText, true)
-                    .AddField("Payout", payoutText, true);
+                    .AddField("Stake", $"`{amountText}`", true)
+                    .AddField("Fee (10%)", $"`{feeText}`", true)
+                    .AddField("Payout", $"`{payoutText}`", true);
             }
 
             var staffComponents = new DiscordComponent[]
@@ -241,12 +241,12 @@ namespace Server.Communication.Discord.Interactions
                         {
                             userEmbed.AddField("Streak", loseStreakText, true);
                         }
-                        userEmbed.AddField("Balance", balanceText, true);
+                        userEmbed.AddField("Balance", $"`{balanceText}`", true);
 
                         // Extra field for lost outcome
                         if (newStatus == StakeStatus.Lost)
                         {
-                            userEmbed.AddField("You lost", $"**{amountText}**", true);
+                            userEmbed.AddField("You lost", $"`{amountText}`", true);
                         }
                     }
 
@@ -402,7 +402,7 @@ namespace Server.Communication.Discord.Interactions
 
                     var staffEmbed = new DiscordEmbedBuilder(staffMessage.Embeds.Count > 0 ? staffMessage.Embeds[0] : new DiscordEmbedBuilder())
                         .WithTitle("🔁 Stake Cancelled")
-                        .WithDescription($"The {GpFormatter.Format(stake.AmountK)} stake for {stake.Identifier} was cancelled by the user.")
+                        .WithDescription($"The `{GpFormatter.Format(stake.AmountK)}` stake for {stake.Identifier} was cancelled by the user.")
                         .WithColor(DiscordColor.Orange)
                         .WithThumbnail("https://i.imgur.com/lTUFG2C.gif")
                         .WithTimestamp(DateTimeOffset.UtcNow);

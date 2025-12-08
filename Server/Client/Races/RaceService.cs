@@ -26,7 +26,7 @@ namespace Server.Client.Races
             LoadActiveRace();
 
             // Flush to DB and update Discord every 60 seconds
-            _flushTimer = new Timer(async _ => await FlushAndBroadcastAsync(), null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
+            _flushTimer = new Timer(async _ => await FlushAndBroadcastAsync(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         }
 
         public Race GetActiveRace()
@@ -228,69 +228,19 @@ namespace Server.Client.Races
                     if (client != null)
                     {
                         var channel = await client.GetChannelAsync(race.ChannelId);
-                        var message = await channel.GetMessageAsync(race.MessageId);
+                        var embed = BuildRaceEmbed(race, GetTopParticipants(10), isEnding);
 
-                        var top = GetTopParticipants(10);
-                        var sb = new System.Text.StringBuilder();
-                        int rank = 1;
-                        foreach (var p in top)
+                        try
                         {
-                            string medal = rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"#{rank}" };
-                            sb.AppendLine($"{medal} **{p.Username}** - {Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}");
-                            rank++;
+                            var message = await channel.GetMessageAsync(race.MessageId);
+                            await message.ModifyAsync(embed: embed);
                         }
-
-                        if (sb.Length == 0) sb.Append("No wagers yet.");
-
-                        var prizes = race.GetPrizes();
-                        var prizeDesc = string.Join("\n", prizes.Select(x => $"Rank {x.Rank}: {x.Prize}"));
-
-                        var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
-                            .WithTitle("🏆 Race Leaderboard 🏆")
-                            .WithDescription(sb.ToString())
-                            .WithColor(DSharpPlus.Entities.DiscordColor.Gold)
-                            .AddField("Prizes", string.IsNullOrEmpty(prizeDesc) ? "None" : prizeDesc)
-                            .WithFooter(isEnding ? "Race Ended" : $"Ends at {race.EndTime:g}");
-
-                        await message.ModifyAsync(embed: embed.Build());
-                    }
-                }
-                catch (DSharpPlus.Exceptions.NotFoundException)
-                {
-                    // Message was deleted; try to repost it
-                    try
-                    {
-                        var client = _serverManager.DiscordBotHost?.Client;
-                        if (client != null)
+                        catch (DSharpPlus.Exceptions.NotFoundException)
                         {
-                            var channel = await client.GetChannelAsync(race.ChannelId);
-                            
-                            var top = GetTopParticipants(10);
-                            var sb = new System.Text.StringBuilder();
-                            int rank = 1;
-                            foreach (var p in top)
-                            {
-                                string medal = rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"#{rank}" };
-                                sb.AppendLine($"{medal} **{p.Username}** - {Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}");
-                                rank++;
-                            }
-                            if (sb.Length == 0) sb.Append("No wagers yet.");
-
-                            var prizes = race.GetPrizes();
-                            var prizeDesc = string.Join("\n", prizes.Select(x => $"Rank {x.Rank}: {x.Prize}"));
-
-                            var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
-                                .WithTitle("🏆 Race Leaderboard 🏆")
-                                .WithDescription(sb.ToString())
-                                .WithColor(DSharpPlus.Entities.DiscordColor.Gold)
-                                .AddField("Prizes", string.IsNullOrEmpty(prizeDesc) ? "None" : prizeDesc)
-                                .WithFooter(isEnding ? "Race Ended" : $"Ends at {race.EndTime:g}");
-
-                            var newMsg = await channel.SendMessageAsync(embed.Build());
+                            var newMsg = await channel.SendMessageAsync(embed);
                             await SetMessageIdAsync(newMsg.Id);
                         }
                     }
-                    catch { /* Ignore if we can't repost */ }
                 }
                 catch (Exception ex)
                 {
@@ -316,6 +266,65 @@ namespace Server.Client.Races
                     _activeParticipants.Clear();
                 }
             }
+        }
+
+        private DSharpPlus.Entities.DiscordEmbed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding)
+        {
+            var totalWagered = _activeParticipants.Values.Sum(p => p.TotalWagered);
+            var totalWageredFormatted = Server.Client.Utils.GpFormatter.Format(totalWagered);
+            
+            var sb = new System.Text.StringBuilder();
+            if (topParticipants.Count == 0)
+            {
+                sb.AppendLine("No wagers yet. Be the first!");
+            }
+            else
+            {
+                int rank = 1;
+                foreach (var p in topParticipants)
+                {
+                    string medal = rank switch
+                    {
+                        1 => "🥇",
+                        2 => "🥈",
+                        3 => "🥉",
+                        4 => "4️⃣",
+                        5 => "5️⃣",
+                        6 => "6️⃣",
+                        7 => "7️⃣",
+                        8 => "8️⃣",
+                        9 => "9️⃣",
+                        10 => "🔟",
+                        _ => $"#{rank}"
+                    };
+                    sb.AppendLine($"{medal} **{p.Username}** — `{Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}`");
+                    rank++;
+                }
+            }
+
+            var prizes = race.GetPrizes();
+            var prizeDesc = string.Join("\n", prizes.Select(x => $"`#{x.Rank}` {x.Prize}"));
+            if (string.IsNullOrEmpty(prizeDesc)) prizeDesc = "None";
+
+            var endTimestamp = new DateTimeOffset(race.EndTime).ToUnixTimeSeconds();
+            var timeString = isEnding ? "Ended" : $"<t:{endTimestamp}:R>";
+
+            var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
+                .WithTitle(isEnding ? "🏁  **RACE ENDED**  🏁" : "🏁  **ACTIVE RACE**  🏁")
+                .WithDescription($"Ends: {timeString}\nTotal Wagered: `{totalWageredFormatted}`")
+                .WithColor(isEnding ? DSharpPlus.Entities.DiscordColor.Gray : DSharpPlus.Entities.DiscordColor.Gold)
+                .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
+                .AddField("🏆 Leaderboard", sb.ToString(), false)
+                .AddField("🎁 Prizes", prizeDesc, false)
+                .WithFooter($"Race ID: {race.Id} • Prestige", null)
+                .WithTimestamp(DateTimeOffset.UtcNow);
+
+            if (!isEnding)
+            {
+                embed.AddField("\u200b", "-# *Updates every 30 seconds*", false);
+            }
+
+            return embed.Build();
         }
         
         public List<RaceParticipant> GetTopParticipants(int count)
