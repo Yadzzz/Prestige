@@ -124,7 +124,7 @@ namespace Server.Communication.Discord.Interactions
                     .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
                     .WithColor(DiscordColor.Gold)
                     .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
-                    .WithFooter("Prestige Bets")
+                    .WithFooter(ServerConfiguration.ServerName)
                     .WithTimestamp(DateTimeOffset.UtcNow);
 
                 var headsButtonRematch = new DiscordButtonComponent(
@@ -323,7 +323,8 @@ namespace Server.Communication.Discord.Interactions
             coinflipsService.UpdateCoinflipOutcome(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0);
 
             // Register wager for race (only on completion)
-            env.ServerManager.RaceService?.RegisterWager(user.Identifier, user.Username, betAmountK);
+            var raceName = user.DisplayName ?? user.Username;
+            env.ServerManager.RaceService?.RegisterWager(user.Identifier, raceName, betAmountK);
 
             usersService.TryGetUser(user.Identifier, out user);
             var embed = BuildResultEmbed(user, flip, betAmountK, totalWinK, preFlipBalanceK, win, choseHeads, resultHeads);
@@ -462,7 +463,7 @@ namespace Server.Communication.Discord.Interactions
                 .WithDescription($"**{description}**\n\n{body}")
                 .WithColor(color)
                 .WithThumbnail(thumbnailUrl)
-                .WithFooter("Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
         }
 

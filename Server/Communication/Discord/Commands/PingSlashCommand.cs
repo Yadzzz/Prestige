@@ -11,7 +11,7 @@ namespace Server.Communication.Discord.Commands
         {
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Pong")
-                .WithDescription("Prestige bot is online and responding.")
+                .WithDescription($"{ServerConfiguration.ShortName} bot is online and responding.")
                 .WithColor(DiscordColor.Blurple);
 
             await ctx.CreateResponseAsync(embed.Build());

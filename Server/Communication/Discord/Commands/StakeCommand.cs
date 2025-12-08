@@ -103,7 +103,7 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Member", ctx.Member.DisplayName, true)
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
-                .WithFooter("Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             // User cancel button is temporarily disabled; keep code for future use.

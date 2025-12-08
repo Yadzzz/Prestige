@@ -83,7 +83,7 @@ namespace Server.Communication.Discord.Interactions
                 .WithDescription($"{e.User.Username}, you have `{formatted}`.")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
-                .WithFooter($"Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(System.DateTimeOffset.UtcNow);
 
             // Buttons row 1

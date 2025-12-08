@@ -15,6 +15,8 @@ namespace Server
 
         public void Initialize()
         {
+            Server.Infrastructure.Configuration.ConfigService.Load();
+            Console.Title = Server.Infrastructure.Configuration.ConfigService.Current.ServerName;
             this.ServerManager = new ServerManager();
             this.CommunicationManager = new CommunicationManager();
 

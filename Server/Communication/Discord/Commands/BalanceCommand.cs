@@ -42,7 +42,7 @@ namespace Server.Communication.Discord.Commands
                 .WithDescription($"{ctx.Member.DisplayName}, you have `{formatted}`.")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
-                .WithFooter($"Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 //.WithFooter($"Prestige Bets • {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm}");
                 .WithTimestamp(System.DateTimeOffset.UtcNow);
 
@@ -93,7 +93,7 @@ namespace Server.Communication.Discord.Commands
                 .WithDescription($"{member.DisplayName} has **{formatted}** in their wallet.")
                 .WithColor(DiscordColor.Blurple)
                 .WithThumbnail(member.AvatarUrl ?? member.DefaultAvatarUrl)
-                .WithFooter("Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             await ctx.RespondAsync(new DiscordMessageBuilder()

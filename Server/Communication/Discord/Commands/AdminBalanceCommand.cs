@@ -84,7 +84,7 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Staff", staffName, true)
                 .WithColor(DiscordColor.Green)
                 .WithThumbnail(adjustmentType == BalanceAdjustmentType.AdminGift ? "https://i.imgur.com/vFstFPx.gif" : "https://i.imgur.com/0qEQpNC.gif")
-                .WithFooter("Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             await ctx.RespondAsync(new DiscordMessageBuilder()

@@ -86,7 +86,7 @@ namespace Server.Communication.Discord.Commands
                 .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
-                .WithFooter("Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             //var headsButton = new DiscordButtonComponent(ButtonStyle.Success, $"cf_heads_{flip.Id}", "🪙 Heads");

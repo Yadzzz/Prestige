@@ -80,10 +80,13 @@ namespace Server.Communication.Discord.Interactions
 
             stakesService.UpdateStakeStatus(stake.Id, newStatus);
 
+            usersService.TryGetUser(stake.Identifier, out var user);
+
             // Register wager for race if the stake was resolved as Won or Lost
             if (newStatus == StakeStatus.Won || newStatus == StakeStatus.Lost)
             {
-                env.ServerManager.RaceService?.RegisterWager(stake.Identifier, stake.Identifier, stake.AmountK);
+                var raceName = user?.DisplayName ?? user?.Username ?? stake.Identifier;
+                env.ServerManager.RaceService?.RegisterWager(stake.Identifier, raceName, stake.AmountK);
             }
 
             env.ServerManager.LogsService.Log(
@@ -94,8 +97,6 @@ namespace Server.Communication.Discord.Interactions
                 message: $"Stake resolved id={stake.Id} status={newStatus} amountK={stake.AmountK}",
                 exception: null,
                 metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"status\":\"{newStatus}\"}}");
-
-            usersService.TryGetUser(stake.Identifier, out var user);
 
             long feeK = 0;
             long payoutK = 0;

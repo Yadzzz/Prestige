@@ -126,7 +126,7 @@ namespace Server.Infrastructure.Discord
                             .WithDescription(description)
                             .WithColor(DSharpPlus.Entities.DiscordColor.Blurple)
                             .WithThumbnail("https://i.imgur.com/PspKnEB.gif")
-                            .WithFooter("🤖 Prestige AI")
+                            .WithFooter($"🤖 {ServerConfiguration.ShortName} AI")
                             .WithTimestamp(DateTimeOffset.UtcNow);
 
                         await e.Context.RespondAsync(embed: embed);
@@ -138,7 +138,7 @@ namespace Server.Infrastructure.Discord
                             .WithDescription("I couldn't recognize that command. Please check for typos.")
                             .WithColor(DSharpPlus.Entities.DiscordColor.Red)
                             .WithThumbnail("https://i.imgur.com/PspKnEB.gif")
-                            .WithFooter("🤖 Prestige AI")
+                            .WithFooter($"🤖 {ServerConfiguration.ShortName} AI")
                             .WithTimestamp(DateTimeOffset.UtcNow);
 
                         await e.Context.RespondAsync(embed: embed);

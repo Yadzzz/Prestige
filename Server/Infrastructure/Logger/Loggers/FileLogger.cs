@@ -15,7 +15,12 @@ namespace Server.Infrastructure.Logger.Loggers
         public FileLogger()
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            _logFilePath = System.IO.Path.Combine(baseDir, "logs.txt");
+            var logsDir = System.IO.Path.Combine(baseDir, "logs");
+            if (!System.IO.Directory.Exists(logsDir))
+            {
+                System.IO.Directory.CreateDirectory(logsDir);
+            }
+            _logFilePath = System.IO.Path.Combine(logsDir, $"log_{DateTime.UtcNow:yyyyMMdd}.txt");
         }
 
         private void WriteLine(string level, string message)
@@ -28,9 +33,10 @@ namespace Server.Infrastructure.Logger.Loggers
                     System.IO.File.AppendAllText(_logFilePath, line + Environment.NewLine);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Never throw from logger
+                // Fallback to console if file logging fails
+                Console.WriteLine($"[FileLogger Error] {ex.Message}");
             }
         }
 
