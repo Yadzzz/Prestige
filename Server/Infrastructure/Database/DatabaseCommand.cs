@@ -1,6 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,7 +37,7 @@ namespace Server.Infrastructure.Database
 
         public int ExecuteQuery()
         {
-            if (base._mySqlConnection.State == System.Data.ConnectionState.Closed)
+            if (base._mySqlConnection.State == ConnectionState.Closed)
             {
                 base.OpenConnection();
             }
@@ -46,9 +47,34 @@ namespace Server.Infrastructure.Database
             return rowsAffected;
         }
 
+        public object ExecuteScalar()
+        {
+            if (base._mySqlConnection.State == ConnectionState.Closed)
+            {
+                base.OpenConnection();
+            }
+
+            return this._MySqlCommand.ExecuteScalar();
+        }
+
+        public DataTable ExecuteDataTable()
+        {
+            if (base._mySqlConnection.State == ConnectionState.Closed)
+            {
+                base.OpenConnection();
+            }
+
+            var dt = new DataTable();
+            using (var reader = this._MySqlCommand.ExecuteReader())
+            {
+                dt.Load(reader);
+            }
+            return dt;
+        }
+
         public MySqlDataReader ExecuteDataReader()
         {
-            if (base._mySqlConnection.State == System.Data.ConnectionState.Closed)
+            if (base._mySqlConnection.State == ConnectionState.Closed)
             {
                 base.OpenConnection();
             }

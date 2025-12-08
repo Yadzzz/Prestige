@@ -30,7 +30,15 @@ namespace Server.Infrastructure.Connection
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                try
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LoggerManager.LogError($"[ServerSocket.BeginAcceptError] {e}");
+                }
+                catch
+                {
+                    Console.WriteLine(e.ToString());
+                }
             }
         }
 
@@ -50,7 +58,15 @@ namespace Server.Infrastructure.Connection
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                try
+                {
+                    var env = ServerEnvironment.GetServerEnvironment();
+                    env.ServerManager.LoggerManager.LogError($"[ServerSocket.EndAcceptError] {e}");
+                }
+                catch
+                {
+                    Console.WriteLine(e.ToString());
+                }
             }
 
             this.BeginAccept();

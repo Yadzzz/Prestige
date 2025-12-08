@@ -17,6 +17,9 @@ namespace Server.Infrastructure.Logger
         public LoggerManager(LoggerConfiguration loggerConfiguration)
         {
             this.LoggerConfiguration = loggerConfiguration;
+            this._fileLogger = new FileLogger();
+            this._consoleLogger = new ConsoleLogger();
+            this._databaseLogger = new DatabaseLogger();
         }
 
         private void Log(string message, LoggingLevel level)

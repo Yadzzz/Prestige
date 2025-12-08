@@ -25,7 +25,7 @@ namespace Server.Client
 
         public void AddClient(Client client)
         {
-            if (Clients.Contains(client))
+            if (!Clients.Contains(client))
             {
                 Clients.Add(client);
             }

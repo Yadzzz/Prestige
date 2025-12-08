@@ -1,17 +1,35 @@
-﻿namespace Server
+﻿using Server.Infrastructure;
+
+namespace Server
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Console.ForegroundColor = ConsoleColor.White;
 
-            ServerEnvironment.GetServerEnvironment().Initialize();
+            var env = ServerEnvironment.GetServerEnvironment();
+            env.Initialize();
 
-            while (true)
+            await env.ServerManager.DiscordBotHost.StartAsync();
+
+            // Handle graceful shutdown
+            var tcs = new TaskCompletionSource();
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
             {
-                Console.ReadKey();
-            }
+                Console.WriteLine("Shutting down...");
+                env.ServerManager.StopAsync().Wait();
+                tcs.TrySetResult();
+            };
+            Console.CancelKeyPress += (s, e) =>
+            {
+                e.Cancel = true;
+                Console.WriteLine("Shutting down...");
+                env.ServerManager.StopAsync().Wait();
+                tcs.TrySetResult();
+            };
+
+            await tcs.Task;
         }
     }
 }

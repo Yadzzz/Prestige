@@ -9,8 +9,11 @@ namespace Server.Client.Users
     public class User
     {
         public int Id { get; set; }
-        public string Identifier { get; set; }
-        public string Sid { get; set; }
-        public string AuthToken { get; set; }
+        public string Identifier { get; set; } // Represents discord user id
+        public string Username { get; set; }
+        public string DisplayName { get; set; }
+        public long Balance { get; set; }
+        public int StakeStreak { get; set; }
+        public int StakeLoseStreak { get; set; }
     }
 }
