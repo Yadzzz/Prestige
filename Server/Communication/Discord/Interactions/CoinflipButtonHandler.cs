@@ -188,7 +188,7 @@ namespace Server.Communication.Discord.Interactions
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
 
                 updateBuilder.ClearComponents();
-                updateBuilder.AddComponents(disabledRmButton, disabledHalfButton, disabledX2Button, disabledMaxButton, disabledExitButton);
+                updateBuilder.AddComponents(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton, disabledExitButton);
 
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, updateBuilder);
 
@@ -323,8 +323,8 @@ namespace Server.Communication.Discord.Interactions
 
             var rematchRow = new DiscordComponent[]
             {
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_rm_{flip.Id}",   "RM",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)),
                 new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_half_{flip.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId)),
+                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_rm_{flip.Id}",   "RM",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)),
                 new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_x2_{flip.Id}",   "X2",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)),
                 new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_max_{flip.Id}",  "MAX", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId)),
                 //new DiscordButtonComponent(ButtonStyle.Danger,    $"cf_exit_{flip.Id}", "Exit", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))

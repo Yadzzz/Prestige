@@ -97,7 +97,7 @@ namespace Server.Communication.Discord.Commands
 
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("⚔️ Stake Request")
-                .WithDescription("Your stake request was sent.")
+                .WithDescription("Your stake was sent.")
                 .AddField("Amount", prettyAmount, true)
                 .AddField("Remaining", remainingPretty, true)
                 .AddField("Member", ctx.Member.DisplayName, true)

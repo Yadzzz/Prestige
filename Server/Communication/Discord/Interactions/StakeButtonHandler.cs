@@ -138,18 +138,15 @@ namespace Server.Communication.Discord.Interactions
 
             var resultTitle = newStatus switch
             {
-                StakeStatus.Won => "🏆 Stake Won",
-                StakeStatus.Lost => "⚔️ Stake Lost",
+                StakeStatus.Won => "Win",
+                StakeStatus.Lost => "Lost",
                 StakeStatus.Cancelled => "❌ Stake Cancelled",
                 _ => "Stake"
             };
 
             var resultDescription = newStatus switch
             {
-                StakeStatus.Won =>
-                    feeK > 0 && payoutK > 0
-                        ? $"Congratulations 🎉\nYou won the **{amountText}** stake."
-                        : $"Congratulations 🎉\nYou won the **{amountText}** stake.",
+                StakeStatus.Won => $"You won the **{amountText}** stake.",
                 StakeStatus.Lost => $"You lost the **{amountText}** stake.",
                 StakeStatus.Cancelled => $"The **{amountText}** stake was cancelled.",
                 _ => string.Empty
@@ -220,9 +217,7 @@ namespace Server.Communication.Discord.Interactions
 
                     var userEmbed = new DiscordEmbedBuilder()
                         .WithTitle(resultTitle)
-                        .WithDescription(newStatus == StakeStatus.Won && payoutK > 0
-                            ? $"Congratulations 🎉\nYou won the **{totalWinText}** stake."
-                            : resultDescription)
+                        .WithDescription(resultDescription)
                         .WithColor(newStatus == StakeStatus.Won ? DiscordColor.SpringGreen :
                                    newStatus == StakeStatus.Lost ? DiscordColor.Red : DiscordColor.Orange)
                         .WithThumbnail(userThumbnail)
@@ -231,13 +226,13 @@ namespace Server.Communication.Discord.Interactions
                     if (!string.IsNullOrEmpty(balanceText))
                     {
                         // Common top row: win/lose streak and balance
-                        if (!string.IsNullOrEmpty(winStreakText))
+                        if (newStatus == StakeStatus.Won && !string.IsNullOrEmpty(winStreakText))
                         {
-                            userEmbed.AddField("Win Streak", winStreakText, true);
+                            userEmbed.AddField("Streak", winStreakText, true);
                         }
-                        if (!string.IsNullOrEmpty(loseStreakText))
+                        else if (newStatus == StakeStatus.Lost && !string.IsNullOrEmpty(loseStreakText))
                         {
-                            userEmbed.AddField("Lose Streak", loseStreakText, true);
+                            userEmbed.AddField("Streak", loseStreakText, true);
                         }
                         userEmbed.AddField("Balance", balanceText, true);
 
