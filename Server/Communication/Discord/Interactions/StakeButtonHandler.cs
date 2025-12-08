@@ -80,6 +80,12 @@ namespace Server.Communication.Discord.Interactions
 
             stakesService.UpdateStakeStatus(stake.Id, newStatus);
 
+            // Register wager for race if the stake was resolved as Won or Lost
+            if (newStatus == StakeStatus.Won || newStatus == StakeStatus.Lost)
+            {
+                env.ServerManager.RaceService?.RegisterWager(stake.Identifier, stake.Identifier, stake.AmountK);
+            }
+
             env.ServerManager.LogsService.Log(
                 source: nameof(StakeButtonHandler),
                 level: "Info",

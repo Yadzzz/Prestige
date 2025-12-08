@@ -322,6 +322,9 @@ namespace Server.Communication.Discord.Interactions
             // Persist updated flip baseline
             coinflipsService.UpdateCoinflipOutcome(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0);
 
+            // Register wager for race (only on completion)
+            env.ServerManager.RaceService?.RegisterWager(user.Identifier, user.Username, betAmountK);
+
             usersService.TryGetUser(user.Identifier, out user);
             var embed = BuildResultEmbed(user, flip, betAmountK, totalWinK, preFlipBalanceK, win, choseHeads, resultHeads);
 
