@@ -13,7 +13,23 @@ namespace Server
 
             await env.ServerManager.DiscordBotHost.StartAsync();
 
-            await Task.Delay(-1); // keep app alive
+            // Handle graceful shutdown
+            var tcs = new TaskCompletionSource();
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                Console.WriteLine("Shutting down...");
+                env.ServerManager.StopAsync().Wait();
+                tcs.TrySetResult();
+            };
+            Console.CancelKeyPress += (s, e) =>
+            {
+                e.Cancel = true;
+                Console.WriteLine("Shutting down...");
+                env.ServerManager.StopAsync().Wait();
+                tcs.TrySetResult();
+            };
+
+            await tcs.Task;
         }
     }
 }

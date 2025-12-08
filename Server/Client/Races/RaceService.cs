@@ -36,10 +36,11 @@ namespace Server.Client.Races
 
         public void RegisterWager(string userIdentifier, string username, long amount)
         {
-            if (_activeRace == null || _activeRace.Status != RaceStatus.Active)
+            var race = _activeRace;
+            if (race == null || race.Status != RaceStatus.Active)
                 return;
 
-            if (DateTime.UtcNow > _activeRace.EndTime)
+            if (DateTime.UtcNow > race.EndTime)
             {
                 // Race ended; do not accept new wagers. 
                 // The background timer will handle closing the race.
@@ -50,7 +51,7 @@ namespace Server.Client.Races
                 // Add new
                 id => new RaceParticipant
                 {
-                    RaceId = _activeRace.Id,
+                    RaceId = race.Id,
                     UserIdentifier = id,
                     Username = username,
                     TotalWagered = amount
@@ -180,22 +181,29 @@ namespace Server.Client.Races
 
             _isDirty = false;
 
-            // 1. Flush to DB
+            // 1. Flush to DB (Bulk)
             var participants = _activeParticipants.Values.ToList();
-            foreach (var p in participants)
+            if (participants.Count > 0)
             {
                 using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
                 {
-                    // Upsert
-                    cmd.SetCommand(@"
-                        INSERT INTO race_participants (RaceId, UserIdentifier, TotalWagered, Username) 
-                        VALUES (@RaceId, @UserId, @Wagered, @Username)
-                        ON DUPLICATE KEY UPDATE TotalWagered = @Wagered, Username = @Username");
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("INSERT INTO race_participants (RaceId, UserIdentifier, TotalWagered, Username) VALUES ");
                     
-                    cmd.AddParameter("@RaceId", p.RaceId);
-                    cmd.AddParameter("@UserId", p.UserIdentifier);
-                    cmd.AddParameter("@Wagered", p.TotalWagered);
-                    cmd.AddParameter("@Username", p.Username);
+                    for (int i = 0; i < participants.Count; i++)
+                    {
+                        if (i > 0) sb.Append(",");
+                        sb.Append($"(@r{i}, @u{i}, @w{i}, @n{i})");
+                        
+                        cmd.AddParameter($"@r{i}", participants[i].RaceId);
+                        cmd.AddParameter($"@u{i}", participants[i].UserIdentifier);
+                        cmd.AddParameter($"@w{i}", participants[i].TotalWagered);
+                        cmd.AddParameter($"@n{i}", participants[i].Username);
+                    }
+                    
+                    sb.Append(" ON DUPLICATE KEY UPDATE TotalWagered = VALUES(TotalWagered), Username = VALUES(Username)");
+                    
+                    cmd.SetCommand(sb.ToString());
                     cmd.ExecuteQuery();
                 }
             }
@@ -319,6 +327,12 @@ namespace Server.Client.Races
                 cmd.AddParameter("@Id", _activeRace.Id);
                 cmd.ExecuteQuery();
             }
+        }
+
+        public async Task StopAsync()
+        {
+            _flushTimer?.Change(Timeout.Infinite, 0);
+            await FlushAndBroadcastAsync();
         }
     }
 }

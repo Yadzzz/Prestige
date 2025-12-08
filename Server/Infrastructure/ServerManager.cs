@@ -62,5 +62,13 @@ namespace Server.Infrastructure
 
             Console.WriteLine("ServerManager Initialized ->");
         }
+
+        public async Task StopAsync()
+        {
+            if (this.RaceService != null)
+            {
+                await this.RaceService.StopAsync();
+            }
+        }
     }
 }

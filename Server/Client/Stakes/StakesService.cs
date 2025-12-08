@@ -37,10 +37,6 @@ namespace Server.Client.Stakes
                         return null;
                 }
 
-                // Register wager for race
-                var env = ServerEnvironment.GetServerEnvironment();
-                env.ServerManager.RaceService?.RegisterWager(user.Identifier, user.DisplayName ?? user.Username, amountK);
-
                 using (var fetch = new DatabaseCommand())
                 {
                     fetch.SetCommand("SELECT * FROM stakes WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
