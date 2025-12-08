@@ -14,6 +14,7 @@ using Server.Client.Audit;
 using Server.Client.Coinflips;
 using Server.Client.LiveFeed;
 using Server.Client.Races;
+using Server.Client.AI;
 
 namespace Server.Infrastructure
 {
@@ -31,6 +32,7 @@ namespace Server.Infrastructure
         public LogsService LogsService { get; set; }
         public LiveFeedService LiveFeedService { get; set; }
         public RaceService RaceService { get; set; }
+        public AiCommandResolverService AiCommandResolverService { get; set; }
 
         public ServerManager()
         {
@@ -48,7 +50,7 @@ namespace Server.Infrastructure
             this.StakesService = new StakesService(this.DatabaseManager);
             this.CoinflipsService = new CoinflipsService(this.DatabaseManager);
             this.LogsService = new LogsService(this.DatabaseManager);
-            this.RaceService = new RaceService(this);
+            this.AiCommandResolverService = new AiCommandResolverService("https://lively-butterfly-20a1.yadmarzan.workers.dev/");
 
             var discordOptions = new DiscordOptions
             {
@@ -59,6 +61,7 @@ namespace Server.Infrastructure
 
             this.DiscordBotHost = new DiscordBotHost(discordOptions, this.UsersService);
             this.LiveFeedService = new LiveFeedService(this.DiscordBotHost);
+            this.RaceService = new RaceService(this);
 
             Console.WriteLine("ServerManager Initialized ->");
         }
