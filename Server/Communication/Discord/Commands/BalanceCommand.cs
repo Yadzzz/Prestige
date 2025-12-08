@@ -71,34 +71,34 @@ namespace Server.Communication.Discord.Commands
             );
         }
 
-        [Command("balance")]
-        [RequireRoles(RoleCheckMode.Any, "Staff", "Admin", "Moderator")]
-        public async Task Balance(CommandContext ctx, DiscordMember member)
-        {
-            var env = ServerEnvironment.GetServerEnvironment();
-            var usersService = env.ServerManager.UsersService;
+        //[Command("balance")]
+        //[RequireRoles(RoleCheckMode.Any, "Staff", "Admin", "Moderator")]
+        //public async Task Balance(CommandContext ctx, DiscordMember member)
+        //{
+        //    var env = ServerEnvironment.GetServerEnvironment();
+        //    var usersService = env.ServerManager.UsersService;
 
-            var user = await usersService.EnsureUserAsync(member.Id.ToString(), member.Username, member.DisplayName);
-            if (user == null)
-            {
-                await ctx.RespondAsync("Failed to resolve target user.");
-                return;
-            }
+        //    var user = await usersService.EnsureUserAsync(member.Id.ToString(), member.Username, member.DisplayName);
+        //    if (user == null)
+        //    {
+        //        await ctx.RespondAsync("Failed to resolve target user.");
+        //        return;
+        //    }
 
-            var formatted = GpFormatter.Format(user.Balance);
-            var staffName = ctx.Member?.DisplayName ?? ctx.User.Username;
+        //    var formatted = GpFormatter.Format(user.Balance);
+        //    var staffName = ctx.Member?.DisplayName ?? ctx.User.Username;
 
-            var embed = new DiscordEmbedBuilder()
-                .WithTitle("User Balance")
-                .WithDescription($"{member.DisplayName} has **{formatted}** in their wallet.")
-                .WithColor(DiscordColor.Blurple)
-                .WithThumbnail(member.AvatarUrl ?? member.DefaultAvatarUrl)
-                .WithFooter(ServerConfiguration.ServerName)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+        //    var embed = new DiscordEmbedBuilder()
+        //        .WithTitle("User Balance")
+        //        .WithDescription($"{member.DisplayName} has **{formatted}** in their wallet.")
+        //        .WithColor(DiscordColor.Blurple)
+        //        .WithThumbnail(member.AvatarUrl ?? member.DefaultAvatarUrl)
+        //        .WithFooter(ServerConfiguration.ServerName)
+        //        .WithTimestamp(DateTimeOffset.UtcNow);
 
-            await ctx.RespondAsync(new DiscordMessageBuilder()
-                .WithContent(member.Mention)
-                .AddEmbed(embed));
-        }
+        //    await ctx.RespondAsync(new DiscordMessageBuilder()
+        //        .WithContent(member.Mention)
+        //        .AddEmbed(embed));
+        //}
     }
 }

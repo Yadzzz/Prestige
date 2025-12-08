@@ -87,8 +87,44 @@ namespace Server.Infrastructure.Discord
                 EnableMentionPrefix = false
             });
 
+            commands.CommandExecuted += async (s, e) =>
+            {
+                Console.WriteLine(
+                    $"[CMD EXECUTED] User: {e.Context.User.Username}#{e.Context.User.Discriminator} " +
+                    $"({e.Context.User.Id}) | Command: !{e.Command.Name} | Message: {e.Context.RawArgumentString}"
+                );
+                await Task.CompletedTask;
+            };
+
+            //commands.CommandErrored += async (s, e) =>
+            //{
+            //    Console.WriteLine(
+            //        $"[CMD ERROR] User: {e.Context.User.Username}#{e.Context.User.Discriminator} " +
+            //        $"({e.Context.User.Id}) | Command: !{e.Command?.Name ?? "UNKNOWN"} | Error: {e.Exception.Message}"
+            //    );
+
+            //    await Task.CompletedTask;
+            //};
+
             commands.CommandErrored += async (s, e) =>
             {
+                Console.WriteLine(
+                    $"[CMD ERROR] User: {e.Context.User.Username}#{e.Context.User.Discriminator} " +
+                    $"({e.Context.User.Id}) | Command: !{e.Command?.Name ?? "UNKNOWN"} | Error: {e.Exception.Message}"
+                );
+
+                if (e.Exception is ChecksFailedException)
+                {
+                    var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
+                        .WithTitle("⛔ Access Denied")
+                        .WithDescription("You do not have permission to execute this command.")
+                        .WithColor(DSharpPlus.Entities.DiscordColor.Red)
+                        .WithTimestamp(DateTimeOffset.UtcNow);
+
+                    await e.Context.RespondAsync(embed: embed);
+                    return;
+                }
+
                 if (e.Exception is CommandNotFoundException)
                 {
                     var env = ServerEnvironment.GetServerEnvironment();
@@ -144,6 +180,17 @@ namespace Server.Infrastructure.Discord
                         await e.Context.RespondAsync(embed: embed);
                     }
                     // If no match and no suggestion, do nothing (silent fail) or generic message
+                }
+                else
+                {
+                    Console.WriteLine($"[Command Error] {e.Exception}");
+                    var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
+                        .WithTitle("⚠️ Error")
+                        .WithDescription($"An error occurred: {e.Exception.Message}")
+                        .WithColor(DSharpPlus.Entities.DiscordColor.Orange)
+                        .WithTimestamp(DateTimeOffset.UtcNow);
+
+                    await e.Context.RespondAsync(embed: embed);
                 }
             };
 
