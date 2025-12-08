@@ -47,11 +47,11 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            var transaction = transactionsService.CreateDepositRequest(user, amountK);
+            var transaction = await transactionsService.CreateDepositRequestAsync(user, amountK);
             if (transaction == null)
             {
                 await ctx.RespondAsync("Failed to create deposit request. Please try again later.");
-                serverManager.LogsService.Log(
+                await serverManager.LogsService.LogAsync(
                     source: nameof(DepositCommand),
                     level: "Error",
                     userIdentifier: user.Identifier,
@@ -104,7 +104,7 @@ namespace Server.Communication.Discord.Commands
                 .AddComponents(acceptButton, cancelButton, denyButton));
 
             // Persist message/channel IDs so we can update messages on status changes
-            transactionsService.UpdateTransactionMessages(
+            await transactionsService.UpdateTransactionMessagesAsync(
                 transaction.Id,
                 userMessage.Id,
                 userMessage.Channel.Id,

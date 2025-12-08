@@ -24,6 +24,14 @@ namespace Server.Infrastructure.Database
             }
         }
 
+        protected async Task OpenConnectionAsync()
+        {
+            if (this._mySqlConnection.State == System.Data.ConnectionState.Closed)
+            {
+                await this._mySqlConnection.OpenAsync();
+            }
+        }
+
         protected void CloseConnection()
         {
             if(this._mySqlConnection.State != System.Data.ConnectionState.Closed)

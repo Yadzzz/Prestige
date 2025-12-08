@@ -31,7 +31,7 @@ namespace Server.Communication.Discord.Interactions
             var coinflipsService = serverManager.CoinflipsService;
             var usersService = serverManager.UsersService;
 
-            var flip = coinflipsService.GetCoinflipById(flipId);
+            var flip = await coinflipsService.GetCoinflipByIdAsync(flipId);
             if (flip == null)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
@@ -39,7 +39,8 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
-            if (!usersService.TryGetUser(flip.Identifier, out var user) || user == null)
+            var user = await usersService.GetUserAsync(flip.Identifier);
+            if (user == null)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
@@ -65,7 +66,7 @@ namespace Server.Communication.Discord.Interactions
                 long baseAmountK = flip.AmountK;
 
                 // Refresh user to get latest balance
-                usersService.TryGetUser(user.Identifier, out user);
+                user = await usersService.GetUserAsync(user.Identifier);
                 if (user == null)
                 {
                     await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
@@ -101,18 +102,18 @@ namespace Server.Communication.Discord.Interactions
                     return;
                 }
 
-                if (!usersService.RemoveBalance(user.Identifier, newAmountK))
+                if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmountK))
                 {
                     await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance for this rematch. Please try again.").AsEphemeral(true));
                     return;
                 }
 
-                var newFlip = coinflipsService.CreateCoinflip(user, newAmountK);
+                var newFlip = await coinflipsService.CreateCoinflipAsync(user, newAmountK);
                 if (newFlip == null)
                 {
                     // Refund if we couldn't create a new flip row
-                    usersService.AddBalance(user.Identifier, newAmountK);
+                    await usersService.AddBalanceAsync(user.Identifier, newAmountK);
                     await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to create rematch flip. Please try again later.").AsEphemeral(true));
                     return;
@@ -199,7 +200,7 @@ namespace Server.Communication.Discord.Interactions
                     .AddEmbed(embedRematch)
                     .AddComponents(headsButtonRematch, tailsButtonRematch, exitButtonRematch));
 
-                coinflipsService.UpdateCoinflipOutcome(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: newMessage.Channel.Id);
+                await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: newMessage.Channel.Id);
                 return;
             }
 
@@ -210,10 +211,10 @@ namespace Server.Communication.Discord.Interactions
                 if (flip.AmountK > 0)
                 {
                     // Give back the reserved amount
-                    usersService.AddBalance(user.Identifier, flip.AmountK);
+                    await usersService.AddBalanceAsync(user.Identifier, flip.AmountK);
 
                     // Mark this flip as cancelled so any later exits won't refund again
-                    coinflipsService.UpdateCoinflipOutcome(
+                    await coinflipsService.UpdateCoinflipOutcomeAsync(
                         flip.Id,
                         flip.ChoseHeads ?? false,
                         flip.ResultHeads ?? false,
@@ -305,7 +306,7 @@ namespace Server.Communication.Discord.Interactions
                 totalWinK = betAmountK + payoutK;
 
                 // Total returned to user: original stake + net profit.
-                usersService.AddBalance(user.Identifier, totalWinK);
+                await usersService.AddBalanceAsync(user.Identifier, totalWinK);
             }
 
             // Fire-and-forget live feed entry for coinflip games.
@@ -320,13 +321,13 @@ namespace Server.Communication.Discord.Interactions
             }
 
             // Persist updated flip baseline
-            coinflipsService.UpdateCoinflipOutcome(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0);
+            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0);
 
             // Register wager for race (only on completion)
             var raceName = user.DisplayName ?? user.Username;
             env.ServerManager.RaceService?.RegisterWager(user.Identifier, raceName, betAmountK);
 
-            usersService.TryGetUser(user.Identifier, out user);
+            user = await usersService.GetUserAsync(user.Identifier);
             var embed = BuildResultEmbed(user, flip, betAmountK, totalWinK, preFlipBalanceK, win, choseHeads, resultHeads);
 
             var rematchRow = new DiscordComponent[]

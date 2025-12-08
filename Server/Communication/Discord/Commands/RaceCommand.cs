@@ -51,7 +51,7 @@ namespace Server.Communication.Discord.Commands
             }
 
             var env = ServerEnvironment.GetServerEnvironment();
-            env.ServerManager.RaceService.EndRace();
+            await env.ServerManager.RaceService.EndRaceAsync();
             await ctx.RespondAsync("Race ended manually.");
         }
     }

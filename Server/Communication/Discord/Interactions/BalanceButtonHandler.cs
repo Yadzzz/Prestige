@@ -121,8 +121,8 @@ namespace Server.Communication.Discord.Interactions
 
             const int pageSize = 10;
 
-            usersService.TryGetUser(identifier, out var user);
-            var adjustments = balanceAdjustmentsService.GetAdjustmentsPageForUser(identifier, page, pageSize, out var totalCount);
+            var user = await usersService.GetUserAsync(identifier);
+            var (adjustments, totalCount) = await balanceAdjustmentsService.GetAdjustmentsPageForUserAsync(identifier, page, pageSize);
 
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Transaction History")

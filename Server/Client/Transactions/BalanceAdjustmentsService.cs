@@ -17,13 +17,13 @@ namespace Server.Client.Transactions
             _usersService = usersService;
         }
 
-        public List<BalanceAdjustment> GetAdjustmentsPageForUser(string userIdentifier, int page, int pageSize, out int totalCount)
+        public async Task<(List<BalanceAdjustment> Adjustments, int TotalCount)> GetAdjustmentsPageForUserAsync(string userIdentifier, int page, int pageSize)
         {
-            totalCount = 0;
+            int totalCount = 0;
             var results = new List<BalanceAdjustment>();
 
             if (string.IsNullOrEmpty(userIdentifier))
-                return results;
+                return (results, totalCount);
 
             try
             {
@@ -32,7 +32,7 @@ namespace Server.Client.Transactions
                 {
                     countCmd.SetCommand("SELECT COUNT(*) FROM balance_adjustments WHERE user_identifier = @uid");
                     countCmd.AddParameter("uid", userIdentifier);
-                    var countObj = countCmd.ExecuteScalar();
+                    var countObj = await countCmd.ExecuteScalarAsync();
                     if (countObj != null)
                     {
                         totalCount = Convert.ToInt32(countObj);
@@ -40,7 +40,7 @@ namespace Server.Client.Transactions
                 }
 
                 if (totalCount == 0)
-                    return results;
+                    return (results, totalCount);
 
                 // 2. Get page data
                 int offset = (page - 1) * pageSize;
@@ -53,7 +53,7 @@ namespace Server.Client.Transactions
                     cmd.AddParameter("limit", pageSize);
                     cmd.AddParameter("offset", offset);
 
-                    var table = cmd.ExecuteDataTable();
+                    var table = await cmd.ExecuteDataTableAsync();
                     foreach (System.Data.DataRow row in table.Rows)
                     {
                         results.Add(new BalanceAdjustment
@@ -78,10 +78,17 @@ namespace Server.Client.Transactions
                 env.ServerManager.LoggerManager.LogError($"[BalanceAdjustmentsService.GetAdjustmentsPageForUser] user={userIdentifier} ex={ex}");
             }
 
-            return results;
+            return (results, totalCount);
         }
 
-        public bool RecordAdjustment(User targetUser, string staffIdentifier, BalanceAdjustmentType adjustmentType, long amountK, string source, string reason = null)
+        public List<BalanceAdjustment> GetAdjustmentsPageForUser(string userIdentifier, int page, int pageSize, out int totalCount)
+        {
+            var result = GetAdjustmentsPageForUserAsync(userIdentifier, page, pageSize).GetAwaiter().GetResult();
+            totalCount = result.TotalCount;
+            return result.Adjustments;
+        }
+
+        public async Task<bool> RecordAdjustmentAsync(User targetUser, string staffIdentifier, BalanceAdjustmentType adjustmentType, long amountK, string source, string reason = null)
         {
             if (targetUser == null || amountK <= 0 || string.IsNullOrEmpty(source))
             {
@@ -90,11 +97,13 @@ namespace Server.Client.Transactions
 
             int? staffId = null;
 
-            if (!string.IsNullOrEmpty(staffIdentifier) &&
-                _usersService.TryGetUser(staffIdentifier, out var staffUser) &&
-                staffUser != null)
+            if (!string.IsNullOrEmpty(staffIdentifier))
             {
-                staffId = staffUser.Id;
+                var staffUser = await _usersService.GetUserAsync(staffIdentifier);
+                if (staffUser != null)
+                {
+                    staffId = staffUser.Id;
+                }
             }
 
             try
@@ -113,7 +122,7 @@ namespace Server.Client.Transactions
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("reason", (object)(reason ?? (object)DBNull.Value));
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -131,6 +140,11 @@ namespace Server.Client.Transactions
             }
 
             return false;
+        }
+
+        public bool RecordAdjustment(User targetUser, string staffIdentifier, BalanceAdjustmentType adjustmentType, long amountK, string source, string reason = null)
+        {
+            return RecordAdjustmentAsync(targetUser, staffIdentifier, adjustmentType, amountK, source, reason).GetAwaiter().GetResult();
         }
     }
 }

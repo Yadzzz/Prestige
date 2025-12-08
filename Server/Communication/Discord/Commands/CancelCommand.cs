@@ -34,15 +34,15 @@ namespace Server.Communication.Discord.Commands
             var sbPanel = new System.Text.StringBuilder();
 
             // 1. Cancel Pending Coinflips
-            var pendingFlips = coinflipsService.GetPendingCoinflipsByUserId(user.Id);
+            var pendingFlips = await coinflipsService.GetPendingCoinflipsByUserIdAsync(user.Id);
             foreach (var flip in pendingFlips)
             {
                 // Refund
-                usersService.AddBalance(user.Identifier, flip.AmountK);
+                await usersService.AddBalanceAsync(user.Identifier, flip.AmountK);
                 totalRefundedK += flip.AmountK;
 
                 // Update Status
-                coinflipsService.UpdateCoinflipOutcome(
+                await coinflipsService.UpdateCoinflipOutcomeAsync(
                     flip.Id,
                     flip.ChoseHeads ?? false,
                     flip.ResultHeads ?? false,
@@ -86,15 +86,15 @@ namespace Server.Communication.Discord.Commands
             }
 
             // 2. Cancel Pending Stakes
-            var pendingStakes = stakesService.GetPendingStakesByUserId(user.Id);
+            var pendingStakes = await stakesService.GetPendingStakesByUserIdAsync(user.Id);
             foreach (var stake in pendingStakes)
             {
                 // Refund
-                usersService.AddBalance(user.Identifier, stake.AmountK);
+                await usersService.AddBalanceAsync(user.Identifier, stake.AmountK);
                 totalRefundedK += stake.AmountK;
 
                 // Update Status
-                stakesService.UpdateStakeStatus(stake.Id, StakeStatus.Cancelled);
+                await stakesService.UpdateStakeStatusAsync(stake.Id, StakeStatus.Cancelled);
 
                 // Update User Discord Message (Disable buttons)
                 if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue)

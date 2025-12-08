@@ -14,7 +14,7 @@ namespace Server.Client.Stakes
             _databaseManager = databaseManager;
         }
 
-        public Stake CreateStake(User user, long amountK)
+        public async Task<Stake> CreateStakeAsync(User user, long amountK)
         {
             if (user == null || amountK <= 0)
                 return null;
@@ -32,7 +32,7 @@ namespace Server.Client.Stakes
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     if (rows <= 0)
                         return null;
                 }
@@ -42,7 +42,7 @@ namespace Server.Client.Stakes
                     fetch.SetCommand("SELECT * FROM stakes WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
                     fetch.AddParameter("user_id", user.Id);
 
-                    using (var reader = fetch.ExecuteDataReader())
+                    using (var reader = await fetch.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -67,7 +67,12 @@ namespace Server.Client.Stakes
             return null;
         }
 
-        public Stake GetStakeById(int id)
+        public Stake CreateStake(User user, long amountK)
+        {
+            return CreateStakeAsync(user, amountK).GetAwaiter().GetResult();
+        }
+
+        public async Task<Stake> GetStakeByIdAsync(int id)
         {
             try
             {
@@ -76,7 +81,7 @@ namespace Server.Client.Stakes
                     command.SetCommand("SELECT * FROM stakes WHERE id = @id LIMIT 1");
                     command.AddParameter("id", id);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -101,7 +106,12 @@ namespace Server.Client.Stakes
             return null;
         }
 
-        public bool UpdateStakeStatus(int id, StakeStatus status)
+        public Stake GetStakeById(int id)
+        {
+            return GetStakeByIdAsync(id).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> UpdateStakeStatusAsync(int id, StakeStatus status)
         {
             try
             {
@@ -112,7 +122,7 @@ namespace Server.Client.Stakes
                     command.AddParameter("updated_at", DateTime.UtcNow);
                     command.AddParameter("id", id);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -132,7 +142,12 @@ namespace Server.Client.Stakes
             return false;
         }
 
-        public bool UpdateStakeMessages(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
+        public bool UpdateStakeStatus(int id, StakeStatus status)
+        {
+            return UpdateStakeStatusAsync(id, status).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> UpdateStakeMessagesAsync(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
         {
             try
             {
@@ -145,7 +160,7 @@ namespace Server.Client.Stakes
                     command.AddParameter("staff_channel_id", (long)staffChannelId);
                     command.AddParameter("id", id);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -165,7 +180,12 @@ namespace Server.Client.Stakes
             return false;
         }
 
-        public bool UpdateStakeFee(int id, long feeK)
+        public bool UpdateStakeMessages(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
+        {
+            return UpdateStakeMessagesAsync(id, userMessageId, userChannelId, staffMessageId, staffChannelId).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> UpdateStakeFeeAsync(int id, long feeK)
         {
             try
             {
@@ -176,7 +196,7 @@ namespace Server.Client.Stakes
                     command.AddParameter("updated_at", DateTime.UtcNow);
                     command.AddParameter("id", id);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -196,7 +216,12 @@ namespace Server.Client.Stakes
             return false;
         }
 
-        public System.Collections.Generic.List<Stake> GetPendingStakesByUserId(int userId)
+        public bool UpdateStakeFee(int id, long feeK)
+        {
+            return UpdateStakeFeeAsync(id, feeK).GetAwaiter().GetResult();
+        }
+
+        public async Task<System.Collections.Generic.List<Stake>> GetPendingStakesByUserIdAsync(int userId)
         {
             var list = new System.Collections.Generic.List<Stake>();
             try
@@ -207,7 +232,7 @@ namespace Server.Client.Stakes
                     command.AddParameter("user_id", userId);
                     command.AddParameter("status", (int)StakeStatus.Pending);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         while (reader != null && reader.Read())
                         {
@@ -222,6 +247,11 @@ namespace Server.Client.Stakes
                 env.ServerManager.LoggerManager.LogError($"GetPendingStakesByUserId failed: {ex}");
             }
             return list;
+        }
+
+        public System.Collections.Generic.List<Stake> GetPendingStakesByUserId(int userId)
+        {
+            return GetPendingStakesByUserIdAsync(userId).GetAwaiter().GetResult();
         }
 
         private Stake MapStake(System.Data.IDataRecord reader)

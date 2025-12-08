@@ -58,18 +58,18 @@ namespace Server.Communication.Discord.Commands
             }
 
             // Lock stake amount up-front so it can't be reused while pending
-            var balanceLocked = usersService.RemoveBalance(user.Identifier, amountK);
+            var balanceLocked = await usersService.RemoveBalanceAsync(user.Identifier, amountK);
             if (!balanceLocked)
             {
                 await ctx.RespondAsync("Failed to lock balance for this stake. Please try again.");
                 return;
             }
 
-            var stake = stakesService.CreateStake(user, amountK);
+            var stake = await stakesService.CreateStakeAsync(user, amountK);
             if (stake == null)
             {
                 // rollback locked balance on failure
-                usersService.AddBalance(user.Identifier, amountK);
+                await usersService.AddBalanceAsync(user.Identifier, amountK);
 
                 await ctx.RespondAsync("Failed to create stake. Please try again later.");
                 serverManager.LogsService.Log(
@@ -121,13 +121,13 @@ namespace Server.Communication.Discord.Commands
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var winButton = new DiscordButtonComponent(ButtonStyle.Success, $"stake_win_{stake.Id}", "Win", emoji: new DiscordComponentEmoji("🏆"));
-            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            //var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
             var loseButton = new DiscordButtonComponent(ButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", emoji: new DiscordComponentEmoji("❌"));
 
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")
                 .AddEmbed(staffEmbed)
-                .AddComponents(winButton, cancelButton, loseButton));
+                .AddComponents(winButton, /*cancelButton,*/ loseButton));
 
             stakesService.UpdateStakeMessages(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
         }

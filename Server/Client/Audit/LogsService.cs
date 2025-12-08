@@ -12,7 +12,7 @@ namespace Server.Client.Audit
             _databaseManager = databaseManager;
         }
 
-        public void Log(string source, string level, string? userIdentifier, string? action, string? message, string? exception, string? metadataJson = null)
+        public async Task LogAsync(string source, string level, string? userIdentifier, string? action, string? message, string? exception, string? metadataJson = null)
         {
             try
             {
@@ -28,13 +28,18 @@ namespace Server.Client.Audit
                     command.AddParameter("exception", (object?)exception ?? DBNull.Value);
                     command.AddParameter("metadata_json", (object?)metadataJson ?? DBNull.Value);
 
-                    command.ExecuteQuery();
+                    await command.ExecuteQueryAsync();
                 }
             }
             catch
             {
                 // Intentionally swallow logging errors to avoid recursive failures
             }
+        }
+
+        public void Log(string source, string level, string? userIdentifier, string? action, string? message, string? exception, string? metadataJson = null)
+        {
+            LogAsync(source, level, userIdentifier, action, message, exception, metadataJson).GetAwaiter().GetResult();
         }
     }
 }

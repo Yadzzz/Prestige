@@ -16,7 +16,7 @@ namespace Server.Client.Transactions
             _usersService = usersService;
         }
 
-        public Transaction CreateDepositRequest(User user, long amountK)
+        public async Task<Transaction> CreateDepositRequestAsync(User user, long amountK)
         {
             if (user == null || amountK <= 0)
             {
@@ -37,7 +37,7 @@ namespace Server.Client.Transactions
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     if (rows <= 0)
                     {
                         var env = ServerEnvironment.GetServerEnvironment();
@@ -59,7 +59,7 @@ namespace Server.Client.Transactions
                     fetch.SetCommand("SELECT * FROM transactions WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
                     fetch.AddParameter("user_id", user.Id);
 
-                    using (var reader = fetch.ExecuteDataReader())
+                    using (var reader = await fetch.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -99,7 +99,12 @@ namespace Server.Client.Transactions
             return null;
         }
 
-        public Transaction CreateWithdrawRequest(User user, long amountK)
+        public Transaction CreateDepositRequest(User user, long amountK)
+        {
+            return CreateDepositRequestAsync(user, amountK).GetAwaiter().GetResult();
+        }
+
+        public async Task<Transaction> CreateWithdrawRequestAsync(User user, long amountK)
         {
             if (user == null || amountK <= 0)
             {
@@ -120,7 +125,7 @@ namespace Server.Client.Transactions
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     if (rows <= 0)
                     {
                         return null;
@@ -133,7 +138,7 @@ namespace Server.Client.Transactions
                     fetch.SetCommand("SELECT * FROM transactions WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
                     fetch.AddParameter("user_id", user.Id);
 
-                    using (var reader = fetch.ExecuteDataReader())
+                    using (var reader = await fetch.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -173,7 +178,12 @@ namespace Server.Client.Transactions
             return null;
         }
 
-        public Transaction GetTransactionById(int id)
+        public Transaction CreateWithdrawRequest(User user, long amountK)
+        {
+            return CreateWithdrawRequestAsync(user, amountK).GetAwaiter().GetResult();
+        }
+
+        public async Task<Transaction> GetTransactionByIdAsync(int id)
         {
             try
             {
@@ -182,7 +192,7 @@ namespace Server.Client.Transactions
                     command.SetCommand("SELECT * FROM transactions WHERE id = @id LIMIT 1");
                     command.AddParameter("id", id);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -207,14 +217,19 @@ namespace Server.Client.Transactions
             return null;
         }
 
-        public List<Transaction> GetTransactionsPageForUser(string identifier, int page, int pageSize, out int totalCount)
+        public Transaction GetTransactionById(int id)
+        {
+            return GetTransactionByIdAsync(id).GetAwaiter().GetResult();
+        }
+
+        public async Task<(List<Transaction> Transactions, int TotalCount)> GetTransactionsPageForUserAsync(string identifier, int page, int pageSize)
         {
             var result = new List<Transaction>();
-            totalCount = 0;
+            int totalCount = 0;
 
             if (string.IsNullOrEmpty(identifier) || page < 1 || pageSize <= 0)
             {
-                return result;
+                return (result, totalCount);
             }
 
             try
@@ -224,7 +239,7 @@ namespace Server.Client.Transactions
                     countCommand.SetCommand("SELECT COUNT(*) FROM transactions WHERE identifier = @identifier");
                     countCommand.AddParameter("identifier", identifier);
 
-                    using (var reader = countCommand.ExecuteDataReader())
+                    using (var reader = await countCommand.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -242,7 +257,7 @@ namespace Server.Client.Transactions
                     command.AddParameter("limit", pageSize);
                     command.AddParameter("offset", offset);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         while (reader != null && reader.Read())
                         {
@@ -264,10 +279,17 @@ namespace Server.Client.Transactions
                     exception: ex.ToString());
             }
 
-            return result;
+            return (result, totalCount);
         }
 
-        public bool UpdateTransactionStatus(int id, TransactionStatus status, int? staffId, string staffIdentifier, string notes)
+        public List<Transaction> GetTransactionsPageForUser(string identifier, int page, int pageSize, out int totalCount)
+        {
+            var result = GetTransactionsPageForUserAsync(identifier, page, pageSize).GetAwaiter().GetResult();
+            totalCount = result.TotalCount;
+            return result.Transactions;
+        }
+
+        public async Task<bool> UpdateTransactionStatusAsync(int id, TransactionStatus status, int? staffId, string staffIdentifier, string notes)
         {
             try
             {
@@ -281,7 +303,7 @@ namespace Server.Client.Transactions
                     command.AddParameter("updated_at", DateTime.UtcNow);
                     command.AddParameter("id", id);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -301,7 +323,12 @@ namespace Server.Client.Transactions
             return false;
         }
 
-        public bool UpdateTransactionFee(int id, long feeK)
+        public bool UpdateTransactionStatus(int id, TransactionStatus status, int? staffId, string staffIdentifier, string notes)
+        {
+            return UpdateTransactionStatusAsync(id, status, staffId, staffIdentifier, notes).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> UpdateTransactionFeeAsync(int id, long feeK)
         {
             try
             {
@@ -312,7 +339,7 @@ namespace Server.Client.Transactions
                     command.AddParameter("updated_at", DateTime.UtcNow);
                     command.AddParameter("id", id);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -332,7 +359,12 @@ namespace Server.Client.Transactions
             return false;
         }
 
-        public bool UpdateTransactionMessages(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
+        public bool UpdateTransactionFee(int id, long feeK)
+        {
+            return UpdateTransactionFeeAsync(id, feeK).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> UpdateTransactionMessagesAsync(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
         {
             try
             {
@@ -345,7 +377,7 @@ namespace Server.Client.Transactions
                     command.AddParameter("staff_channel_id", (long)staffChannelId);
                     command.AddParameter("id", id);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -363,6 +395,11 @@ namespace Server.Client.Transactions
             }
 
             return false;
+        }
+
+        public bool UpdateTransactionMessages(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
+        {
+            return UpdateTransactionMessagesAsync(id, userMessageId, userChannelId, staffMessageId, staffChannelId).GetAwaiter().GetResult();
         }
 
         private Transaction MapTransaction(System.Data.IDataRecord reader)

@@ -47,6 +47,16 @@ namespace Server.Infrastructure.Database
             return rowsAffected;
         }
 
+        public async Task<int> ExecuteQueryAsync()
+        {
+            if (base._mySqlConnection.State == ConnectionState.Closed)
+            {
+                await base.OpenConnectionAsync();
+            }
+
+            return await this._MySqlCommand.ExecuteNonQueryAsync();
+        }
+
         public object ExecuteScalar()
         {
             if (base._mySqlConnection.State == ConnectionState.Closed)
@@ -55,6 +65,16 @@ namespace Server.Infrastructure.Database
             }
 
             return this._MySqlCommand.ExecuteScalar();
+        }
+
+        public async Task<object> ExecuteScalarAsync()
+        {
+            if (base._mySqlConnection.State == ConnectionState.Closed)
+            {
+                await base.OpenConnectionAsync();
+            }
+
+            return await this._MySqlCommand.ExecuteScalarAsync();
         }
 
         public DataTable ExecuteDataTable()
@@ -72,6 +92,21 @@ namespace Server.Infrastructure.Database
             return dt;
         }
 
+        public async Task<DataTable> ExecuteDataTableAsync()
+        {
+            if (base._mySqlConnection.State == ConnectionState.Closed)
+            {
+                await base.OpenConnectionAsync();
+            }
+
+            var dt = new DataTable();
+            using (var reader = await this._MySqlCommand.ExecuteReaderAsync())
+            {
+                dt.Load(reader);
+            }
+            return dt;
+        }
+
         public MySqlDataReader ExecuteDataReader()
         {
             if (base._mySqlConnection.State == ConnectionState.Closed)
@@ -80,6 +115,16 @@ namespace Server.Infrastructure.Database
             }
 
             return this._MySqlCommand.ExecuteReader();
+        }
+
+        public async Task<MySqlDataReader> ExecuteDataReaderAsync()
+        {
+            if (base._mySqlConnection.State == ConnectionState.Closed)
+            {
+                await base.OpenConnectionAsync();
+            }
+
+            return (MySqlDataReader)await this._MySqlCommand.ExecuteReaderAsync();
         }
 
         public void Dispose()

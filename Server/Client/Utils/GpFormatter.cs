@@ -13,8 +13,9 @@ namespace Server.Client.Utils
             public static string Format(long storedK)
             {
                 decimal millions = storedK / 1000.0m;
-                // Always show two decimal places and use '.' as decimal separator
-                return millions.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "M";
+                // Truncate to 2 decimal places so we don't show more than the user actually has
+                decimal truncated = Math.Floor(millions * 100) / 100;
+                return truncated.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "M";
             }
     }
 }

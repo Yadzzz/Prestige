@@ -13,7 +13,7 @@ namespace Server.Client.Coinflips
             _databaseManager = databaseManager;
         }
 
-        public Coinflip CreateCoinflip(User user, long amountK)
+        public async Task<Coinflip> CreateCoinflipAsync(User user, long amountK)
         {
             if (user == null || amountK <= 0)
                 return null;
@@ -30,7 +30,7 @@ namespace Server.Client.Coinflips
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     if (rows <= 0)
                         return null;
                 }
@@ -40,7 +40,7 @@ namespace Server.Client.Coinflips
                     fetch.SetCommand("SELECT * FROM coinflips WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
                     fetch.AddParameter("user_id", user.Id);
 
-                    using (var reader = fetch.ExecuteDataReader())
+                    using (var reader = await fetch.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -65,7 +65,12 @@ namespace Server.Client.Coinflips
             return null;
         }
 
-        public Coinflip GetCoinflipById(int id)
+        public Coinflip CreateCoinflip(User user, long amountK)
+        {
+            return CreateCoinflipAsync(user, amountK).GetAwaiter().GetResult();
+        }
+
+        public async Task<Coinflip> GetCoinflipByIdAsync(int id)
         {
             try
             {
@@ -74,7 +79,7 @@ namespace Server.Client.Coinflips
                     command.SetCommand("SELECT * FROM coinflips WHERE id = @id LIMIT 1");
                     command.AddParameter("id", id);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         if (reader != null && reader.Read())
                         {
@@ -99,7 +104,12 @@ namespace Server.Client.Coinflips
             return null;
         }
 
-        public bool UpdateCoinflipOutcome(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId)
+        public Coinflip GetCoinflipById(int id)
+        {
+            return GetCoinflipByIdAsync(id).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> UpdateCoinflipOutcomeAsync(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId)
         {
             try
             {
@@ -114,7 +124,7 @@ namespace Server.Client.Coinflips
                     command.AddParameter("updated_at", DateTime.UtcNow);
                     command.AddParameter("id", id);
 
-                    var rows = command.ExecuteQuery();
+                    var rows = await command.ExecuteQueryAsync();
                     return rows > 0;
                 }
             }
@@ -134,7 +144,12 @@ namespace Server.Client.Coinflips
             return false;
         }
 
-        public System.Collections.Generic.List<Coinflip> GetPendingCoinflipsByUserId(int userId)
+        public bool UpdateCoinflipOutcome(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId)
+        {
+            return UpdateCoinflipOutcomeAsync(id, choseHeads, resultHeads, status, messageId, channelId).GetAwaiter().GetResult();
+        }
+
+        public async Task<System.Collections.Generic.List<Coinflip>> GetPendingCoinflipsByUserIdAsync(int userId)
         {
             var list = new System.Collections.Generic.List<Coinflip>();
             try
@@ -145,7 +160,7 @@ namespace Server.Client.Coinflips
                     command.AddParameter("user_id", userId);
                     command.AddParameter("status", (int)CoinflipStatus.Pending);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         while (reader != null && reader.Read())
                         {
@@ -160,6 +175,11 @@ namespace Server.Client.Coinflips
                 env.ServerManager.LoggerManager.LogError($"GetPendingCoinflipsByUserId failed: {ex}");
             }
             return list;
+        }
+
+        public System.Collections.Generic.List<Coinflip> GetPendingCoinflipsByUserId(int userId)
+        {
+            return GetPendingCoinflipsByUserIdAsync(userId).GetAwaiter().GetResult();
         }
 
         private Coinflip MapCoinflip(System.Data.IDataRecord reader)

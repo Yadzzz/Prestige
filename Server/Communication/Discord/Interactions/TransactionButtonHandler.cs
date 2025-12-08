@@ -8,6 +8,7 @@ using Server.Client.Transactions;
 using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Infrastructure;
+using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Interactions
 {
@@ -45,7 +46,7 @@ namespace Server.Communication.Discord.Interactions
             var env = ServerEnvironment.GetServerEnvironment();
             var transactionsService = env.ServerManager.TransactionsService;
 
-            var transaction = transactionsService.GetTransactionById(txId);
+            var transaction = await transactionsService.GetTransactionByIdAsync(txId);
             if (transaction == null || transaction.Type != TransactionType.Withdraw)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
@@ -87,7 +88,7 @@ namespace Server.Communication.Discord.Interactions
             // Persist fee_k when selection is made
             if (transaction.Type == TransactionType.Withdraw)
             {
-                transactionsService.UpdateTransactionFee(transaction.Id, feeK);
+                await transactionsService.UpdateTransactionFeeAsync(transaction.Id, feeK);
             }
 
             // Update staff message description with chosen deposit type and enable buttons
@@ -151,6 +152,7 @@ namespace Server.Communication.Discord.Interactions
 
                     await staffMessage.ModifyAsync(builder =>
                     {
+                        builder.WithContent($"<@&{DiscordIds.StaffRoleId}>");
                         builder.Embed = updatedEmbed.Build();
                         builder.ClearComponents();
                         builder.AddComponents(components);
@@ -159,7 +161,7 @@ namespace Server.Communication.Discord.Interactions
                 catch (Exception ex)
                 {
                     env.ServerManager.LoggerManager.LogError($"Failed to update staff deposit message after type selection: {ex}");
-                    env.ServerManager.LogsService.Log(
+                    await env.ServerManager.LogsService.LogAsync(
                         source: nameof(TransactionButtonHandler),
                         level: "Error",
                         userIdentifier: transaction.Identifier,
@@ -222,7 +224,7 @@ namespace Server.Communication.Discord.Interactions
             catch (Exception ex)
             {
                 env.ServerManager.LoggerManager.LogError($"Failed to update user deposit message after type selection: {ex}");
-                env.ServerManager.LogsService.Log(
+                await env.ServerManager.LogsService.LogAsync(
                     source: nameof(TransactionButtonHandler),
                     level: "Error",
                     userIdentifier: transaction.Identifier,
@@ -246,7 +248,7 @@ namespace Server.Communication.Discord.Interactions
             var transactionsService = env.ServerManager.TransactionsService;
             var usersService = env.ServerManager.UsersService;
 
-            var transaction = transactionsService.GetTransactionById(txId);
+            var transaction = await transactionsService.GetTransactionByIdAsync(txId);
             if (transaction == null)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
@@ -281,7 +283,7 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
-            transactionsService.UpdateTransactionStatus(
+            await transactionsService.UpdateTransactionStatusAsync(
                 txId,
                 newStatus,
                 staffId: null,
@@ -291,14 +293,14 @@ namespace Server.Communication.Discord.Interactions
             if (newStatus == TransactionStatus.Accepted)
             {
                 var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
-                usersService.TryGetUser(transaction.Identifier, out var targetUser);
+                var targetUser = await usersService.GetUserAsync(transaction.Identifier);
 
                 if (transaction.Type == TransactionType.Deposit)
                 {
-                    usersService.AddBalance(transaction.Identifier, transaction.AmountK);
+                    await usersService.AddBalanceAsync(transaction.Identifier, transaction.AmountK);
                     if (targetUser != null)
                     {
-                        balanceAdjustmentsService.RecordAdjustment(
+                        await balanceAdjustmentsService.RecordAdjustmentAsync(
                             targetUser,
                             e.User.Id.ToString(),
                             BalanceAdjustmentType.Deposit,
@@ -313,7 +315,7 @@ namespace Server.Communication.Discord.Interactions
                     // On accept we don't change balance again; on cancel/deny we refund below.
                     if (targetUser != null)
                     {
-                        balanceAdjustmentsService.RecordAdjustment(
+                        await balanceAdjustmentsService.RecordAdjustmentAsync(
                             targetUser,
                             e.User.Id.ToString(),
                             BalanceAdjustmentType.Withdraw,
@@ -327,10 +329,10 @@ namespace Server.Communication.Discord.Interactions
                      && transaction.Type == TransactionType.Withdraw)
             {
                 // Refund locked withdrawal amount on cancel/deny so user balance returns to original.
-                usersService.AddBalance(transaction.Identifier, transaction.AmountK);
+                await usersService.AddBalanceAsync(transaction.Identifier, transaction.AmountK);
             }
 
-            env.ServerManager.LogsService.Log(
+            await env.ServerManager.LogsService.LogAsync(
                 source: nameof(TransactionButtonHandler),
                 level: "Info",
                 userIdentifier: transaction.Identifier,
@@ -342,7 +344,7 @@ namespace Server.Communication.Discord.Interactions
             var statusText = newStatus.ToString().ToUpperInvariant();
             var typeLabel = transaction.Type == TransactionType.Withdraw ? "Withdrawal" : "Deposit";
 
-            usersService.TryGetUser(transaction.Identifier, out var updatedUser);
+            var updatedUser = await usersService.GetUserAsync(transaction.Identifier);
             var balanceText = updatedUser != null ? GpFormatter.Format(updatedUser.Balance) : null;
 
             var originalEmbed = e.Message.Embeds.Count > 0 ? e.Message.Embeds[0] : null;
@@ -500,7 +502,7 @@ namespace Server.Communication.Discord.Interactions
                         {
                             var envOuter = ServerEnvironment.GetServerEnvironment();
                             envOuter.ServerManager.LoggerManager.LogError($"Failed to disable transaction user cancel button after staff action: {ex}");
-                            envOuter.ServerManager.LogsService.Log(
+                            await envOuter.ServerManager.LogsService.LogAsync(
                                 source: nameof(TransactionButtonHandler),
                                 level: "Error",
                                 userIdentifier: transaction.Identifier,
@@ -514,7 +516,7 @@ namespace Server.Communication.Discord.Interactions
                 {
                     var envOuter = ServerEnvironment.GetServerEnvironment();
                     envOuter.ServerManager.LoggerManager.LogError($"Failed to send processed transaction message to user: {ex}");
-                    envOuter.ServerManager.LogsService.Log(
+                    await envOuter.ServerManager.LogsService.LogAsync(
                         source: nameof(TransactionButtonHandler),
                         level: "Error",
                         userIdentifier: transaction.Identifier,
@@ -537,7 +539,7 @@ namespace Server.Communication.Discord.Interactions
             var env = ServerEnvironment.GetServerEnvironment();
             var transactionsService = env.ServerManager.TransactionsService;
 
-            var transaction = transactionsService.GetTransactionById(txId);
+            var transaction = await transactionsService.GetTransactionByIdAsync(txId);
             if (transaction == null)
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
@@ -552,7 +554,7 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
-            transactionsService.UpdateTransactionStatus(
+            await transactionsService.UpdateTransactionStatusAsync(
                 txId,
                 TransactionStatus.Cancelled,
                 staffId: null,
@@ -563,10 +565,10 @@ namespace Server.Communication.Discord.Interactions
             if (transaction.Type == TransactionType.Withdraw)
             {
                 var usersService = env.ServerManager.UsersService;
-                usersService.AddBalance(transaction.Identifier, transaction.AmountK);
+                await usersService.AddBalanceAsync(transaction.Identifier, transaction.AmountK);
             }
 
-            env.ServerManager.LogsService.Log(
+            await env.ServerManager.LogsService.LogAsync(
                 source: nameof(TransactionButtonHandler),
                 level: "Info",
                 userIdentifier: transaction.Identifier,

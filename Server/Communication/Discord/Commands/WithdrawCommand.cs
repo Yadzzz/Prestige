@@ -66,14 +66,14 @@ namespace Server.Communication.Discord.Commands
             }
 
             // Lock the withdrawal amount up-front, similar to stakes
-            var balanceLocked = usersService.RemoveBalance(user.Identifier, amountK);
+            var balanceLocked = await usersService.RemoveBalanceAsync(user.Identifier, amountK);
             if (!balanceLocked)
             {
                 await ctx.RespondAsync("Failed to lock balance for this withdrawal. Please try again later.");
                 return;
             }
 
-            var transaction = transactionsService.CreateWithdrawRequest(user, amountK);
+            var transaction = await transactionsService.CreateWithdrawRequestAsync(user, amountK);
             if (transaction == null)
             {
                 await ctx.RespondAsync("Failed to create withdrawal request. Please try again later.");
@@ -85,7 +85,7 @@ namespace Server.Communication.Discord.Commands
                     message: $"Failed to create withdraw for {user.Identifier} amountK={amountK}",
                     exception: null);
                 // rollback locked balance if transaction creation failed
-                usersService.AddBalance(user.Identifier, amountK);
+                await usersService.AddBalanceAsync(user.Identifier, amountK);
                 return;
             }
 
@@ -128,7 +128,7 @@ namespace Server.Communication.Discord.Commands
                 .AddEmbed(staffEmbed)
                 .AddComponents(acceptButton, cancelButton, denyButton));
 
-            transactionsService.UpdateTransactionMessages(
+            await transactionsService.UpdateTransactionMessagesAsync(
                 transaction.Id,
                 userMessage.Id,
                 userMessage.Channel.Id,

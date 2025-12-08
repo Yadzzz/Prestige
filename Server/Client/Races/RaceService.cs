@@ -68,7 +68,7 @@ namespace Server.Client.Races
             _isDirty = true;
         }
 
-        public Race CreateRace(DateTime endTime, List<RacePrize> prizes, ulong channelId)
+        public async Task<Race> CreateRaceAsync(DateTime endTime, List<RacePrize> prizes, ulong channelId)
         {
             if (_activeRace != null && _activeRace.Status == RaceStatus.Active)
             {
@@ -94,7 +94,8 @@ namespace Server.Client.Races
                 cmd.AddParameter("@Prizes", race.PrizeDistributionJson);
                 cmd.AddParameter("@Channel", race.ChannelId);
                 
-                race.Id = Convert.ToInt32(cmd.ExecuteScalar());
+                var result = await cmd.ExecuteScalarAsync();
+                race.Id = Convert.ToInt32(result);
             }
 
             _activeRace = race;
@@ -102,7 +103,12 @@ namespace Server.Client.Races
             return race;
         }
 
-        public void EndRace()
+        public Race CreateRace(DateTime endTime, List<RacePrize> prizes, ulong channelId)
+        {
+            return CreateRaceAsync(endTime, prizes, channelId).GetAwaiter().GetResult();
+        }
+
+        public async Task EndRaceAsync()
         {
             if (_activeRace == null) return;
 
@@ -113,14 +119,19 @@ namespace Server.Client.Races
                 cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
                 cmd.AddParameter("@Status", _activeRace.Status.ToString());
                 cmd.AddParameter("@Id", _activeRace.Id);
-                cmd.ExecuteQuery();
+                await cmd.ExecuteQueryAsync();
             }
 
             // Final flush
-            FlushAndBroadcastAsync().Wait();
+            await FlushAndBroadcastAsync();
             
             _activeRace = null;
             _activeParticipants.Clear();
+        }
+
+        public void EndRace()
+        {
+            EndRaceAsync().GetAwaiter().GetResult();
         }
 
         private void LoadActiveRace()
@@ -204,7 +215,7 @@ namespace Server.Client.Races
                     sb.Append(" ON DUPLICATE KEY UPDATE TotalWagered = VALUES(TotalWagered), Username = VALUES(Username)");
                     
                     cmd.SetCommand(sb.ToString());
-                    cmd.ExecuteQuery();
+                    await cmd.ExecuteQueryAsync();
                 }
             }
 
@@ -276,7 +287,7 @@ namespace Server.Client.Races
                                 .WithFooter(isEnding ? "Race Ended" : $"Ends at {race.EndTime:g}");
 
                             var newMsg = await channel.SendMessageAsync(embed.Build());
-                            SetMessageId(newMsg.Id);
+                            await SetMessageIdAsync(newMsg.Id);
                         }
                     }
                     catch { /* Ignore if we can't repost */ }
@@ -296,7 +307,7 @@ namespace Server.Client.Races
                     cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
                     cmd.AddParameter("@Status", race.Status.ToString());
                     cmd.AddParameter("@Id", race.Id);
-                    cmd.ExecuteQuery();
+                    await cmd.ExecuteQueryAsync();
                 }
                 
                 if (_activeRace == race)
@@ -315,7 +326,7 @@ namespace Server.Client.Races
                 .ToList();
         }
 
-        public void SetMessageId(ulong messageId)
+        public async Task SetMessageIdAsync(ulong messageId)
         {
             if (_activeRace == null) return;
             _activeRace.MessageId = messageId;
@@ -325,8 +336,13 @@ namespace Server.Client.Races
                 cmd.SetCommand("UPDATE races SET MessageId = @MsgId WHERE Id = @Id");
                 cmd.AddParameter("@MsgId", messageId);
                 cmd.AddParameter("@Id", _activeRace.Id);
-                cmd.ExecuteQuery();
+                await cmd.ExecuteQueryAsync();
             }
+        }
+
+        public void SetMessageId(ulong messageId)
+        {
+            SetMessageIdAsync(messageId).GetAwaiter().GetResult();
         }
 
         public async Task StopAsync()

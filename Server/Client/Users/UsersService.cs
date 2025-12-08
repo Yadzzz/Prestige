@@ -13,13 +13,13 @@ namespace Server.Client.Users
             _databaseManager = databaseManager;
         }
 
-        public bool AddBalance(string identifier, long amount)
+        public async Task<bool> AddBalanceAsync(string identifier, long amount)
         {
             if (amount <= 0)
             {
                 return false;
             }
-            var updated = TryUpdateBalance(identifier, amount);
+            var updated = await UpdateBalanceAsync(identifier, amount);
 
             try
             {
@@ -43,13 +43,19 @@ namespace Server.Client.Users
             return updated;
         }
 
-        public bool RemoveBalance(string identifier, long amount)
+        // Keep synchronous method for backward compatibility
+        public bool AddBalance(string identifier, long amount)
+        {
+            return AddBalanceAsync(identifier, amount).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> RemoveBalanceAsync(string identifier, long amount)
         {
             if (amount <= 0)
             {
                 return false;
             }
-            var updated = TryUpdateBalance(identifier, -amount);
+            var updated = await UpdateBalanceAsync(identifier, -amount);
 
             try
             {
@@ -73,7 +79,13 @@ namespace Server.Client.Users
             return updated;
         }
 
-        public bool UserExists(string identifier)
+        // Keep synchronous method for backward compatibility
+        public bool RemoveBalance(string identifier, long amount)
+        {
+            return RemoveBalanceAsync(identifier, amount).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> UserExistsAsync(string identifier)
         {
             if (string.IsNullOrEmpty(identifier))
             {
@@ -86,7 +98,7 @@ namespace Server.Client.Users
                     command.SetCommand("SELECT COUNT(*) FROM users WHERE identifier = @identifier");
                     command.AddParameter("identifier", identifier);
 
-                    var result = command.ExecuteQuery();
+                    var result = await command.ExecuteScalarAsync();
 
                     return Convert.ToInt32(result) > 0;
                 }
@@ -106,13 +118,17 @@ namespace Server.Client.Users
             return false;
         }
 
-        public bool TryGetUser(string identifier, out User user)
+        // Keep synchronous method for backward compatibility
+        public bool UserExists(string identifier)
         {
-            user = null;
+            return UserExistsAsync(identifier).GetAwaiter().GetResult();
+        }
 
+        public async Task<User?> GetUserAsync(string identifier)
+        {
             if (string.IsNullOrEmpty(identifier))
             {
-                return false;
+                return null;
             }
 
             try
@@ -122,16 +138,16 @@ namespace Server.Client.Users
                     command.SetCommand("SELECT * FROM users WHERE identifier = @identifier LIMIT 1");
                     command.AddParameter("identifier", identifier);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         if (reader == null)
                         {
-                            return false;
+                            return null;
                         }
 
-                        while (reader.Read())
+                        if (await reader.ReadAsync())
                         {
-                            user = new User
+                            return new User
                             {
                                 Id = Convert.ToInt32(reader["id"]),
                                 Identifier = reader["identifier"].ToString(),
@@ -150,18 +166,25 @@ namespace Server.Client.Users
                 try
                 {
                     var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LoggerManager.LogError($"[UsersService.TryGetUserError] identifier={identifier} ex={ex}");
+                    env.ServerManager.LoggerManager.LogError($"[UsersService.GetUserError] identifier={identifier} ex={ex}");
                 }
                 catch
                 {
-                    Console.WriteLine($"[UsersService.TryGetUserError] {ex}");
+                    Console.WriteLine($"[UsersService.GetUserError] {ex}");
                 }
             }
 
+            return null;
+        }
+
+        // Keep synchronous method for backward compatibility
+        public bool TryGetUser(string identifier, out User user)
+        {
+            user = GetUserAsync(identifier).GetAwaiter().GetResult();
             return user != null;
         }
 
-        public bool CreateUser(string identifier, string username, string displayName)
+        public async Task<bool> CreateUserAsync(string identifier, string username, string displayName)
         {
             if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(username))
             {
@@ -169,7 +192,7 @@ namespace Server.Client.Users
             }
 
             // If the user already exists, treat creation as a no-op success.
-            if (UserExists(identifier))
+            if (await UserExistsAsync(identifier))
             {
                 return true;
             }
@@ -186,7 +209,7 @@ namespace Server.Client.Users
                     command.AddParameter("stake_streak", 0);
                     command.AddParameter("stake_lose_streak", 0);
 
-                    int rowsAffected = command.ExecuteQuery();
+                    int rowsAffected = await command.ExecuteQueryAsync();
 
                     return rowsAffected > 0;
                 }
@@ -206,7 +229,13 @@ namespace Server.Client.Users
             }
         }
 
-        private bool TryUpdateBalance(string identifier, long delta)
+        // Keep synchronous method for backward compatibility
+        public bool CreateUser(string identifier, string username, string displayName)
+        {
+            return CreateUserAsync(identifier, username, displayName).GetAwaiter().GetResult();
+        }
+
+        private async Task<bool> UpdateBalanceAsync(string identifier, long delta)
         {
             if (string.IsNullOrEmpty(identifier) || delta == 0)
             {
@@ -221,8 +250,8 @@ namespace Server.Client.Users
                     command.AddParameter("identifier", identifier);
                     command.AddParameter("delta", delta);
 
-                    var result = command.ExecuteQuery();
-                    return Convert.ToInt32(result) > 0;
+                    var result = await command.ExecuteQueryAsync();
+                    return result > 0;
                 }
             }
             catch (Exception ex)
@@ -240,28 +269,32 @@ namespace Server.Client.Users
             }
         }
 
-        public Task<User?> EnsureUserAsync(string userId, string username, string displayName)
+        // Keep synchronous method for backward compatibility
+        private bool TryUpdateBalance(string identifier, long delta)
+        {
+            return UpdateBalanceAsync(identifier, delta).GetAwaiter().GetResult();
+        }
+
+        public async Task<User?> EnsureUserAsync(string userId, string username, string displayName)
         {
             if (string.IsNullOrEmpty(userId))
             {
-                return Task.FromResult<User?>(null);
+                return null;
             }
 
-            if (!TryGetUser(userId, out var user) || user == null)
+            var user = await GetUserAsync(userId);
+            if (user == null)
             {
                 // User does not exist yet; try to create and then fetch.
-                if (!CreateUser(userId, username, displayName))
+                if (!await CreateUserAsync(userId, username, displayName))
                 {
-                    return Task.FromResult<User?>(null);
+                    return null;
                 }
 
-                if (!TryGetUser(userId, out user) || user == null)
-                {
-                    return Task.FromResult<User?>(null);
-                }
+                user = await GetUserAsync(userId);
             }
 
-            return Task.FromResult<User?>(user);
+            return user;
         }
     }
 }

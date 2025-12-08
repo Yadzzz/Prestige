@@ -65,16 +65,16 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!usersService.RemoveBalance(user.Identifier, amountK))
+            if (!await usersService.RemoveBalanceAsync(user.Identifier, amountK))
             {
                 await ctx.RespondAsync("Failed to lock balance for this flip. Please try again.");
                 return;
             }
 
-            var flip = coinflipsService.CreateCoinflip(user, amountK);
+            var flip = await coinflipsService.CreateCoinflipAsync(user, amountK);
             if (flip == null)
             {
-                usersService.AddBalance(user.Identifier, amountK);
+                await usersService.AddBalanceAsync(user.Identifier, amountK);
                 await ctx.RespondAsync("Failed to create coinflip. Please try again later.");
                 return;
             }

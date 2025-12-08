@@ -69,7 +69,7 @@ namespace Server.Communication.Discord.Interactions
                         var raceChannelId = DiscordIds.RaceChannelId;
                         var raceChannel = await client.GetChannelAsync(raceChannelId);
 
-                        var race = env.ServerManager.RaceService.CreateRace(endTime, config.Prizes, raceChannelId);
+                        var race = await env.ServerManager.RaceService.CreateRaceAsync(endTime, config.Prizes, raceChannelId);
                         
                         await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, 
                             new DiscordInteractionResponseBuilder().WithContent($"Race started! ID: {race.Id} in <#{raceChannelId}>"));
@@ -82,7 +82,7 @@ namespace Server.Communication.Discord.Interactions
                             .WithFooter($"Ends at {endTime:g}");
                             
                         var msg = await raceChannel.SendMessageAsync(leaderboardEmbed);
-                        env.ServerManager.RaceService.SetMessageId(msg.Id);
+                        await env.ServerManager.RaceService.SetMessageIdAsync(msg.Id);
                         
                         _pendingConfigs.Remove(e.User.Id);
                     }
