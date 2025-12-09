@@ -208,7 +208,49 @@ namespace Server.Client.Races
                 }
             }
 
-            // 2. Update Discord Message
+            // 2. Handle Ending & Prize Distribution
+            List<string>? distributionLog = null;
+            if (isEnding)
+            {
+                race.Status = RaceStatus.Finished;
+                using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
+                {
+                    cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
+                    cmd.AddParameter("@Status", race.Status.ToString());
+                    cmd.AddParameter("@Id", race.Id);
+                    await cmd.ExecuteQueryAsync();
+                }
+
+                // Distribute Prizes
+                distributionLog = new List<string>();
+                var winners = GetTopParticipants(50); 
+                var prizes = race.GetPrizes();
+                var usersService = _serverManager.UsersService;
+
+                foreach (var prize in prizes)
+                {
+                    int index = prize.Rank - 1;
+                    if (index >= 0 && index < winners.Count)
+                    {
+                        var winner = winners[index];
+                        if (Server.Client.Utils.GpParser.TryParseAmountInK(prize.Prize, out long amountK))
+                        {
+                            await usersService.AddBalanceAsync(winner.UserIdentifier, amountK);
+                            distributionLog.Add($"**#{prize.Rank}** {winner.Username}: `{prize.Prize}` ✅");
+                            
+                            _serverManager.LogsService.Log(
+                                source: nameof(RaceService),
+                                level: "Info",
+                                userIdentifier: winner.UserIdentifier,
+                                action: "RacePrize",
+                                message: $"Won rank {prize.Rank} in race {race.Id}. Prize: {prize.Prize} ({amountK}k)",
+                                exception: null);
+                        }
+                    }
+                }
+            }
+
+            // 3. Update Discord Message
             if (race.ChannelId != 0 && race.MessageId != 0)
             {
                 try
@@ -217,7 +259,7 @@ namespace Server.Client.Races
                     if (client != null)
                     {
                         var channel = await client.GetChannelAsync(race.ChannelId);
-                        var embed = BuildRaceEmbed(race, GetTopParticipants(10), isEnding);
+                        var embed = BuildRaceEmbed(race, GetTopParticipants(10), isEnding, distributionLog);
 
                         try
                         {
@@ -237,27 +279,18 @@ namespace Server.Client.Races
                 }
             }
 
-            // 3. End if needed
+            // 4. Cleanup
             if (isEnding)
             {
-                race.Status = RaceStatus.Finished;
-                using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
-                {
-                    cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
-                    cmd.AddParameter("@Status", race.Status.ToString());
-                    cmd.AddParameter("@Id", race.Id);
-                    await cmd.ExecuteQueryAsync();
-                }
-                
                 if (_activeRace == race)
                 {
-                    _activeRace = null;
+                    _activeRace = null!;
                     _activeParticipants.Clear();
                 }
             }
         }
 
-        private DSharpPlus.Entities.DiscordEmbed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding)
+        private DSharpPlus.Entities.DiscordEmbed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding, List<string>? distributionLog = null)
         {
             var totalWagered = _activeParticipants.Values.Sum(p => p.TotalWagered);
             var totalWageredFormatted = Server.Client.Utils.GpFormatter.Format(totalWagered);
@@ -303,9 +336,18 @@ namespace Server.Client.Races
                 .WithDescription($"Ends: {timeString}\nTotal Wagered: `{totalWageredFormatted}`")
                 .WithColor(isEnding ? DSharpPlus.Entities.DiscordColor.Gray : DSharpPlus.Entities.DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
-                .AddField("🏆 Leaderboard", sb.ToString(), false)
-                .AddField("🎁 Prizes", prizeDesc, false)
-                .WithFooter($"Race ID: {race.Id} • Prestige", null)
+                .AddField("🏆 Leaderboard", sb.ToString(), false);
+
+            if (isEnding && distributionLog != null && distributionLog.Count > 0)
+            {
+                embed.AddField("🎁 Winners Paid", string.Join("\n", distributionLog), false);
+            }
+            else
+            {
+                embed.AddField("🎁 Prizes", prizeDesc, false);
+            }
+
+            embed.WithFooter($"Race ID: {race.Id} • Prestige", null)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             if (!isEnding)
