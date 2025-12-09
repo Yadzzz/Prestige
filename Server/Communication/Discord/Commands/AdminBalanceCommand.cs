@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
@@ -7,27 +8,42 @@ using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Client.Transactions;
 using Server.Infrastructure;
+using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
 {
-    [RequireRoles(RoleCheckMode.Any, "Staff", "Admin", "Moderator")]
     public class AdminBalanceCommand : BaseCommandModule
     {
         [Command("add")]
         public async Task AddAsync(CommandContext ctx, string amount, DiscordMember member)
         {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You are not authorized to use this command.");
+                return;
+            }
             await HandleBalanceChangeAsync(ctx, amount, member, BalanceAdjustmentType.AdminAdd);
         }
 
         [Command("gift")]
         public async Task GiftAsync(CommandContext ctx, string amount, DiscordMember member)
         {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You are not authorized to use this command.");
+                return;
+            }
             await HandleBalanceChangeAsync(ctx, amount, member, BalanceAdjustmentType.AdminGift);
         }
 
         [Command("remove")]
         public async Task RemoveAsync(CommandContext ctx, string amount, DiscordMember member)
         {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You are not authorized to use this command.");
+                return;
+            }
             await HandleBalanceRemovalAsync(ctx, amount, member);
         }
 
@@ -76,7 +92,7 @@ namespace Server.Communication.Discord.Commands
 
             var staffName = ctx.Member?.DisplayName ?? ctx.User.Username;
 
-            var title = adjustmentType == BalanceAdjustmentType.AdminGift ? "Gifted Balance" : "Added Balance";
+            var title = adjustmentType == BalanceAdjustmentType.AdminGift ? "Gifted" : "Added Balance";
             var embed = new DiscordEmbedBuilder()
                 .WithTitle(title)
                 .AddField("Amount", $"**{prettyAmount}**", true)

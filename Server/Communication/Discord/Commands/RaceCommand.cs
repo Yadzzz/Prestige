@@ -14,7 +14,7 @@ namespace Server.Communication.Discord.Commands
         //[RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
         public async Task RaceCreate(CommandContext ctx)
         {
-            if (!ctx.Member.Roles.Any(r => r.Id == DiscordIds.StaffRoleId))
+            if (!ctx.Member.IsStaff())
             {
                 await ctx.RespondAsync("You do not have permission to execute this command.");
                 return;
@@ -44,7 +44,7 @@ namespace Server.Communication.Discord.Commands
         //[RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
         public async Task RaceEnd(CommandContext ctx)
         {
-            if (!ctx.Member.Roles.Any(r => r.Id == DiscordIds.StaffRoleId))
+            if (!ctx.Member.IsStaff())
             {
                 await ctx.RespondAsync("You do not have permission to execute this command.");
                 return;

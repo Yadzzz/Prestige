@@ -112,21 +112,10 @@ namespace Server.Client.Races
         {
             if (_activeRace == null) return;
 
-            _activeRace.Status = RaceStatus.Finished;
-            
-            using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
-            {
-                cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
-                cmd.AddParameter("@Status", _activeRace.Status.ToString());
-                cmd.AddParameter("@Id", _activeRace.Id);
-                await cmd.ExecuteQueryAsync();
-            }
-
-            // Final flush
+            // Force the race to end immediately.
+            // FlushAndBroadcastAsync handles the logic of updating Discord, DB, and clearing memory.
+            _activeRace.EndTime = DateTime.UtcNow.AddSeconds(-1);
             await FlushAndBroadcastAsync();
-            
-            _activeRace = null;
-            _activeParticipants.Clear();
         }
 
         public void EndRace()

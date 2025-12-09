@@ -103,13 +103,13 @@ namespace Server.Communication.Discord.Commands
                 .WithThumbnail("https://i.imgur.com/A4tPGOW.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var ingameButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_deposit_ingame_{transaction.Id}", "In-game (5% fee)", emoji: new DiscordComponentEmoji("🎮"));
+            var ingameButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_deposit_ingame_{transaction.Id}", "In-game (5% fee)", emoji: new DiscordComponentEmoji("🎮"));
             var cryptoButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_deposit_crypto_{transaction.Id}", "Crypto (0% fee)", emoji: new DiscordComponentEmoji("🪙"));
             var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(pendingEmbed)
-                .AddComponents(ingameButton, cryptoButton, userCancelButton));
+                .AddComponents(ingameButton, cryptoButton /*, userCancelButton*/));
 
             var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.WithdrawStaffChannelId);
 

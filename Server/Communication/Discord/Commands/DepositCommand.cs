@@ -82,8 +82,8 @@ namespace Server.Communication.Discord.Commands
                 emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
-                .AddEmbed(pendingEmbed)
-                .AddComponents(userCancelButton));
+                .AddEmbed(pendingEmbed));
+                //.AddComponents(userCancelButton));
 
             // Send to staff channel
             var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.DepositStaffChannelId);

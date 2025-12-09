@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
@@ -7,6 +8,8 @@ using Server.Client.Stakes;
 using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Infrastructure;
+
+using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Interactions
 {
@@ -36,7 +39,7 @@ namespace Server.Communication.Discord.Interactions
             // Only staff should be able to resolve stakes via these buttons.
             // If the interaction user is not in the staff role, block it.
             var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
-            if (member == null || !member.Roles.Any(r => r.Id == Server.Infrastructure.Discord.DiscordIds.StaffRoleId))
+            if (!member.IsStaff())
             {
                 await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
@@ -89,14 +92,14 @@ namespace Server.Communication.Discord.Interactions
                 env.ServerManager.RaceService?.RegisterWager(stake.Identifier, raceName, stake.AmountK);
             }
 
-            env.ServerManager.LogsService.Log(
+            await env.ServerManager.LogsService.LogAsync(
                 source: nameof(StakeButtonHandler),
                 level: "Info",
                 userIdentifier: stake.Identifier,
                 action: "StakeResolved",
-                message: $"Stake resolved id={stake.Id} status={newStatus} amountK={stake.AmountK}",
+                message: $"Stake resolved id={stake.Id} status={newStatus} amountK={stake.AmountK} staff={e.User.Id}",
                 exception: null,
-                metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"status\":\"{newStatus}\"}}");
+                metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"status\":\"{newStatus}\",\"staffId\":\"{e.User.Id}\"}}");
 
             long feeK = 0;
             long payoutK = 0;

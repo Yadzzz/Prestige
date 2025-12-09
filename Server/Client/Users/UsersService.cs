@@ -26,7 +26,7 @@ namespace Server.Client.Users
                 if (updated)
                 {
                     var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LogsService.Log(
+                    await env.ServerManager.LogsService.LogAsync(
                         source: nameof(UsersService),
                         level: "Info",
                         userIdentifier: identifier,
@@ -62,7 +62,7 @@ namespace Server.Client.Users
                 if (updated)
                 {
                     var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LogsService.Log(
+                    await env.ServerManager.LogsService.LogAsync(
                         source: nameof(UsersService),
                         level: "Info",
                         userIdentifier: identifier,
@@ -191,7 +191,8 @@ namespace Server.Client.Users
                 return false;
             }
 
-            // If the user already exists, treat creation as a no-op success.
+            // Optimization: Try to insert directly. If it fails due to duplicate, we assume user exists.
+
             if (await UserExistsAsync(identifier))
             {
                 return true;
@@ -216,6 +217,12 @@ namespace Server.Client.Users
             }
             catch (Exception ex)
             {
+                // Check if it's a duplicate entry error (MySQL error 1062)
+                if (ex.Message.Contains("Duplicate entry") || (ex.InnerException?.Message.Contains("Duplicate entry") ?? false))
+                {
+                    return true;
+                }
+
                 try
                 {
                     var env = ServerEnvironment.GetServerEnvironment();

@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
@@ -179,8 +180,9 @@ namespace Server.Communication.Discord.Interactions
                     var userChannel = await client.GetChannelAsync(transaction.UserChannelId.Value);
                     var originalMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
 
-                    var ingameDisabled = new DiscordButtonComponent(ButtonStyle.Success, $"tx_deposit_ingame_{txId}", "In-game (5% fee)", disabled: true, emoji: new DiscordComponentEmoji("🎮"));
-                    var cryptoDisabled = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_deposit_crypto_{txId}", "Crypto (0% fee)", disabled: true, emoji: new DiscordComponentEmoji("🪙"));
+                    var isIngame = typeToken.Equals("ingame", StringComparison.OrdinalIgnoreCase);
+                    var ingameDisabled = new DiscordButtonComponent(isIngame ? ButtonStyle.Success : ButtonStyle.Secondary, $"tx_deposit_ingame_{txId}", "In-game (5% fee)", disabled: true, emoji: new DiscordComponentEmoji("🎮"));
+                    var cryptoDisabled = new DiscordButtonComponent(!isIngame ? ButtonStyle.Success : ButtonStyle.Secondary, $"tx_deposit_crypto_{txId}", "Crypto (0% fee)", disabled: true, emoji: new DiscordComponentEmoji("🪙"));
 
                     // Keep user cancel button enabled
                     var userCancel = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{txId}", "Cancel", disabled: false, emoji: new DiscordComponentEmoji("❌"));
@@ -236,6 +238,17 @@ namespace Server.Communication.Discord.Interactions
 
         private static async Task HandleStaffTransactionAction(DiscordClient client, ComponentInteractionCreateEventArgs e)
         {
+            // Security: Ensure the user clicking the button has the Staff role
+            var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
+            if (!member.IsStaff())
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder()
+                        .WithContent("You are not authorized to perform this action.")
+                        .AsEphemeral(true));
+                return;
+            }
+
             var parts = e.Id.Split('_');
             if (parts.Length != 3)
                 return;

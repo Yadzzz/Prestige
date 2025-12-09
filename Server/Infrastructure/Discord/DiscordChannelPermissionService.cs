@@ -41,9 +41,14 @@ namespace Server.Infrastructure.Discord
             return false;
         }
 
+        private static bool IsStaff(CommandContext ctx)
+        {
+            return ctx.Member.IsStaff();
+        }
+
         public static async Task<bool> EnforceDepositChannelAsync(CommandContext ctx)
         {
-            if (IsInDepositTicketChannel(ctx))
+            if (IsStaff(ctx) || IsInDepositTicketChannel(ctx))
                 return true;
 
             await ctx.RespondAsync("You can only use this command inside a deposit ticket channel.");
@@ -52,7 +57,7 @@ namespace Server.Infrastructure.Discord
 
         public static async Task<bool> EnforceWithdrawChannelAsync(CommandContext ctx)
         {
-            if (IsInWithdrawTicketChannel(ctx))
+            if (IsStaff(ctx) || IsInWithdrawTicketChannel(ctx))
                 return true;
 
             await ctx.RespondAsync("You can only use this command inside a withdrawal ticket channel.");
@@ -61,7 +66,7 @@ namespace Server.Infrastructure.Discord
 
         public static async Task<bool> EnforceCoinflipChannelAsync(CommandContext ctx)
         {
-            if (IsInCoinflipTicketChannel(ctx))
+            if (IsStaff(ctx) || IsInCoinflipTicketChannel(ctx))
                 return true;
 
             await ctx.RespondAsync("You can only use this command inside a games channel.");
@@ -70,7 +75,7 @@ namespace Server.Infrastructure.Discord
 
         public static async Task<bool> EnforceStakeChannelAsync(CommandContext ctx)
         {
-            if (IsInStakeTicketChannel(ctx))
+            if (IsStaff(ctx) || IsInStakeTicketChannel(ctx))
                 return true;
 
             await ctx.RespondAsync("You can only use this command inside a games channel.");

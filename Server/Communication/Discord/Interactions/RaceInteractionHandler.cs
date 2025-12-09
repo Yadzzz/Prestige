@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
@@ -23,6 +24,17 @@ namespace Server.Communication.Discord.Interactions
 
         public static async Task HandleComponent(DiscordClient client, ComponentInteractionCreateEventArgs e)
         {
+            // Security: Ensure the user interacting is Staff
+            var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
+            if (!member.IsStaff())
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder()
+                        .WithContent("You are not authorized to configure races.")
+                        .AsEphemeral(true));
+                return;
+            }
+
             if (e.Id == "race_config_menu")
             {
                 var selected = e.Values[0];
@@ -97,6 +109,17 @@ namespace Server.Communication.Discord.Interactions
 
         public static async Task HandleModal(DiscordClient client, ModalSubmitEventArgs e)
         {
+            // Security: Ensure the user interacting is Staff
+            var member = e.Interaction.Guild != null ? await e.Interaction.Guild.GetMemberAsync(e.Interaction.User.Id) : null;
+            if (!member.IsStaff())
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder()
+                        .WithContent("You are not authorized to configure races.")
+                        .AsEphemeral(true));
+                return;
+            }
+
             if (!_pendingConfigs.TryGetValue(e.Interaction.User.Id, out var config))
             {
                 config = new RaceConfigBuilder();
