@@ -82,6 +82,59 @@ namespace Server.Client.LiveFeed
             });
         }
 
+        public void PublishBlackjack(long amountK, bool win, bool push)
+        {
+            var client = TryGetClient();
+            if (client == null)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
+                    var amountPretty = GpFormatter.Format(amountK);
+
+                    // Big win is based on the total returned amount (amountK).
+                    var isBigWin = win && amountK >= 1_000_000L; // >= 1B
+
+                    string description;
+                    DiscordColor color;
+
+                    if (push)
+                    {
+                        description = $"{amountPretty} **PUSH** in Blackjack 🤝";
+                        color = DiscordColor.Yellow;
+                    }
+                    else if (isBigWin)
+                    {
+                        description = $"{amountPretty} __**BIG WIN!**__ in Blackjack <:{nameof(DiscordIds.BigWinMvppEmojiId)}:{DiscordIds.BigWinMvppEmojiId}>";
+                        color = new DiscordColor("#AA66FF"); // purple for big wins
+                    }
+                    else if (win)
+                    {
+                        description = $"{amountPretty} **WIN** in Blackjack <:{nameof(DiscordIds.CoinflipGoldEmojiId)}:{DiscordIds.CoinflipGoldEmojiId}>";
+                        color = DiscordColor.SpringGreen;
+                    }
+                    else
+                    {
+                        description = $"{amountPretty} **LOST** in Blackjack <:{nameof(DiscordIds.CoinflipSilverEmojiId)}:{DiscordIds.CoinflipSilverEmojiId}>";
+                        color = DiscordColor.Red;
+                    }
+
+                    var embed = new DiscordEmbedBuilder()
+                        .WithDescription(description)
+                        .WithColor(color);
+
+                    await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed));
+                }
+                catch
+                {
+                    // Swallow errors: live feed must not affect gameplay.
+                }
+            });
+        }
+
         public void PublishStake(long amountK, bool win)
         {
             var client = TryGetClient();

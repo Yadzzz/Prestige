@@ -11,7 +11,11 @@ namespace Server.Infrastructure.Discord
                 Token = options.Token,
                 TokenType = options.TokenType,
                 Intents = options.Intents,
-                MinimumLogLevel = options.MinimumLogLevel
+                MinimumLogLevel = options.MinimumLogLevel,
+                AutoReconnect = true,
+                //ReconnectIndefinitely = true,
+                GatewayCompressionLevel = GatewayCompressionLevel.Stream,
+                LargeThreshold = 250
             };
 
             return new DiscordClient(config);

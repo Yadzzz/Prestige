@@ -73,6 +73,15 @@ namespace Server.Infrastructure.Discord
             return false;
         }
 
+        public static async Task<bool> EnforceBlackjackChannelAsync(CommandContext ctx)
+        {
+            if (IsStaff(ctx) || IsInCoinflipTicketChannel(ctx))
+                return true;
+
+            await ctx.RespondAsync("You can only use this command inside a games channel.");
+            return false;
+        }
+
         public static async Task<bool> EnforceStakeChannelAsync(CommandContext ctx)
         {
             if (IsStaff(ctx) || IsInStakeTicketChannel(ctx))

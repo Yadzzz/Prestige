@@ -57,6 +57,23 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Check if the flip is already finished (to prevent double-playing)
+            // Rematch buttons (rm, half, x2, max) are allowed on finished flips because they create NEW flips.
+            // But "heads", "tails", and "exit" (refund) should only work on PENDING flips.
+            bool isRematchAction = string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(action, "half", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(action, "max", StringComparison.OrdinalIgnoreCase);
+
+            if (!isRematchAction && flip.Status != CoinflipStatus.Pending)
+            {
+                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder()
+                        .WithContent("This coinflip is already finished.")
+                        .AsEphemeral(true));
+                return;
+            }
+
             // Handle rematch-style buttons first: they each create a brand new coinflip row
             if (string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(action, "half", StringComparison.OrdinalIgnoreCase)
@@ -362,9 +379,10 @@ namespace Server.Communication.Discord.Interactions
                     await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, responseBuilder);
                     return;
                 }
-                catch (DSharpPlus.Exceptions.NotFoundException)
+                catch
                 {
                     // If the channel or message no longer exists (deleted, etc.),
+                    // OR if ModifyAsync fails for any other reason (network, etc.),
                     // fall through to the fallback below without breaking the flip
                     // logic or the user's balance.
                 }

@@ -38,6 +38,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Blackjack buttons
+            if (e.Id.StartsWith("bj_", StringComparison.OrdinalIgnoreCase))
+            {
+                await BlackjackButtonHandler.Handle(client, e);
+                return;
+            }
+
             // Race interactions
             if (e.Id.StartsWith("race_", StringComparison.OrdinalIgnoreCase))
             {
