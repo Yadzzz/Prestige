@@ -232,7 +232,7 @@ namespace Server.Communication.Discord.Commands
                 if (netChange > 0)
                 {
                     embed.WithColor(DiscordColor.Green);
-                    embed.AddField("Result", $"🎉 **You won {GpFormatter.Format(netChange)}!**\nBalance: **{GpFormatter.Format(user.Balance)}**");
+                    embed.AddField("Result", $"🎉 **You won {GpFormatter.Format(netChange)}!**\nPayout: **{GpFormatter.Format(totalPayout)}**\nBalance: **{GpFormatter.Format(user.Balance)}**");
                 }
                 else if (netChange < 0)
                 {
@@ -265,15 +265,15 @@ namespace Server.Communication.Discord.Commands
             var buttons = new System.Collections.Generic.List<DiscordButtonComponent>();
 
             // Check if we are waiting for dealer (e.g. player has 21/BJ but dealer has Ace)
-            bool isWaitingForDealer = game.DealerHand.Cards.Count > 0 
+            bool isInsuranceOffered = game.DealerHand.Cards.Count > 0 
                                       && game.DealerHand.Cards[0].Rank == "A" 
                                       && !game.InsuranceTaken 
                                       && !game.InsuranceDeclined;
             bool is21 = currentHand.GetTotal() == 21;
 
             // Hit button
-            // Hide if 21 or waiting for dealer
-            if (!currentHand.IsStanding && !currentHand.IsBusted && !is21 && !isWaitingForDealer)
+            // Hide if 21
+            if (!currentHand.IsStanding && !currentHand.IsBusted && !is21)
             {
                 buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Primary, $"bj_hit_{game.Id}", "Hit"));
             }
@@ -286,24 +286,23 @@ namespace Server.Communication.Discord.Commands
             }
 
             // Double button
-            // Hide if 21 or waiting for dealer
-            if (currentHand.CanDouble() && !is21 && !isWaitingForDealer)
+            // Hide if 21
+            if (currentHand.CanDouble() && !is21)
             {
                 buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_double_{game.Id}", "Double x2"));
             }
 
             // Split button
-            // Hide if 21 (unless 2 Aces? but 2 Aces is 12) or waiting for dealer
-            if (currentHand.CanSplit() && !isWaitingForDealer)
+            // Hide if 21 (unless 2 Aces? but 2 Aces is 12)
+            if (currentHand.CanSplit())
             {
                 buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_split_{game.Id}", "Split"));
             }
 
             // Insurance button
-            if (isWaitingForDealer && currentHand.Cards.Count == 2)
+            if (isInsuranceOffered && currentHand.Cards.Count == 2)
             {
                 buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Danger, $"bj_ins_{game.Id}", "Insurance"));
-                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_noins_{game.Id}", "No Insurance"));
             }
 
             return buttons.ToArray();

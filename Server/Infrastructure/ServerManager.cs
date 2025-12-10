@@ -64,7 +64,7 @@ namespace Server.Infrastructure
                 TokenType = DSharpPlus.TokenType.Bot
             };
 
-            this.DiscordBotHost = new DiscordBotHost(discordOptions, this.UsersService);
+            this.DiscordBotHost = new DiscordBotHost(discordOptions, this);
             this.LiveFeedService = new LiveFeedService(this.DiscordBotHost);
             this.RaceService = new RaceService(this);
 

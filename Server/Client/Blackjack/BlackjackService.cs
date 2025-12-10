@@ -390,8 +390,11 @@ namespace Server.Client.Blackjack
             // Check if there are any non-busted player hands
             bool anyLiveHands = game.PlayerHands.Any(h => !h.IsBusted);
 
-            // Dealer plays only if there are live hands
-            if (anyLiveHands)
+            // Dealer plays only if there are live hands AND not all hands are Blackjacks
+            // If all player hands are Blackjacks, dealer doesn't draw (unless they have BJ, which is handled earlier)
+            bool allBlackjacks = game.PlayerHands.All(h => h.IsBlackjack());
+            
+            if (anyLiveHands && !allBlackjacks)
             {
                 while (game.DealerHand.GetTotal() < 17)
                 {

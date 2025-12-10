@@ -20,12 +20,12 @@ namespace Server.Infrastructure.Discord
     {
         private readonly DiscordOptions _options;
         private readonly DiscordClient _client;
-        private readonly UsersService _usersService;
+        private readonly ServerManager _serverManager;
 
-        public DiscordBotHost(DiscordOptions options, UsersService usersService)
+        public DiscordBotHost(DiscordOptions options, ServerManager serverManager)
         {
             _options = options;
-            _usersService = usersService;
+            _serverManager = serverManager;
 
             var builder = DiscordClientFactory.CreateBuilder(_options);
 
@@ -37,7 +37,19 @@ namespace Server.Infrastructure.Discord
                     logging.AddConsole();
                     logging.SetMinimumLevel(_options.MinimumLogLevel);
                 });
-                services.AddSingleton(_usersService);
+                
+                // Register existing services from ServerManager
+                /*services.AddSingleton(_serverManager);
+                services.AddSingleton(_serverManager.UsersService);
+                services.AddSingleton(_serverManager.TransactionsService);
+                services.AddSingleton(_serverManager.BalanceAdjustmentsService);
+                services.AddSingleton(_serverManager.StakesService);
+                services.AddSingleton(_serverManager.CoinflipsService);
+                services.AddSingleton(_serverManager.BlackjackService);
+                services.AddSingleton(_serverManager.LogsService);
+                services.AddSingleton(_serverManager.LiveFeedService);
+                services.AddSingleton(_serverManager.RaceService);
+                services.AddSingleton(_serverManager.AiCommandResolverService);*/
             });
 
             // Configure Event Handlers
@@ -56,7 +68,7 @@ namespace Server.Infrastructure.Discord
                 {
                     try
                     {
-                        await _usersService.EnsureUserAsync(e.Member.Id.ToString(), e.Member.Username, e.Member.DisplayName);
+                        await _serverManager.UsersService.EnsureUserAsync(e.Member.Id.ToString(), e.Member.Username, e.Member.DisplayName);
                     }
                     catch
                     {
@@ -107,8 +119,7 @@ namespace Server.Infrastructure.Discord
 
                     if (e.Exception is CommandNotFoundException)
                     {
-                        var env = ServerEnvironment.GetServerEnvironment();
-                        var aiService = env.ServerManager.AiCommandResolverService;
+                        var aiService = _serverManager.AiCommandResolverService;
 
                         if (aiService == null) return;
 

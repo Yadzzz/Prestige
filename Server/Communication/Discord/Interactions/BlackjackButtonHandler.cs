@@ -68,18 +68,60 @@ namespace Server.Communication.Discord.Interactions
             switch (action.ToLower())
             {
                 case "hit":
+                    // Implicitly decline insurance if offered
+                    if (!game.InsuranceTaken && !game.InsuranceDeclined && game.DealerHand.Cards.Count > 0 && game.DealerHand.Cards[0].Rank == "A")
+                    {
+                        await blackjackService.DeclineInsuranceAsync(game);
+                        game = await blackjackService.GetGameAsync(gameId); // Refresh
+                        
+                        // If dealer had Blackjack, the game is now finished. Do not proceed with Hit.
+                        if (game.Status == BlackjackGameStatus.Finished)
+                        {
+                            success = true;
+                            break;
+                        }
+                    }
+
                     success = await blackjackService.HitAsync(game);
                     if (!success)
                         errorMessage = "Cannot hit right now.";
                     break;
 
                 case "stand":
+                    // Implicitly decline insurance if offered
+                    if (!game.InsuranceTaken && !game.InsuranceDeclined && game.DealerHand.Cards.Count > 0 && game.DealerHand.Cards[0].Rank == "A")
+                    {
+                        await blackjackService.DeclineInsuranceAsync(game);
+                        game = await blackjackService.GetGameAsync(gameId); // Refresh
+
+                        // If dealer had Blackjack, the game is now finished. Do not proceed with Stand.
+                        if (game.Status == BlackjackGameStatus.Finished)
+                        {
+                            success = true;
+                            break;
+                        }
+                    }
+
                     success = await blackjackService.StandAsync(game);
                     if (!success)
                         errorMessage = "Cannot stand right now.";
                     break;
 
                 case "double":
+                    // Implicitly decline insurance if offered
+                    if (!game.InsuranceTaken && !game.InsuranceDeclined && game.DealerHand.Cards.Count > 0 && game.DealerHand.Cards[0].Rank == "A")
+                    {
+                        await blackjackService.DeclineInsuranceAsync(game);
+                        game = await blackjackService.GetGameAsync(gameId); // Refresh
+
+                        // If dealer had Blackjack, the game is now finished. Do not proceed with Double.
+                        if (game.Status == BlackjackGameStatus.Finished)
+                        {
+                            success = true;
+                            break;
+                        }
+                    }
+
                     // Refresh user balance
                     user = await usersService.GetUserAsync(user.Identifier);
                     var currentHand = game.GetCurrentHand();
@@ -110,6 +152,20 @@ namespace Server.Communication.Discord.Interactions
                     break;
 
                 case "split":
+                    // Implicitly decline insurance if offered
+                    if (!game.InsuranceTaken && !game.InsuranceDeclined && game.DealerHand.Cards.Count > 0 && game.DealerHand.Cards[0].Rank == "A")
+                    {
+                        await blackjackService.DeclineInsuranceAsync(game);
+                        game = await blackjackService.GetGameAsync(gameId); // Refresh
+
+                        // If dealer had Blackjack, the game is now finished. Do not proceed with Split.
+                        if (game.Status == BlackjackGameStatus.Finished)
+                        {
+                            success = true;
+                            break;
+                        }
+                    }
+
                     // Refresh user balance
                     user = await usersService.GetUserAsync(user.Identifier);
                     
