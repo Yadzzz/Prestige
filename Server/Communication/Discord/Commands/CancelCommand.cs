@@ -4,6 +4,7 @@ using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
+using Server.Client.Blackjack;
 using Server.Client.Coinflips;
 using Server.Client.Stakes;
 using Server.Client.Utils;
@@ -60,7 +61,8 @@ namespace Server.Communication.Discord.Commands
                         
                         await msg.ModifyAsync(mb =>
                         {
-                            mb.Embed = msg.Embeds.Count > 0 ? msg.Embeds[0] : null;
+                            mb.ClearEmbeds();
+                            if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
                             mb.ClearComponents(); // Remove all buttons
                         });
                     }
@@ -106,7 +108,8 @@ namespace Server.Communication.Discord.Commands
 
                         await msg.ModifyAsync(mb =>
                         {
-                            mb.Embed = msg.Embeds.Count > 0 ? msg.Embeds[0] : null;
+                            mb.ClearEmbeds();
+                            if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
                             mb.ClearComponents(); // Remove all buttons
                         });
                     }
@@ -131,7 +134,8 @@ namespace Server.Communication.Discord.Commands
 
                         await msg.ModifyAsync(mb =>
                         {
-                            mb.Embed = staffEmbed;
+                            mb.ClearEmbeds();
+                            mb.AddEmbed(staffEmbed);
                             mb.ClearComponents(); // Remove all buttons
                         });
                     }
@@ -146,6 +150,60 @@ namespace Server.Communication.Discord.Commands
                 if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue && ctx.Guild != null)
                 {
                     var url = $"https://discord.com/channels/{ctx.Guild.Id}/{stake.UserChannelId}/{stake.UserMessageId}";
+                    sbPanel.AppendLine($"[Click Here]({url})");
+                }
+                else
+                {
+                    sbPanel.AppendLine("N/A");
+                }
+
+                cancelledCount++;
+            }
+
+            // 3. Cancel Pending Blackjack Games
+            var blackjackService = serverManager.BlackjackService;
+            var activeGames = await blackjackService.GetActiveGamesByUserIdAsync(user.Id);
+            foreach (var game in activeGames)
+            {
+                // Refund total bet amount (including splits/doubles)
+                long totalBet = game.PlayerHands.Sum(h => h.BetAmount);
+                if (game.InsuranceTaken)
+                {
+                    totalBet += game.BetAmount / 2;
+                }
+
+                await usersService.AddBalanceAsync(user.Identifier, totalBet);
+                totalRefundedK += totalBet;
+
+                // Update Status
+                await blackjackService.UpdateGameStatusAsync(game.Id, BlackjackGameStatus.Finished);
+
+                // Update Discord Message (Disable buttons)
+                if (game.ChannelId.HasValue && game.MessageId.HasValue)
+                {
+                    try
+                    {
+                        var channel = await ctx.Client.GetChannelAsync(game.ChannelId.Value);
+                        var msg = await channel.GetMessageAsync(game.MessageId.Value);
+
+                        await msg.ModifyAsync(mb =>
+                        {
+                            mb.ClearEmbeds();
+                            if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
+                            mb.ClearComponents(); // Remove all buttons
+                        });
+                    }
+                    catch
+                    {
+                        // Message might be deleted, ignore
+                    }
+                }
+
+                sbGame.AppendLine("`BLACKJACK`");
+                sbAmount.AppendLine($"`{GpFormatter.Format(totalBet)}`");
+                if (game.ChannelId.HasValue && game.MessageId.HasValue && ctx.Guild != null)
+                {
+                    var url = $"https://discord.com/channels/{ctx.Guild.Id}/{game.ChannelId}/{game.MessageId}";
                     sbPanel.AppendLine($"[Click Here]({url})");
                 }
                 else

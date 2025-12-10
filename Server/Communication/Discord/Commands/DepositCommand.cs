@@ -76,7 +76,7 @@ namespace Server.Communication.Discord.Commands
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var userCancelButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"tx_usercancel_{transaction.Id}",
                 "Cancel",
                 emoji: new DiscordComponentEmoji("❌"));
@@ -94,9 +94,9 @@ namespace Server.Communication.Discord.Commands
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var acceptButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", emoji: new DiscordComponentEmoji("✅"));
-            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
-            var denyButton = new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
+            var acceptButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", emoji: new DiscordComponentEmoji("✅"));
+            var cancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            var denyButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
 
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")

@@ -11,7 +11,7 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class BlackjackButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             var parts = e.Id.Split('_');
             if (parts.Length < 3)
@@ -29,7 +29,7 @@ namespace Server.Communication.Discord.Interactions
             var game = await blackjackService.GetGameAsync(gameId);
             if (game == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Game not found.").AsEphemeral(true));
                 return;
             }
@@ -37,7 +37,7 @@ namespace Server.Communication.Discord.Interactions
             // Only the game owner can interact
             if (e.User == null || e.User.Id.ToString() != game.Identifier)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("This game doesn't belong to you.")
                         .AsEphemeral(true));
@@ -47,7 +47,7 @@ namespace Server.Communication.Discord.Interactions
             // Game already finished
             if (game.Status == BlackjackGameStatus.Finished)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("This game is already finished.")
                         .AsEphemeral(true));
@@ -57,7 +57,7 @@ namespace Server.Communication.Discord.Interactions
             var user = await usersService.GetUserAsync(game.Identifier);
             if (user == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
                 return;
             }
@@ -86,7 +86,7 @@ namespace Server.Communication.Discord.Interactions
                     
                     if (currentHand != null && user.Balance < currentHand.BetAmount)
                     {
-                        await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                        await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                             new DiscordInteractionResponseBuilder()
                                 .WithContent("You don't have enough balance to double.")
                                 .AsEphemeral(true));
@@ -115,7 +115,7 @@ namespace Server.Communication.Discord.Interactions
                     
                     if (user.Balance < game.BetAmount)
                     {
-                        await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                        await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                             new DiscordInteractionResponseBuilder()
                                 .WithContent("You don't have enough balance to split.")
                                 .AsEphemeral(true));
@@ -145,7 +145,7 @@ namespace Server.Communication.Discord.Interactions
                     
                     if (user.Balance < insuranceCost)
                     {
-                        await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                        await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                             new DiscordInteractionResponseBuilder()
                                 .WithContent("You don't have enough balance for insurance.")
                                 .AsEphemeral(true));
@@ -175,7 +175,7 @@ namespace Server.Communication.Discord.Interactions
                     break;
 
                 default:
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder()
                             .WithContent("Unknown action.")
                             .AsEphemeral(true));
@@ -184,7 +184,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (!success && errorMessage != null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent(errorMessage)
                         .AsEphemeral(true));
@@ -197,7 +197,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (game == null || user == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("Failed to refresh game state.")
                         .AsEphemeral(true));
@@ -208,7 +208,7 @@ namespace Server.Communication.Discord.Interactions
             var embed = Commands.BlackjackCommand.BuildGameEmbed(game, user);
             var buttons = Commands.BlackjackCommand.BuildButtons(game);
 
-            var builder = new DiscordWebhookBuilder()
+            var builder = new DiscordInteractionResponseBuilder()
                 .AddEmbed(embed);
 
             if (buttons.Length > 0)
@@ -216,7 +216,7 @@ namespace Server.Communication.Discord.Interactions
                 builder.AddComponents(buttons);
             }
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, new DiscordInteractionResponseBuilder(builder));
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
         }
     }
 }

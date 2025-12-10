@@ -15,7 +15,7 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class TransactionButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             if (e.Id.StartsWith("tx_usercancel_", StringComparison.OrdinalIgnoreCase))
             {
@@ -34,7 +34,7 @@ namespace Server.Communication.Discord.Interactions
             }
         }
 
-        private static async Task HandleDepositTypeSelectionAsync(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        private static async Task HandleDepositTypeSelectionAsync(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             var parts = e.Id.Split('_');
             if (parts.Length != 4)
@@ -50,7 +50,7 @@ namespace Server.Communication.Discord.Interactions
             var transaction = await transactionsService.GetTransactionByIdAsync(txId);
             if (transaction == null || transaction.Type != TransactionType.Withdraw)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Withdrawal request not found.").AsEphemeral(true));
                 return;
             }
@@ -58,7 +58,7 @@ namespace Server.Communication.Discord.Interactions
             // Only the user who created this withdrawal may choose deposit type
             if (e.User == null || !string.Equals(e.User.Id.ToString(), transaction.Identifier, StringComparison.Ordinal))
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("This withdrawal doesn't belong to you.")
                         .AsEphemeral(true));
@@ -67,7 +67,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (transaction.Status != TransactionStatus.Pending)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("This withdrawal request has already been processed.").AsEphemeral(true));
                 return;
             }
@@ -146,15 +146,16 @@ namespace Server.Communication.Discord.Interactions
 
                     var components = new DiscordComponent[]
                     {
-                        new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: false, emoji: new DiscordComponentEmoji("✅")),
-                        new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: false, emoji: new DiscordComponentEmoji("❌")),
-                        new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: false, emoji: new DiscordComponentEmoji("❌"))
+                        new DiscordButtonComponent(DiscordButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: false, emoji: new DiscordComponentEmoji("✅")),
+                        new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: false, emoji: new DiscordComponentEmoji("❌")),
+                        new DiscordButtonComponent(DiscordButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: false, emoji: new DiscordComponentEmoji("❌"))
                     };
 
                     await staffMessage.ModifyAsync(builder =>
                     {
                         builder.WithContent($"<@&{DiscordIds.StaffRoleId}>");
-                        builder.Embed = updatedEmbed.Build();
+                        builder.ClearEmbeds();
+                        builder.AddEmbed(updatedEmbed.Build());
                         builder.ClearComponents();
                         builder.AddComponents(components);
                     });
@@ -181,11 +182,11 @@ namespace Server.Communication.Discord.Interactions
                     var originalMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
 
                     var isIngame = typeToken.Equals("ingame", StringComparison.OrdinalIgnoreCase);
-                    var ingameDisabled = new DiscordButtonComponent(isIngame ? ButtonStyle.Success : ButtonStyle.Secondary, $"tx_deposit_ingame_{txId}", "In-game (5% fee)", disabled: true, emoji: new DiscordComponentEmoji("🎮"));
-                    var cryptoDisabled = new DiscordButtonComponent(!isIngame ? ButtonStyle.Success : ButtonStyle.Secondary, $"tx_deposit_crypto_{txId}", "Crypto (0% fee)", disabled: true, emoji: new DiscordComponentEmoji("🪙"));
+                    var ingameDisabled = new DiscordButtonComponent(isIngame ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary, $"tx_deposit_ingame_{txId}", "In-game (5% fee)", disabled: true, emoji: new DiscordComponentEmoji("🎮"));
+                    var cryptoDisabled = new DiscordButtonComponent(!isIngame ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary, $"tx_deposit_crypto_{txId}", "Crypto (0% fee)", disabled: true, emoji: new DiscordComponentEmoji("🪙"));
 
-                    // Keep user cancel button enabled
-                    var userCancel = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{txId}", "Cancel", disabled: false, emoji: new DiscordComponentEmoji("❌"));
+                    // User cancel button removed
+                    // var userCancel = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_usercancel_{txId}", "Cancel", disabled: false, emoji: new DiscordComponentEmoji("❌"));
 
                     var originalEmbed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
                     var embedBuilder = new DiscordEmbedBuilder(originalEmbed ?? new DiscordEmbedBuilder());
@@ -212,13 +213,14 @@ namespace Server.Communication.Discord.Interactions
 
                     await originalMessage.ModifyAsync(builder =>
                     {
-                        builder.Embed = embedBuilder.Build();
+                        builder.ClearEmbeds();
+                        builder.AddEmbed(embedBuilder.Build());
                         builder.ClearComponents();
-                        builder.AddComponents(ingameDisabled, cryptoDisabled, userCancel);
+                        builder.AddComponents(ingameDisabled, cryptoDisabled);
                     });
                 }
 
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent($"You selected **{depositTypeText}** for this withdrawal.")
                         .AsEphemeral(true));
@@ -236,13 +238,13 @@ namespace Server.Communication.Discord.Interactions
             }
         }
 
-        private static async Task HandleStaffTransactionAction(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        private static async Task HandleStaffTransactionAction(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             // Security: Ensure the user clicking the button has the Staff role
             var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
             if (!member.IsStaff())
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("You are not authorized to perform this action.")
                         .AsEphemeral(true));
@@ -264,7 +266,7 @@ namespace Server.Communication.Discord.Interactions
             var transaction = await transactionsService.GetTransactionByIdAsync(txId);
             if (transaction == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Transaction not found.").AsEphemeral(true));
                 return;
             }
@@ -289,7 +291,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (transaction.Status != TransactionStatus.Pending)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("This transaction has already been processed.")
                         .AsEphemeral(true));
@@ -399,16 +401,16 @@ namespace Server.Communication.Discord.Interactions
 
             var components = new DiscordComponent[]
             {
-                new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅")),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("❌")),
-                new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: true, emoji: new DiscordComponentEmoji("❌"))
+                new DiscordButtonComponent(DiscordButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅")),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("❌")),
+                new DiscordButtonComponent(DiscordButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: true, emoji: new DiscordComponentEmoji("❌"))
             };
 
             var responseBuilder = new DiscordInteractionResponseBuilder()
                 .AddEmbed(updatedEmbed)
                 .AddComponents(components);
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, responseBuilder);
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
 
             if (transaction.UserChannelId.HasValue)
             {
@@ -498,7 +500,7 @@ namespace Server.Communication.Discord.Interactions
                             var originalMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
 
                             var disabledCancel = new DiscordButtonComponent(
-                                ButtonStyle.Secondary,
+                                DiscordButtonStyle.Secondary,
                                 $"tx_usercancel_{transaction.Id}",
                                 "Cancel",
                                 disabled: true,
@@ -506,9 +508,9 @@ namespace Server.Communication.Discord.Interactions
 
                             await originalMessage.ModifyAsync(builder =>
                             {
-                                builder.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                                builder.ClearEmbeds();
+                                if (originalMessage.Embeds.Count > 0) builder.AddEmbed(originalMessage.Embeds[0]);
                                 builder.ClearComponents();
-                                builder.AddComponents(disabledCancel);
                             });
                         }
                         catch (Exception ex)
@@ -540,7 +542,7 @@ namespace Server.Communication.Discord.Interactions
             }
         }
 
-        private static async Task HandleUserCancelAction(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        private static async Task HandleUserCancelAction(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             var parts = e.Id.Split('_');
             if (parts.Length != 3)
@@ -555,14 +557,14 @@ namespace Server.Communication.Discord.Interactions
             var transaction = await transactionsService.GetTransactionByIdAsync(txId);
             if (transaction == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Transaction not found.").AsEphemeral(true));
                 return;
             }
 
             if (transaction.Status != TransactionStatus.Pending || transaction.Identifier != e.User.Id.ToString())
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("You cannot cancel this transaction.").AsEphemeral(true));
                 return;
             }
@@ -616,7 +618,7 @@ namespace Server.Communication.Discord.Interactions
                             var originalMessage = await userChannel.GetMessageAsync(transaction.UserMessageId.Value);
 
                             var disabledCancel = new DiscordButtonComponent(
-                                ButtonStyle.Secondary,
+                                DiscordButtonStyle.Secondary,
                                 $"tx_usercancel_{transaction.Id}",
                                 "Cancel",
                                 disabled: true,
@@ -624,7 +626,7 @@ namespace Server.Communication.Discord.Interactions
 
                             await originalMessage.ModifyAsync(builder =>
                             {
-                                builder.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                                if (originalMessage.Embeds.Count > 0) builder.AddEmbed(originalMessage.Embeds[0]);
                                 builder.ClearComponents();
                                 builder.AddComponents(disabledCancel);
                             });
@@ -684,14 +686,15 @@ namespace Server.Communication.Discord.Interactions
 
                     var components = new DiscordComponent[]
                     {
-                        new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅")),
-                        new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("🔁")),
-                        new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: true, emoji: new DiscordComponentEmoji("❌"))
+                        new DiscordButtonComponent(DiscordButtonStyle.Success, $"tx_accept_{txId}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅")),
+                        new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_cancel_{txId}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("🔁")),
+                        new DiscordButtonComponent(DiscordButtonStyle.Danger, $"tx_deny_{txId}", "Deny", disabled: true, emoji: new DiscordComponentEmoji("❌"))
                     };
 
                     await staffMessage.ModifyAsync(builder =>
                     {
-                        builder.Embed = updatedEmbed.Build();
+                        builder.ClearEmbeds();
+                        builder.AddEmbed(updatedEmbed.Build());
                         builder.ClearComponents();
                         builder.AddComponents(components);
                     });
@@ -702,7 +705,7 @@ namespace Server.Communication.Discord.Interactions
                 }
             }
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder().WithContent("Your deposit request has been cancelled.").AsEphemeral(true));
         }
     }

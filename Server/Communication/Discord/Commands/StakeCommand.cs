@@ -107,7 +107,7 @@ namespace Server.Communication.Discord.Commands
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             // User cancel button is temporarily disabled; keep code for future use.
-            // var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_usercancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            // var userCancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"stake_usercancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(embed));
@@ -120,14 +120,14 @@ namespace Server.Communication.Discord.Commands
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var winButton = new DiscordButtonComponent(ButtonStyle.Success, $"stake_win_{stake.Id}", "Win", emoji: new DiscordComponentEmoji("🏆"));
-            //var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
-            var loseButton = new DiscordButtonComponent(ButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", emoji: new DiscordComponentEmoji("❌"));
+            var winButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"stake_win_{stake.Id}", "Win", emoji: new DiscordComponentEmoji("🏆"));
+            var cancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            var loseButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", emoji: new DiscordComponentEmoji("❌"));
 
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")
                 .AddEmbed(staffEmbed)
-                .AddComponents(winButton, /*cancelButton,*/ loseButton));
+                .AddComponents(winButton, cancelButton, loseButton));
 
             stakesService.UpdateStakeMessages(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
         }

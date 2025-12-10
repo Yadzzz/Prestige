@@ -59,7 +59,9 @@ namespace Server.Infrastructure
             {
                 Token = DiscordIds.BotToken,
                 GuildId = Discord.DiscordIds.GuildId,
-                Intents = DSharpPlus.DiscordIntents.All
+                Intents = DSharpPlus.DiscordIntents.All,
+                MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Information,
+                TokenType = DSharpPlus.TokenType.Bot
             };
 
             this.DiscordBotHost = new DiscordBotHost(discordOptions, this.UsersService);

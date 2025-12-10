@@ -275,35 +275,35 @@ namespace Server.Communication.Discord.Commands
             // Hide if 21 or waiting for dealer
             if (!currentHand.IsStanding && !currentHand.IsBusted && !is21 && !isWaitingForDealer)
             {
-                buttons.Add(new DiscordButtonComponent(ButtonStyle.Primary, $"bj_hit_{game.Id}", "Hit"));
+                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Primary, $"bj_hit_{game.Id}", "Hit"));
             }
 
             // Stand button
             // Always show unless busted or standing
             if (!currentHand.IsStanding && !currentHand.IsBusted)
             {
-                buttons.Add(new DiscordButtonComponent(ButtonStyle.Success, $"bj_stand_{game.Id}", "Stand"));
+                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Success, $"bj_stand_{game.Id}", "Stand"));
             }
 
             // Double button
             // Hide if 21 or waiting for dealer
             if (currentHand.CanDouble() && !is21 && !isWaitingForDealer)
             {
-                buttons.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bj_double_{game.Id}", "Double x2"));
+                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_double_{game.Id}", "Double x2"));
             }
 
             // Split button
             // Hide if 21 (unless 2 Aces? but 2 Aces is 12) or waiting for dealer
             if (currentHand.CanSplit() && !isWaitingForDealer)
             {
-                buttons.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bj_split_{game.Id}", "Split"));
+                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_split_{game.Id}", "Split"));
             }
 
             // Insurance button
             if (isWaitingForDealer && currentHand.Cards.Count == 2)
             {
-                buttons.Add(new DiscordButtonComponent(ButtonStyle.Danger, $"bj_ins_{game.Id}", "Insurance"));
-                buttons.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bj_noins_{game.Id}", "No Insurance"));
+                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Danger, $"bj_ins_{game.Id}", "Insurance"));
+                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_noins_{game.Id}", "No Insurance"));
             }
 
             return buttons.ToArray();

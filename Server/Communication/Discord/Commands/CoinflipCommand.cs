@@ -89,26 +89,26 @@ namespace Server.Communication.Discord.Commands
                 .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            //var headsButton = new DiscordButtonComponent(ButtonStyle.Success, $"cf_heads_{flip.Id}", "🪙 Heads");
-            //var tailsButton = new DiscordButtonComponent(ButtonStyle.Primary, $"cf_tails_{flip.Id}", "🧠 Tails");
-            //var exitButton = new DiscordButtonComponent(ButtonStyle.Danger, $"cf_exit_{flip.Id}", "Exit");
+            //var headsButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"cf_heads_{flip.Id}", "🪙 Heads");
+            //var tailsButton = new DiscordButtonComponent(DiscordButtonStyle.Primary, $"cf_tails_{flip.Id}", "🧠 Tails");
+            //var exitButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"cf_exit_{flip.Id}", "Exit");
 
             var headsButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"cf_heads_{flip.Id}",
                 " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId)
             );
 
             var tailsButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"cf_tails_{flip.Id}",
                 " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId)
             );
 
             var exitButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"cf_exit_{flip.Id}",
                 "Refund",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)

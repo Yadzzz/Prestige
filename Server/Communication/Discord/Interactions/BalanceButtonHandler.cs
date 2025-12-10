@@ -13,7 +13,7 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class BalanceButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             // All balance buttons are user-side; only the invoker may use them
             var identifier = e.User?.Id.ToString();
@@ -28,7 +28,7 @@ namespace Server.Communication.Discord.Interactions
                 var ownerId = parts[2];
                 if (!string.Equals(ownerId, identifier, StringComparison.OrdinalIgnoreCase))
                 {
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("This is not your balance menu.").AsEphemeral(true));
                     return;
                 }
@@ -61,12 +61,12 @@ namespace Server.Communication.Discord.Interactions
             if (e.Id.StartsWith("bal_buy", StringComparison.OrdinalIgnoreCase))
             {
                 // Placeholder: do nothing for now
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.DeferredMessageUpdate);
                 return;
             }
         }
 
-        private static async Task HandleWalletAsync(ComponentInteractionCreateEventArgs e)
+        private static async Task HandleWalletAsync(ComponentInteractionCreatedEventArgs e)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
@@ -89,20 +89,20 @@ namespace Server.Communication.Discord.Interactions
             // Buttons row 1
             var row1 = new[]
             {
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_buy_{e.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_deposit_{e.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_withdraw_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_buy_{e.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_deposit_{e.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_withdraw_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
             };
 
             var builder = new DiscordInteractionResponseBuilder()
                 .AddEmbed(embed)
                 .AddComponents(row1);
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, builder);
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
         }
 
-        private static async Task HandleHistoryAsync(ComponentInteractionCreateEventArgs e)
+        private static async Task HandleHistoryAsync(ComponentInteractionCreatedEventArgs e)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
@@ -168,15 +168,15 @@ namespace Server.Communication.Discord.Interactions
             var components = new System.Collections.Generic.List<DiscordComponent>();
             if (page > 1)
             {
-                components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{identifier}_{page - 1}", "⏮ Prev"));
+                components.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{identifier}_{page - 1}", "⏮ Prev"));
             }
             
             // Add Wallet button in the middle
-            components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_wallet_{identifier}", "Wallet", emoji: new DiscordComponentEmoji(DiscordIds.WalletEmojiId)));
+            components.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_wallet_{identifier}", "Wallet", emoji: new DiscordComponentEmoji(DiscordIds.WalletEmojiId)));
 
             if (adjustments != null && adjustments.Count == pageSize && page * pageSize < totalCount)
             {
-                components.Add(new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{identifier}_{page + 1}", "Next ⏭"));
+                components.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{identifier}_{page + 1}", "Next ⏭"));
             }
 
             var builder = new DiscordInteractionResponseBuilder()
@@ -188,10 +188,10 @@ namespace Server.Communication.Discord.Interactions
             }
 
             // Update the message instead of sending a new one
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, builder);
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
         }
 
-        private static async Task HandleDepositInfoAsync(ComponentInteractionCreateEventArgs e)
+        private static async Task HandleDepositInfoAsync(ComponentInteractionCreatedEventArgs e)
         {
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("How to Deposit")
@@ -203,10 +203,10 @@ namespace Server.Communication.Discord.Interactions
                 .AddEmbed(embed)
                 .AsEphemeral(true);
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, builder);
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, builder);
         }
 
-        private static async Task HandleWithdrawInfoAsync(ComponentInteractionCreateEventArgs e)
+        private static async Task HandleWithdrawInfoAsync(ComponentInteractionCreatedEventArgs e)
         {
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("How to Withdraw")
@@ -218,7 +218,7 @@ namespace Server.Communication.Discord.Interactions
                 .AddEmbed(embed)
                 .AsEphemeral(true);
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, builder);
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, builder);
         }
     }
 }

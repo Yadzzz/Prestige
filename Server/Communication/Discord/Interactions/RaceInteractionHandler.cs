@@ -22,13 +22,13 @@ namespace Server.Communication.Discord.Interactions
             public List<RacePrize> Prizes { get; set; } = new();
         }
 
-        public static async Task HandleComponent(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task HandleComponent(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             // Security: Ensure the user interacting is Staff
             var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
             if (!member.IsStaff())
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("You are not authorized to configure races.")
                         .AsEphemeral(true));
@@ -43,27 +43,27 @@ namespace Server.Communication.Discord.Interactions
                     var modal = new DiscordInteractionResponseBuilder()
                         .WithTitle("Set Race Duration")
                         .WithCustomId("race_duration_modal")
-                        .AddComponents(new TextInputComponent("Duration (Days)", "duration", "1"));
+                        .AddComponents(new DiscordTextInputComponent("Duration (Days)", "duration", "1"));
                     
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
                 }
                 else if (selected == "race_winners")
                 {
                     var modal = new DiscordInteractionResponseBuilder()
                         .WithTitle("Set Winners Count")
                         .WithCustomId("race_winners_modal")
-                        .AddComponents(new TextInputComponent("Number of Winners", "winners", "3"));
+                        .AddComponents(new DiscordTextInputComponent("Number of Winners", "winners", "3"));
                     
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
                 }
                 else if (selected == "race_prizes")
                 {
                     var modal = new DiscordInteractionResponseBuilder()
                         .WithTitle("Set Prizes")
                         .WithCustomId("race_prizes_modal")
-                        .AddComponents(new TextInputComponent("Prizes (Rank:Prize, one per line)", "prizes", "1:100M\n2:50M\n3:25M", style: TextInputStyle.Paragraph));
+                        .AddComponents(new DiscordTextInputComponent("Prizes (Rank:Prize, one per line)", "prizes", "1:100M\n2:50M\n3:25M", style: DiscordTextInputStyle.Paragraph));
                     
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
                 }
                 else if (selected == "race_start")
                 {
@@ -83,7 +83,7 @@ namespace Server.Communication.Discord.Interactions
 
                         var race = await env.ServerManager.RaceService.CreateRaceAsync(endTime, config.Prizes, raceChannelId);
                         
-                        await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, 
+                        await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
                             new DiscordInteractionResponseBuilder().WithContent($"Race started! ID: {race.Id} in <#{raceChannelId}>"));
                         
                         // Post initial leaderboard
@@ -100,20 +100,20 @@ namespace Server.Communication.Discord.Interactions
                     }
                     catch (Exception ex)
                     {
-                        await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, 
+                        await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
                             new DiscordInteractionResponseBuilder().WithContent($"Error: {ex.Message}").AsEphemeral(true));
                     }
                 }
             }
         }
 
-        public static async Task HandleModal(DiscordClient client, ModalSubmitEventArgs e)
+        public static async Task HandleModal(DiscordClient client, ModalSubmittedEventArgs e)
         {
             // Security: Ensure the user interacting is Staff
             var member = e.Interaction.Guild != null ? await e.Interaction.Guild.GetMemberAsync(e.Interaction.User.Id) : null;
             if (!member.IsStaff())
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("You are not authorized to configure races.")
                         .AsEphemeral(true));
@@ -131,7 +131,7 @@ namespace Server.Communication.Discord.Interactions
                 if (int.TryParse(e.Values["duration"], out var days))
                 {
                     config.DurationDays = days;
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, 
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
                         new DiscordInteractionResponseBuilder().WithContent($"Duration set to {days} days.").AsEphemeral(true));
                 }
             }
@@ -140,7 +140,7 @@ namespace Server.Communication.Discord.Interactions
                 if (int.TryParse(e.Values["winners"], out var winners))
                 {
                     config.WinnersCount = winners;
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, 
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
                         new DiscordInteractionResponseBuilder().WithContent($"Winners set to {winners}.").AsEphemeral(true));
                 }
             }
@@ -157,7 +157,7 @@ namespace Server.Communication.Discord.Interactions
                         config.Prizes.Add(new RacePrize { Rank = rank, Prize = parts[1].Trim() });
                     }
                 }
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, 
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
                     new DiscordInteractionResponseBuilder().WithContent($"Prizes updated ({config.Prizes.Count} entries).").AsEphemeral(true));
             }
         }

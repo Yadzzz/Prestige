@@ -347,7 +347,7 @@ namespace Server.Client.Races
                 embed.AddField("🎁 Prizes", prizeDesc, false);
             }
 
-            embed.WithFooter($"Race ID: {race.Id} • Prestige", null)
+            embed.WithFooter($"Race ID: {race.Id} • {ServerConfiguration.ShortName}", null)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             if (!isEnding)

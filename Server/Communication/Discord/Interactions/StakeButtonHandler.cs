@@ -15,7 +15,7 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class StakeButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             // User cancel for stakes is temporarily disabled.
             // if (e.Id.StartsWith("stake_usercancel_", StringComparison.OrdinalIgnoreCase))
@@ -41,7 +41,7 @@ namespace Server.Communication.Discord.Interactions
             var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
             if (!member.IsStaff())
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("You are not allowed to resolve stakes.")
                         .AsEphemeral(true));
@@ -51,14 +51,14 @@ namespace Server.Communication.Discord.Interactions
             var stake = await stakesService.GetStakeByIdAsync(stakeId);
             if (stake == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Stake not found.").AsEphemeral(true));
                 return;
             }
 
             if (stake.Status != StakeStatus.Pending)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("This stake has already been processed.").AsEphemeral(true));
                 return;
             }
@@ -201,12 +201,12 @@ namespace Server.Communication.Discord.Interactions
 
             var staffComponents = new DiscordComponent[]
             {
-                new DiscordButtonComponent(ButtonStyle.Success, $"stake_win_{stake.Id}", "Win", disabled: true, emoji: new DiscordComponentEmoji("🏆")),
-                //new DiscordButtonComponent(ButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("🔁")),
-                new DiscordButtonComponent(ButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", disabled: true, emoji: new DiscordComponentEmoji("❌"))
+                new DiscordButtonComponent(DiscordButtonStyle.Success, $"stake_win_{stake.Id}", "Win", disabled: true, emoji: new DiscordComponentEmoji("🏆")),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("❌")),
+                new DiscordButtonComponent(DiscordButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", disabled: true, emoji: new DiscordComponentEmoji("❌"))
             };
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage,
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage,
                 new DiscordInteractionResponseBuilder()
                     .AddEmbed(staffEmbed)
                     .AddComponents(staffComponents));
@@ -277,18 +277,11 @@ namespace Server.Communication.Discord.Interactions
                         {
                             var originalMessage = await userChannel.GetMessageAsync(stake.UserMessageId.Value);
 
-                            var disabledCancel = new DiscordButtonComponent(
-                                ButtonStyle.Secondary,
-                                $"stake_usercancel_{stake.Id}",
-                                "Cancel",
-                                disabled: true,
-                                emoji: new DiscordComponentEmoji("❌"));
-
                             await originalMessage.ModifyAsync(builder =>
                             {
-                                builder.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                                builder.ClearEmbeds();
+                                if (originalMessage.Embeds.Count > 0) builder.AddEmbed(originalMessage.Embeds[0]);
                                 builder.ClearComponents();
-                                builder.AddComponents(disabledCancel);
                             });
                         }
                         catch (Exception ex)
@@ -305,7 +298,7 @@ namespace Server.Communication.Discord.Interactions
 
         }
 
-        private static async Task HandleUserCancelAsync(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        private static async Task HandleUserCancelAsync(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             var parts = e.Id.Split('_');
             if (parts.Length != 3)
@@ -321,14 +314,14 @@ namespace Server.Communication.Discord.Interactions
             var stake = await stakesService.GetStakeByIdAsync(stakeId);
             if (stake == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Stake not found.").AsEphemeral(true));
                 return;
             }
 
             if (stake.Status != StakeStatus.Pending || stake.Identifier != e.User.Id.ToString())
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("You cannot cancel this stake.").AsEphemeral(true));
                 return;
             }
@@ -370,18 +363,11 @@ namespace Server.Communication.Discord.Interactions
                         {
                             var originalMessage = await userChannel.GetMessageAsync(stake.UserMessageId.Value);
 
-                            var disabledCancel = new DiscordButtonComponent(
-                                ButtonStyle.Secondary,
-                                $"stake_usercancel_{stake.Id}",
-                                "Cancel",
-                                disabled: true,
-                                emoji: new DiscordComponentEmoji("🔁"));
-
                             await originalMessage.ModifyAsync(builder =>
                             {
-                                builder.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                                builder.ClearEmbeds();
+                                if (originalMessage.Embeds.Count > 0) builder.AddEmbed(originalMessage.Embeds[0]);
                                 builder.ClearComponents();
-                                builder.AddComponents(disabledCancel);
                             });
                         }
                         catch (Exception ex)
@@ -412,7 +398,8 @@ namespace Server.Communication.Discord.Interactions
 
                     await staffMessage.ModifyAsync(b =>
                     {
-                        b.Embed = staffEmbed.Build();
+                        b.ClearEmbeds();
+                        b.AddEmbed(staffEmbed.Build());
                         b.ClearComponents();
                     });
                 }
@@ -422,7 +409,7 @@ namespace Server.Communication.Discord.Interactions
                 }
             }
 
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder().WithContent("Your stake request has been cancelled.").AsEphemeral(true));
         }
 

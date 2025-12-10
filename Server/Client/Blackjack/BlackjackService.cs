@@ -59,9 +59,10 @@ namespace Server.Client.Blackjack
                         await FinishGameAsync(game);
                     }
                 }
+
                 // 2. If Player has Blackjack (and Dealer doesn't show Ace/10 or didn't have BJ on 10), finish.
                 // Note: If Dealer shows Ace, we wait for Insurance.
-                else if (playerHand.IsBlackjack() && !dealerHasAce)
+                if (game.Status == BlackjackGameStatus.Active && playerHand.IsBlackjack() && !dealerHasAce)
                 {
                     playerHand.IsStanding = true;
                     game.CurrentHandIndex++;
@@ -139,6 +140,54 @@ namespace Server.Client.Blackjack
             }
 
             return null;
+        }
+
+        public async Task<List<BlackjackGame>> GetActiveGamesByUserIdAsync(int userId)
+        {
+            var games = new List<BlackjackGame>();
+            try
+            {
+                using (var cmd = new DatabaseCommand())
+                {
+                    cmd.SetCommand("SELECT * FROM blackjack_games WHERE user_id = @user_id AND status = @status");
+                    cmd.AddParameter("user_id", userId);
+                    cmd.AddParameter("status", (int)BlackjackGameStatus.Active);
+
+                    using (var reader = await cmd.ExecuteDataReaderAsync())
+                    {
+                        while (reader != null && reader.Read())
+                        {
+                            games.Add(MapGame(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"GetActiveGamesByUserIdAsync failed: {ex}");
+            }
+            return games;
+        }
+
+        public async Task UpdateGameStatusAsync(int gameId, BlackjackGameStatus status)
+        {
+            try
+            {
+                using (var cmd = new DatabaseCommand())
+                {
+                    cmd.SetCommand("UPDATE blackjack_games SET status = @status, updated_at = @updated_at WHERE id = @id");
+                    cmd.AddParameter("status", (int)status);
+                    cmd.AddParameter("updated_at", DateTime.UtcNow);
+                    cmd.AddParameter("id", gameId);
+                    await cmd.ExecuteQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateGameStatusAsync failed: {ex}");
+            }
         }
 
         public async Task<bool> HitAsync(BlackjackGame game)
@@ -438,7 +487,8 @@ namespace Server.Client.Blackjack
                 // If push, displayAmount is totalBet (which equals totalPayout).
 
                 env.ServerManager.LiveFeedService?.PublishBlackjack(displayAmount, isWin, isPush);
-                env.ServerManager.RaceService?.RegisterWager(user.Identifier, "Blackjack", totalBet);
+                var raceName = user.DisplayName ?? user.Username ?? user.Identifier;
+                env.ServerManager.RaceService?.RegisterWager(user.Identifier, raceName, totalBet);
             }
 
             game.Status = BlackjackGameStatus.Finished;

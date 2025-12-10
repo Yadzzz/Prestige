@@ -8,7 +8,7 @@ namespace Server.Communication.Discord.Interactions
 {
     public class ButtonHandler
     {
-        public static async Task HandleButtons(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task HandleButtons(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             // Transaction buttons
             if (e.Id.StartsWith("tx_", StringComparison.OrdinalIgnoreCase))

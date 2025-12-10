@@ -1,4 +1,4 @@
-﻿using DSharpPlus;
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
@@ -79,10 +79,10 @@ namespace Server.Communication.Discord.Commands
 
                 var row1 = new[]
                 {
-                    new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_buy_{ctx.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
-                    new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_deposit_{ctx.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
-                    new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_withdraw_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
-                    new DiscordButtonComponent(ButtonStyle.Secondary, $"bal_history_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
+                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_buy_{ctx.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
+                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_deposit_{ctx.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
+                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_withdraw_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
+                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
                 };
 
                 await ctx.RespondAsync(new DiscordMessageBuilder()

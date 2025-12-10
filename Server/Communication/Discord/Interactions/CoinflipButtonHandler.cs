@@ -14,7 +14,7 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class CoinflipButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             var parts = e.Id.Split('_');
             if (parts.Length < 3)
@@ -34,7 +34,7 @@ namespace Server.Communication.Discord.Interactions
             var flip = await coinflipsService.GetCoinflipByIdAsync(flipId);
             if (flip == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Flip not found.").AsEphemeral(true));
                 return;
             }
@@ -42,7 +42,7 @@ namespace Server.Communication.Discord.Interactions
             var user = await usersService.GetUserAsync(flip.Identifier);
             if (user == null)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
                 return;
             }
@@ -50,7 +50,7 @@ namespace Server.Communication.Discord.Interactions
             // Only the creator of the flip may interact with its buttons
             if (e.User == null || e.User.Id.ToString() != flip.Identifier)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("This coinflip doesn't belong to you.")
                         .AsEphemeral(true));
@@ -67,7 +67,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (!isRematchAction && flip.Status != CoinflipStatus.Pending)
             {
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent("This coinflip is already finished.")
                         .AsEphemeral(true));
@@ -86,7 +86,7 @@ namespace Server.Communication.Discord.Interactions
                 user = await usersService.GetUserAsync(user.Identifier);
                 if (user == null)
                 {
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
                     return;
                 }
@@ -107,21 +107,21 @@ namespace Server.Communication.Discord.Interactions
 
                 if (newAmountK <= 0)
                 {
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Invalid rematch amount.").AsEphemeral(true));
                     return;
                 }
 
                 if (user.Balance < newAmountK)
                 {
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("You don't have enough balance for this rematch.").AsEphemeral(true));
                     return;
                 }
 
                 if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmountK))
                 {
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance for this rematch. Please try again.").AsEphemeral(true));
                     return;
                 }
@@ -131,7 +131,7 @@ namespace Server.Communication.Discord.Interactions
                 {
                     // Refund if we couldn't create a new flip row
                     await usersService.AddBalanceAsync(user.Identifier, newAmountK);
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to create rematch flip. Please try again later.").AsEphemeral(true));
                     return;
                 }
@@ -146,19 +146,19 @@ namespace Server.Communication.Discord.Interactions
                     .WithTimestamp(DateTimeOffset.UtcNow);
 
                 var headsButtonRematch = new DiscordButtonComponent(
-                    ButtonStyle.Secondary,
+                    DiscordButtonStyle.Secondary,
                     $"cf_heads_{newFlip.Id}",
                     " ",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId));
 
                 var tailsButtonRematch = new DiscordButtonComponent(
-                    ButtonStyle.Secondary,
+                    DiscordButtonStyle.Secondary,
                     $"cf_tails_{newFlip.Id}",
                     " ",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId));
 
                 var exitButtonRematch = new DiscordButtonComponent(
-                    ButtonStyle.Secondary,
+                    DiscordButtonStyle.Secondary,
                     $"cf_exit_{newFlip.Id}",
                     "Refund",
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
@@ -171,28 +171,28 @@ namespace Server.Communication.Discord.Interactions
                 }
 
                 var disabledRmButton = new DiscordButtonComponent(
-                    string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
                     $"cf_rm_{flip.Id}",
                     "RM",
                     true,
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId));
 
                 var disabledHalfButton = new DiscordButtonComponent(
-                    string.Equals(action, "half", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    string.Equals(action, "half", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
                     $"cf_half_{flip.Id}",
                     "1/2",
                     true,
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId));
 
                 var disabledX2Button = new DiscordButtonComponent(
-                    string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
                     $"cf_x2_{flip.Id}",
                     "X2",
                     true,
                     emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId));
 
                 var disabledMaxButton = new DiscordButtonComponent(
-                    string.Equals(action, "max", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    string.Equals(action, "max", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
                     $"cf_max_{flip.Id}",
                     "MAX",
                     true,
@@ -200,7 +200,7 @@ namespace Server.Communication.Discord.Interactions
 
                 /*
                 var disabledExitButton = new DiscordButtonComponent(
-                    string.Equals(action, "exit", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Danger : ButtonStyle.Secondary,
+                    string.Equals(action, "exit", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Danger : DiscordButtonStyle.Secondary,
                     $"cf_exit_{flip.Id}",
                     "Refund",
                     true,
@@ -210,7 +210,7 @@ namespace Server.Communication.Discord.Interactions
                 updateBuilder.ClearComponents();
                 updateBuilder.AddComponents(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton /*, disabledExitButton*/);
 
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, updateBuilder);
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, updateBuilder);
 
                 var channelForNew = await client.GetChannelAsync(e.Channel.Id);
                 var newMessage = await channelForNew.SendMessageAsync(new DiscordMessageBuilder()
@@ -247,12 +247,16 @@ namespace Server.Communication.Discord.Interactions
 
                     await originalMessage.ModifyAsync(mb =>
                     {
-                        mb.Embed = originalMessage.Embeds.Count > 0 ? originalMessage.Embeds[0] : null;
+                        mb.ClearEmbeds();
+                        if (originalMessage.Embeds.Count > 0)
+                        {
+                            mb.AddEmbed(originalMessage.Embeds[0]);
+                        }
                         mb.ClearComponents();
                     });
                 }
 
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder().WithContent("Game cancelled and your bet was refunded."));
                 return;
             }
@@ -269,7 +273,7 @@ namespace Server.Communication.Discord.Interactions
                 }
                 builder.ClearComponents();
 
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, builder);
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
                 return;
             }
             */
@@ -349,11 +353,11 @@ namespace Server.Communication.Discord.Interactions
 
             var rematchRow = new DiscordComponent[]
             {
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_half_{flip.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_rm_{flip.Id}",   "RM",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_x2_{flip.Id}",   "X2",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)),
-                new DiscordButtonComponent(ButtonStyle.Secondary, $"cf_max_{flip.Id}",  "MAX", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId)),
-                //new DiscordButtonComponent(ButtonStyle.Danger,    $"cf_exit_{flip.Id}", "Exit", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_half_{flip.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_rm_{flip.Id}",   "RM",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_x2_{flip.Id}",   "X2",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_max_{flip.Id}",  "MAX", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId)),
+                //new DiscordButtonComponent(DiscordButtonStyle.Danger,    $"cf_exit_{flip.Id}", "Exit", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))
             };
 
             // Replace the original request message with the result embed + rematch buttons
@@ -366,7 +370,8 @@ namespace Server.Communication.Discord.Interactions
 
                     await originalMessage.ModifyAsync(mb =>
                     {
-                        mb.Embed = embed;
+                        mb.ClearEmbeds();
+                        mb.AddEmbed(embed);
                         mb.ClearComponents();
                         mb.AddComponents(rematchRow);
                     });
@@ -376,7 +381,7 @@ namespace Server.Communication.Discord.Interactions
                         .AddEmbed(embed)
                         .AddComponents(rematchRow);
 
-                    await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, responseBuilder);
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
                     return;
                 }
                 catch
@@ -390,13 +395,13 @@ namespace Server.Communication.Discord.Interactions
 
             // Fallback: if we somehow don't have stored IDs or the original message
             // is gone, respond with a new message showing the result + rematch row.
-            await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder()
                     .AddEmbed(embed)
                     .AddComponents(rematchRow));
         }
 
-        private static DiscordEmbedBuilder BuildResultEmbed(User user, Coinflip flip, long betAmountK, long totalWinK, long preFlipBalanceK, bool win, bool choseHeads, bool resultHeads)
+        private static DiscordEmbedBuilder BuildResultEmbed(User? user, Coinflip flip, long betAmountK, long totalWinK, long preFlipBalanceK, bool win, bool choseHeads, bool resultHeads)
         {
             var balanceK = user?.Balance ?? 0L;
             var balancePretty = GpFormatter.Format(balanceK);
