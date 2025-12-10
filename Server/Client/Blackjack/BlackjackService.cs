@@ -60,9 +60,9 @@ namespace Server.Client.Blackjack
                     }
                 }
 
-                // 2. If Player has Blackjack (and Dealer doesn't show Ace/10 or didn't have BJ on 10), finish.
-                // Note: If Dealer shows Ace, we wait for Insurance.
-                if (game.Status == BlackjackGameStatus.Active && playerHand.IsBlackjack() && !dealerHasAce)
+                // 2. If Player has Blackjack, finish immediately.
+                // We do not offer insurance or even money if the player has Blackjack.
+                if (game.Status == BlackjackGameStatus.Active && playerHand.IsBlackjack())
                 {
                     playerHand.IsStanding = true;
                     game.CurrentHandIndex++;
@@ -351,6 +351,25 @@ namespace Server.Client.Blackjack
             long insuranceCost = game.BetAmount / 2;
             if (user.Balance < insuranceCost)
                 return false;
+
+            // Attempt to set insurance_taken in DB atomically to prevent race conditions
+            try 
+            {
+                using (var cmd = new DatabaseCommand())
+                {
+                    cmd.SetCommand("UPDATE blackjack_games SET insurance_taken = 1 WHERE id = @id AND insurance_taken = 0");
+                    cmd.AddParameter("id", game.Id);
+                    int rows = await cmd.ExecuteQueryAsync();
+                    if (rows == 0)
+                        return false; // Already taken
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"TakeInsuranceAsync atomic update failed: {ex}");
+                return false;
+            }
 
             game.InsuranceTaken = true;
             

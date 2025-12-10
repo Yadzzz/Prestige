@@ -82,6 +82,12 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            // If game finished immediately (e.g. Blackjack), refresh user balance
+            if (game.Status == BlackjackGameStatus.Finished)
+            {
+                user = await usersService.GetUserAsync(user.Identifier);
+            }
+
             var embed = BuildGameEmbed(game, user);
             var buttons = BuildButtons(game);
 
@@ -118,8 +124,11 @@ namespace Server.Communication.Discord.Commands
                 betInfo = $"Total Bet: **{GpFormatter.Format(totalCurrentBet)}**";
             }
 
-            // Add Balance info
-            betInfo += $" • Balance: **{GpFormatter.Format(user.Balance)}**";
+            // Add Balance info only if game is NOT finished (otherwise it's shown in Result field)
+            if (!isGameFinished)
+            {
+                betInfo += $" • Balance: **{GpFormatter.Format(user.Balance)}**";
+            }
             
             // Player hands
             string playerHandsText = "";

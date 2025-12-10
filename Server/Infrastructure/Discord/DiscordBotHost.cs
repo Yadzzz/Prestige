@@ -61,6 +61,7 @@ namespace Server.Infrastructure.Discord
                 b.HandleSessionCreated(async (s, e) =>
                 {
                     Console.WriteLine("Bot is ready ->");
+                    _serverManager.LoggerManager.Log("Bot is ready");
                     await Task.CompletedTask;
                 });
 
@@ -91,19 +92,21 @@ namespace Server.Infrastructure.Discord
             {
                 commands.CommandExecuted += async (s, e) =>
                 {
-                    Console.WriteLine(
-                        $"[CMD EXECUTED] User: {e.Context.User.Username}#{e.Context.User.Discriminator} " +
-                        $"({e.Context.User.Id}) | Command: !{e.Command.Name} | Message: {e.Context.RawArgumentString}"
-                    );
+                    var msg = $"[CMD EXECUTED] User: {e.Context.User.Username}#{e.Context.User.Discriminator} " +
+                        $"({e.Context.User.Id}) | Command: !{e.Command.Name} | Message: {e.Context.RawArgumentString}";
+                    
+                    Console.WriteLine(msg);
+                    _serverManager.LoggerManager.Log(msg);
                     await Task.CompletedTask;
                 };
 
                 commands.CommandErrored += async (s, e) =>
                 {
-                    Console.WriteLine(
-                        $"[CMD ERROR] User: {e.Context.User.Username}#{e.Context.User.Discriminator} " +
-                        $"({e.Context.User.Id}) | Command: !{e.Command?.Name ?? "UNKNOWN"} | Error: {e.Exception.Message}"
-                    );
+                    var msg = $"[CMD ERROR] User: {e.Context.User.Username}#{e.Context.User.Discriminator} " +
+                        $"({e.Context.User.Id}) | Command: !{e.Command?.Name ?? "UNKNOWN"} | Error: {e.Exception.Message}";
+                    
+                    Console.WriteLine(msg);
+                    _serverManager.LoggerManager.LogError(msg);
 
                     if (e.Exception is ChecksFailedException)
                     {
