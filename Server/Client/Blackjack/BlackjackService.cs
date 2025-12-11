@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 using Server.Client.Users;
 using Server.Infrastructure.Database;
 
@@ -454,7 +455,9 @@ namespace Server.Client.Blackjack
                     if (isPlayerBlackjack && !isDealerBlackjack)
                     {
                         // Blackjack! 3:2 payout
-                        totalPayout += hand.BetAmount + (hand.BetAmount * 3 / 2);
+                        // Use floating point math to avoid integer truncation for odd amounts
+                        long bonus = (long)(hand.BetAmount * 1.5);
+                        totalPayout += hand.BetAmount + bonus;
                     }
                     else if (isPlayerBlackjack && isDealerBlackjack)
                     {
@@ -603,11 +606,10 @@ namespace Server.Client.Blackjack
                 }
             }
 
-            // Shuffle using Fisher-Yates
-            var rng = new Random();
+            // Shuffle using Fisher-Yates with Cryptographically Secure RNG
             for (int i = deck.Count - 1; i > 0; i--)
             {
-                int j = rng.Next(i + 1);
+                int j = RandomNumberGenerator.GetInt32(i + 1);
                 var temp = deck[i];
                 deck[i] = deck[j];
                 deck[j] = temp;
