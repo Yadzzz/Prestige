@@ -65,10 +65,10 @@ namespace Server.Client.Coinflips
             return null;
         }
 
-        public Coinflip CreateCoinflip(User user, long amountK)
-        {
-            return CreateCoinflipAsync(user, amountK).GetAwaiter().GetResult();
-        }
+        // public Coinflip CreateCoinflip(User user, long amountK)
+        // {
+        //     return CreateCoinflipAsync(user, amountK).GetAwaiter().GetResult();
+        // }
 
         public async Task<Coinflip> GetCoinflipByIdAsync(int id)
         {
@@ -104,10 +104,10 @@ namespace Server.Client.Coinflips
             return null;
         }
 
-        public Coinflip GetCoinflipById(int id)
-        {
-            return GetCoinflipByIdAsync(id).GetAwaiter().GetResult();
-        }
+        // public Coinflip GetCoinflipById(int id)
+        // {
+        //     return GetCoinflipByIdAsync(id).GetAwaiter().GetResult();
+        // }
 
         public async Task<bool> UpdateCoinflipOutcomeAsync(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId)
         {
@@ -144,10 +144,10 @@ namespace Server.Client.Coinflips
             return false;
         }
 
-        public bool UpdateCoinflipOutcome(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId)
-        {
-            return UpdateCoinflipOutcomeAsync(id, choseHeads, resultHeads, status, messageId, channelId).GetAwaiter().GetResult();
-        }
+        // public bool UpdateCoinflipOutcome(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId)
+        // {
+        //     return UpdateCoinflipOutcomeAsync(id, choseHeads, resultHeads, status, messageId, channelId).GetAwaiter().GetResult();
+        // }
 
         public async Task<System.Collections.Generic.List<Coinflip>> GetPendingCoinflipsByUserIdAsync(int userId)
         {
@@ -177,10 +177,10 @@ namespace Server.Client.Coinflips
             return list;
         }
 
-        public System.Collections.Generic.List<Coinflip> GetPendingCoinflipsByUserId(int userId)
-        {
-            return GetPendingCoinflipsByUserIdAsync(userId).GetAwaiter().GetResult();
-        }
+        // public System.Collections.Generic.List<Coinflip> GetPendingCoinflipsByUserId(int userId)
+        // {
+        //     return GetPendingCoinflipsByUserIdAsync(userId).GetAwaiter().GetResult();
+        // }
 
         private Coinflip MapCoinflip(System.Data.IDataRecord reader)
         {

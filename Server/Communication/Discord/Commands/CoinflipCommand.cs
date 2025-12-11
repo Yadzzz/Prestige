@@ -118,7 +118,7 @@ namespace Server.Communication.Discord.Commands
                 .AddEmbed(embed)
                 .AddComponents(headsButton, tailsButton, exitButton));
 
-            coinflipsService.UpdateCoinflipOutcome(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id);
+            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id);
         }
     }
 }

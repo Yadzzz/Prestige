@@ -67,10 +67,10 @@ namespace Server.Client.Stakes
             return null;
         }
 
-        public Stake CreateStake(User user, long amountK)
-        {
-            return CreateStakeAsync(user, amountK).GetAwaiter().GetResult();
-        }
+        // public Stake CreateStake(User user, long amountK)
+        // {
+        //     return CreateStakeAsync(user, amountK).GetAwaiter().GetResult();
+        // }
 
         public async Task<Stake> GetStakeByIdAsync(int id)
         {
@@ -106,10 +106,10 @@ namespace Server.Client.Stakes
             return null;
         }
 
-        public Stake GetStakeById(int id)
-        {
-            return GetStakeByIdAsync(id).GetAwaiter().GetResult();
-        }
+        // public Stake GetStakeById(int id)
+        // {
+        //     return GetStakeByIdAsync(id).GetAwaiter().GetResult();
+        // }
 
         public async Task<bool> UpdateStakeStatusAsync(int id, StakeStatus status)
         {
@@ -142,10 +142,10 @@ namespace Server.Client.Stakes
             return false;
         }
 
-        public bool UpdateStakeStatus(int id, StakeStatus status)
-        {
-            return UpdateStakeStatusAsync(id, status).GetAwaiter().GetResult();
-        }
+        // public bool UpdateStakeStatus(int id, StakeStatus status)
+        // {
+        //     return UpdateStakeStatusAsync(id, status).GetAwaiter().GetResult();
+        // }
 
         public async Task<bool> UpdateStakeMessagesAsync(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
         {
@@ -180,10 +180,10 @@ namespace Server.Client.Stakes
             return false;
         }
 
-        public bool UpdateStakeMessages(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
-        {
-            return UpdateStakeMessagesAsync(id, userMessageId, userChannelId, staffMessageId, staffChannelId).GetAwaiter().GetResult();
-        }
+        // public bool UpdateStakeMessages(int id, ulong userMessageId, ulong userChannelId, ulong staffMessageId, ulong staffChannelId)
+        // {
+        //     return UpdateStakeMessagesAsync(id, userMessageId, userChannelId, staffMessageId, staffChannelId).GetAwaiter().GetResult();
+        // }
 
         public async Task<bool> UpdateStakeFeeAsync(int id, long feeK)
         {
@@ -216,10 +216,10 @@ namespace Server.Client.Stakes
             return false;
         }
 
-        public bool UpdateStakeFee(int id, long feeK)
-        {
-            return UpdateStakeFeeAsync(id, feeK).GetAwaiter().GetResult();
-        }
+        // public bool UpdateStakeFee(int id, long feeK)
+        // {
+        //     return UpdateStakeFeeAsync(id, feeK).GetAwaiter().GetResult();
+        // }
 
         public async Task<System.Collections.Generic.List<Stake>> GetPendingStakesByUserIdAsync(int userId)
         {
@@ -249,10 +249,10 @@ namespace Server.Client.Stakes
             return list;
         }
 
-        public System.Collections.Generic.List<Stake> GetPendingStakesByUserId(int userId)
-        {
-            return GetPendingStakesByUserIdAsync(userId).GetAwaiter().GetResult();
-        }
+        // public System.Collections.Generic.List<Stake> GetPendingStakesByUserId(int userId)
+        // {
+        //     return GetPendingStakesByUserIdAsync(userId).GetAwaiter().GetResult();
+        // }
 
         private Stake MapStake(System.Data.IDataRecord reader)
         {

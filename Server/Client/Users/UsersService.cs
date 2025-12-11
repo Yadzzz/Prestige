@@ -48,10 +48,10 @@ namespace Server.Client.Users
         }
 
         // Keep synchronous method for backward compatibility
-        public bool AddBalance(string identifier, long amount)
-        {
-            return AddBalanceAsync(identifier, amount).GetAwaiter().GetResult();
-        }
+        // public bool AddBalance(string identifier, long amount)
+        // {
+        //     return AddBalanceAsync(identifier, amount).GetAwaiter().GetResult();
+        // }
 
         public async Task<bool> RemoveBalanceAsync(string identifier, long amount)
         {
@@ -88,10 +88,10 @@ namespace Server.Client.Users
         }
 
         // Keep synchronous method for backward compatibility
-        public bool RemoveBalance(string identifier, long amount)
-        {
-            return RemoveBalanceAsync(identifier, amount).GetAwaiter().GetResult();
-        }
+        // public bool RemoveBalance(string identifier, long amount)
+        // {
+        //     return RemoveBalanceAsync(identifier, amount).GetAwaiter().GetResult();
+        // }
 
         public async Task<bool> UserExistsAsync(string identifier)
         {
@@ -127,10 +127,10 @@ namespace Server.Client.Users
         }
 
         // Keep synchronous method for backward compatibility
-        public bool UserExists(string identifier)
-        {
-            return UserExistsAsync(identifier).GetAwaiter().GetResult();
-        }
+        // public bool UserExists(string identifier)
+        // {
+        //     return UserExistsAsync(identifier).GetAwaiter().GetResult();
+        // }
 
         public async Task<User?> GetUserAsync(string identifier)
         {
@@ -186,11 +186,11 @@ namespace Server.Client.Users
         }
 
         // Keep synchronous method for backward compatibility
-        public bool TryGetUser(string identifier, out User user)
-        {
-            user = GetUserAsync(identifier).GetAwaiter().GetResult();
-            return user != null;
-        }
+        // public bool TryGetUser(string identifier, out User user)
+        // {
+        //     user = GetUserAsync(identifier).GetAwaiter().GetResult();
+        //     return user != null;
+        // }
 
         public async Task<bool> CreateUserAsync(string identifier, string username, string displayName)
         {
@@ -235,10 +235,10 @@ namespace Server.Client.Users
         }
 
         // Keep synchronous method for backward compatibility
-        public bool CreateUser(string identifier, string username, string displayName)
-        {
-            return CreateUserAsync(identifier, username, displayName).GetAwaiter().GetResult();
-        }
+        // public bool CreateUser(string identifier, string username, string displayName)
+        // {
+        //     return CreateUserAsync(identifier, username, displayName).GetAwaiter().GetResult();
+        // }
 
         private async Task<bool> UpdateBalanceAsync(string identifier, long delta)
         {
@@ -275,10 +275,10 @@ namespace Server.Client.Users
         }
 
         // Keep synchronous method for backward compatibility
-        private bool TryUpdateBalance(string identifier, long delta)
-        {
-            return UpdateBalanceAsync(identifier, delta).GetAwaiter().GetResult();
-        }
+        // private bool TryUpdateBalance(string identifier, long delta)
+        // {
+        //     return UpdateBalanceAsync(identifier, delta).GetAwaiter().GetResult();
+        // }
 
         private async Task<User?> CreateAndGetUserAsync(string identifier, string username, string displayName)
         {

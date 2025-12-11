@@ -129,7 +129,7 @@ namespace Server.Communication.Discord.Commands
                 .AddEmbed(staffEmbed)
                 .AddComponents(winButton, cancelButton, loseButton));
 
-            stakesService.UpdateStakeMessages(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
+            await stakesService.UpdateStakeMessagesAsync(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
         }
     }
 }
