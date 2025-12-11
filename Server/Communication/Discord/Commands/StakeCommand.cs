@@ -17,7 +17,7 @@ namespace Server.Communication.Discord.Commands
         private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
         [Command("stake")]
         [Aliases("s")]
-        public async Task Stake(CommandContext ctx, string amount)
+        public async Task Stake(CommandContext ctx, string amount = null)
         {
             if (!await DiscordChannelPermissionService.EnforceStakeChannelAsync(ctx))
             {
@@ -27,6 +27,12 @@ namespace Server.Communication.Discord.Commands
             if (RateLimiter.IsRateLimited(ctx.User.Id, "stake", RateLimitInterval))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(amount))
+            {
+                await ctx.RespondAsync("Please specify an amount. Usage: `!stake <amount>` (e.g. `!stake 100m`).");
                 return;
             }
 

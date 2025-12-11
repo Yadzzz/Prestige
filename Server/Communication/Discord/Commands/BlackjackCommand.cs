@@ -32,6 +32,12 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(amount))
+            {
+                await ctx.RespondAsync("Please specify an amount. Usage: `!bj <amount>` (e.g. `!bj 100m`).");
+                return;
+            }
+
             var env = ServerEnvironment.GetServerEnvironment();
             var serverManager = env.ServerManager;
             var usersService = serverManager.UsersService;

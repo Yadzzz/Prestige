@@ -19,7 +19,7 @@ namespace Server.Communication.Discord.Commands
 
         [Command("d")]
         [Aliases("deposit")] 
-        public async Task Deposit(CommandContext ctx, string amount)
+        public async Task Deposit(CommandContext ctx, string amount = null)
         {
             if (!await DiscordChannelPermissionService.EnforceDepositChannelAsync(ctx))
             {
@@ -29,6 +29,12 @@ namespace Server.Communication.Discord.Commands
             if (IsRateLimited(ctx.User.Id))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(amount))
+            {
+                await ctx.RespondAsync("Please specify an amount. Usage: `!d <amount>` (e.g. `!d 100m`).");
                 return;
             }
 

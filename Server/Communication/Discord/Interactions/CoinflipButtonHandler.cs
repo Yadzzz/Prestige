@@ -354,7 +354,7 @@ namespace Server.Communication.Discord.Interactions
 
             // Register wager for race (only on completion)
             var raceName = user.DisplayName ?? user.Username;
-            env.ServerManager.RaceService?.RegisterWager(user.Identifier, raceName, betAmountK);
+            await env.ServerManager.RaceService.RegisterWagerAsync(user.Identifier, raceName, betAmountK);
 
             user = await usersService.GetUserAsync(user.Identifier);
             var embed = BuildResultEmbed(user, flip, betAmountK, totalWinK, preFlipBalanceK, win, choseHeads, resultHeads);

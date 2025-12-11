@@ -89,7 +89,7 @@ namespace Server.Communication.Discord.Interactions
             if (newStatus == StakeStatus.Won || newStatus == StakeStatus.Lost)
             {
                 var raceName = user?.DisplayName ?? user?.Username ?? stake.Identifier;
-                env.ServerManager.RaceService?.RegisterWager(stake.Identifier, raceName, stake.AmountK);
+                await env.ServerManager.RaceService.RegisterWagerAsync(stake.Identifier, raceName, stake.AmountK);
             }
 
             await env.ServerManager.LogsService.LogAsync(

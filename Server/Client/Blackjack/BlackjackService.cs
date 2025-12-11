@@ -509,8 +509,12 @@ namespace Server.Client.Blackjack
                 // If push, displayAmount is totalBet (which equals totalPayout).
 
                 env.ServerManager.LiveFeedService?.PublishBlackjack(displayAmount, isWin, isPush);
-                var raceName = user.DisplayName ?? user.Username ?? user.Identifier;
-                env.ServerManager.RaceService?.RegisterWager(user.Identifier, raceName, totalBet);
+                
+                if (!isPush)
+                {
+                    var raceName = user.DisplayName ?? user.Username ?? user.Identifier;
+                    await env.ServerManager.RaceService.RegisterWagerAsync(user.Identifier, raceName, totalBet);
+                }
             }
 
             game.Status = BlackjackGameStatus.Finished;

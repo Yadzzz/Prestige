@@ -4,8 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DSharpPlus;
+using DSharpPlus.Entities;
 using Server.Infrastructure;
 using Server.Infrastructure.Database;
+using Server.Infrastructure.Discord;
+using Server.Infrastructure.Configuration;
 
 namespace Server.Client.Races
 {
@@ -34,7 +38,7 @@ namespace Server.Client.Races
             return _activeRace;
         }
 
-        public void RegisterWager(string userIdentifier, string username, long amount)
+        public async Task RegisterWagerAsync(string userIdentifier, string username, long amount)
         {
             var race = _activeRace;
             if (race == null || race.Status != RaceStatus.Active)
@@ -45,6 +49,47 @@ namespace Server.Client.Races
                 // Race ended; do not accept new wagers. 
                 // The background timer will handle closing the race.
                 return;
+            }
+
+            // Optimization: If user is already participating, they have already passed the staff check.
+            // This avoids repeated API calls for every wager.
+            if (!_activeParticipants.ContainsKey(userIdentifier))
+            {
+                // Check if user is staff
+                try
+                {
+                    var client = _serverManager.DiscordBotHost.Client;
+                    var guildId = ConfigService.Current.Discord.GuildId;
+                    if (client != null && guildId != 0)
+                    {
+                        if (client.Guilds.TryGetValue(guildId, out var guild))
+                        {
+                            if (ulong.TryParse(userIdentifier, out var userId))
+                            {
+                                DiscordMember member = null;
+                                // Try to get from cache first to avoid API rate limits
+                                if (guild.Members.TryGetValue(userId, out var cachedMember))
+                                {
+                                    member = cachedMember;
+                                }
+                                else
+                                {
+                                    // Fallback to API fetch
+                                    member = await guild.GetMemberAsync(userId);
+                                }
+
+                                if (member != null && member.IsStaff())
+                                {
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _serverManager.LoggerManager.LogError($"[RaceService] Failed to check staff status for {userIdentifier}: {ex.Message}");
+                }
             }
 
             _activeParticipants.AddOrUpdate(userIdentifier,
