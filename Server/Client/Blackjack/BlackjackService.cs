@@ -76,7 +76,8 @@ namespace Server.Client.Blackjack
                     cmd.SetCommand(@"
                         INSERT INTO blackjack_games 
                         (user_id, identifier, bet_amount, status, deck_state, dealer_hand, player_hands, current_hand_index, insurance_taken, created_at, updated_at)
-                        VALUES (@user_id, @identifier, @bet_amount, @status, @deck_state, @dealer_hand, @player_hands, @current_hand_index, @insurance_taken, @created_at, @updated_at)");
+                        VALUES (@user_id, @identifier, @bet_amount, @status, @deck_state, @dealer_hand, @player_hands, @current_hand_index, @insurance_taken, @created_at, @updated_at);
+                        SELECT LAST_INSERT_ID();");
                     cmd.AddParameter("user_id", game.UserId);
                     cmd.AddParameter("identifier", game.Identifier);
                     cmd.AddParameter("bet_amount", game.BetAmount);
@@ -89,23 +90,11 @@ namespace Server.Client.Blackjack
                     cmd.AddParameter("created_at", game.CreatedAt);
                     cmd.AddParameter("updated_at", game.UpdatedAt);
 
-                    await cmd.ExecuteQueryAsync();
+                    var result = await cmd.ExecuteScalarAsync();
+                    game.Id = Convert.ToInt32(result);
                 }
 
-                // Fetch the created game
-                using (var fetch = new DatabaseCommand())
-                {
-                    fetch.SetCommand("SELECT * FROM blackjack_games WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
-                    fetch.AddParameter("user_id", game.UserId);
-
-                    using (var reader = await fetch.ExecuteDataReaderAsync())
-                    {
-                        if (reader != null && reader.Read())
-                        {
-                            return MapGame(reader);
-                        }
-                    }
-                }
+                return game;
             }
             catch (Exception ex)
             {

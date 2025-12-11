@@ -14,9 +14,6 @@ namespace Server.Communication.Discord.Commands
 {
     public class DepositCommand : BaseCommandModule
     {
-        private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, DateTime> LastUsed = new();
-
         [Command("d")]
         [Aliases("deposit")] 
         public async Task Deposit(CommandContext ctx, string amount = null)
@@ -26,7 +23,7 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (IsRateLimited(ctx.User.Id))
+            if (RateLimiter.IsRateLimited(ctx.User.Id))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
                 return;
@@ -116,18 +113,6 @@ namespace Server.Communication.Discord.Commands
                 userMessage.Channel.Id,
                 staffMessage.Id,
                 staffMessage.Channel.Id);
-        }
-
-        private bool IsRateLimited(ulong userId)
-        {
-            var now = DateTime.UtcNow;
-            if (LastUsed.TryGetValue(userId, out var last) && (now - last) < RateLimitInterval)
-            {
-                return true;
-            }
-
-            LastUsed[userId] = now;
-            return false;
         }
 
     }

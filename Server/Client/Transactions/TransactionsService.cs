@@ -27,7 +27,10 @@ namespace Server.Client.Transactions
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO transactions (user_id, identifier, amount_k, fee_k, type, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @fee_k, @type, @status, @created_at, @updated_at)");
+                    command.SetCommand(@"
+                        INSERT INTO transactions (user_id, identifier, amount_k, fee_k, type, status, created_at, updated_at) 
+                        VALUES (@user_id, @identifier, @amount_k, @fee_k, @type, @status, @created_at, @updated_at);
+                        SELECT LAST_INSERT_ID();");
                     command.AddParameter("user_id", user.Id);
                     command.AddParameter("identifier", user.Identifier);
                     command.AddParameter("amount_k", amountK);
@@ -37,50 +40,39 @@ namespace Server.Client.Transactions
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
 
-                    var rows = await command.ExecuteQueryAsync();
-                    if (rows <= 0)
+                    var result = await command.ExecuteScalarAsync();
+                    var newId = Convert.ToInt32(result);
+
+                    // fetch last inserted transaction for this user (simpler for now)
+                    Transaction? createdTx = null;
+                    using (var fetch = new DatabaseCommand())
+                    {
+                        fetch.SetCommand("SELECT * FROM transactions WHERE id = @id");
+                        fetch.AddParameter("id", newId);
+
+                        using (var reader = await fetch.ExecuteDataReaderAsync())
+                        {
+                            if (reader != null && reader.Read())
+                            {
+                                createdTx = MapTransaction(reader);
+                            }
+                        }
+                    }
+
+                    if (createdTx != null)
                     {
                         var env = ServerEnvironment.GetServerEnvironment();
                         env.ServerManager.LogsService.Log(
                             source: nameof(TransactionsService),
-                            level: "Warning",
+                            level: "Info",
                             userIdentifier: user.Identifier,
-                            action: "CreateDepositNoRows",
-                            message: $"Insert returned 0 rows for deposit user={user.Identifier} amountK={amountK}",
-                            exception: null);
-                        return null;
+                            action: "DepositRequested",
+                            message: $"Deposit requested txId={createdTx.Id} user={user.Identifier} amountK={amountK}",
+                            exception: null,
+                            metadataJson: $"{{\"referenceId\":{createdTx.Id},\"kind\":\"Deposit\",\"amountK\":{amountK}}}");
+
+                        return createdTx;
                     }
-                }
-
-                // fetch last inserted transaction for this user (simpler for now)
-                Transaction? createdTx = null;
-                using (var fetch = new DatabaseCommand())
-                {
-                    fetch.SetCommand("SELECT * FROM transactions WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
-                    fetch.AddParameter("user_id", user.Id);
-
-                    using (var reader = await fetch.ExecuteDataReaderAsync())
-                    {
-                        if (reader != null && reader.Read())
-                        {
-                            createdTx = MapTransaction(reader);
-                        }
-                    }
-                }
-
-                if (createdTx != null)
-                {
-                    var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LogsService.Log(
-                        source: nameof(TransactionsService),
-                        level: "Info",
-                        userIdentifier: user.Identifier,
-                        action: "DepositRequested",
-                        message: $"Deposit requested txId={createdTx.Id} user={user.Identifier} amountK={amountK}",
-                        exception: null,
-                        metadataJson: $"{{\"referenceId\":{createdTx.Id},\"kind\":\"Deposit\",\"amountK\":{amountK}}}");
-
-                    return createdTx;
                 }
             }
             catch (Exception ex)
@@ -115,7 +107,10 @@ namespace Server.Client.Transactions
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO transactions (user_id, identifier, amount_k, fee_k, type, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @fee_k, @type, @status, @created_at, @updated_at)");
+                    command.SetCommand(@"
+                        INSERT INTO transactions (user_id, identifier, amount_k, fee_k, type, status, created_at, updated_at) 
+                        VALUES (@user_id, @identifier, @amount_k, @fee_k, @type, @status, @created_at, @updated_at);
+                        SELECT LAST_INSERT_ID();");
                     command.AddParameter("user_id", user.Id);
                     command.AddParameter("identifier", user.Identifier);
                     command.AddParameter("amount_k", amountK);
@@ -125,41 +120,38 @@ namespace Server.Client.Transactions
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
 
-                    var rows = await command.ExecuteQueryAsync();
-                    if (rows <= 0)
-                    {
-                        return null;
-                    }
-                }
+                    var result = await command.ExecuteScalarAsync();
+                    var newId = Convert.ToInt32(result);
 
-                Transaction? createdTx = null;
-                using (var fetch = new DatabaseCommand())
-                {
-                    fetch.SetCommand("SELECT * FROM transactions WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
-                    fetch.AddParameter("user_id", user.Id);
-
-                    using (var reader = await fetch.ExecuteDataReaderAsync())
+                    Transaction? createdTx = null;
+                    using (var fetch = new DatabaseCommand())
                     {
-                        if (reader != null && reader.Read())
+                        fetch.SetCommand("SELECT * FROM transactions WHERE id = @id");
+                        fetch.AddParameter("id", newId);
+
+                        using (var reader = await fetch.ExecuteDataReaderAsync())
                         {
-                            createdTx = MapTransaction(reader);
+                            if (reader != null && reader.Read())
+                            {
+                                createdTx = MapTransaction(reader);
+                            }
                         }
                     }
-                }
 
-                if (createdTx != null)
-                {
-                    var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LogsService.Log(
-                        source: nameof(TransactionsService),
-                        level: "Info",
-                        userIdentifier: user.Identifier,
-                        action: "WithdrawRequested",
-                        message: $"Withdraw requested txId={createdTx.Id} user={user.Identifier} amountK={amountK}",
-                        exception: null,
-                        metadataJson: $"{{\"referenceId\":{createdTx.Id},\"kind\":\"Withdraw\",\"amountK\":{amountK}}}");
+                    if (createdTx != null)
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        env.ServerManager.LogsService.Log(
+                            source: nameof(TransactionsService),
+                            level: "Info",
+                            userIdentifier: user.Identifier,
+                            action: "WithdrawRequested",
+                            message: $"Withdraw requested txId={createdTx.Id} user={user.Identifier} amountK={amountK}",
+                            exception: null,
+                            metadataJson: $"{{\"referenceId\":{createdTx.Id},\"kind\":\"Withdraw\",\"amountK\":{amountK}}}");
 
-                    return createdTx;
+                        return createdTx;
+                    }
                 }
             }
             catch (Exception ex)

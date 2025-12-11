@@ -5,7 +5,9 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Server.Client.Blackjack;
 using Server.Client.Users;
+using Server.Client.Utils;
 using Server.Infrastructure;
+using Server.Communication.Discord.Commands;
 
 namespace Server.Communication.Discord.Interactions
 {
@@ -13,6 +15,13 @@ namespace Server.Communication.Discord.Interactions
     {
         public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
+            if (RateLimiter.IsRateLimited(e.User.Id))
+            {
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("You're doing that too fast.").AsEphemeral(true));
+                return;
+            }
+
             var parts = e.Id.Split('_');
             if (parts.Length < 3)
                 return;

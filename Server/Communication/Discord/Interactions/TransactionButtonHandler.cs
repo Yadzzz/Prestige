@@ -10,6 +10,7 @@ using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Infrastructure;
 using Server.Infrastructure.Discord;
+using Server.Communication.Discord.Commands;
 
 namespace Server.Communication.Discord.Interactions
 {
@@ -17,6 +18,13 @@ namespace Server.Communication.Discord.Interactions
     {
         public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
+            if (RateLimiter.IsRateLimited(e.User.Id))
+            {
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("You're doing that too fast.").AsEphemeral(true));
+                return;
+            }
+
             if (e.Id.StartsWith("tx_usercancel_", StringComparison.OrdinalIgnoreCase))
             {
                 await HandleUserCancelAction(client, e);

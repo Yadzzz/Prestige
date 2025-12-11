@@ -23,7 +23,10 @@ namespace Server.Client.Stakes
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO stakes (user_id, identifier, amount_k, fee_k, status, created_at, updated_at) VALUES (@user_id, @identifier, @amount_k, @fee_k, @status, @created_at, @updated_at)");
+                    command.SetCommand(@"
+                        INSERT INTO stakes (user_id, identifier, amount_k, fee_k, status, created_at, updated_at) 
+                        VALUES (@user_id, @identifier, @amount_k, @fee_k, @status, @created_at, @updated_at);
+                        SELECT LAST_INSERT_ID();");
                     command.AddParameter("user_id", user.Id);
                     command.AddParameter("identifier", user.Identifier);
                     command.AddParameter("amount_k", amountK);
@@ -32,21 +35,21 @@ namespace Server.Client.Stakes
                     command.AddParameter("created_at", DateTime.UtcNow);
                     command.AddParameter("updated_at", DateTime.UtcNow);
 
-                    var rows = await command.ExecuteQueryAsync();
-                    if (rows <= 0)
-                        return null;
-                }
+                    var result = await command.ExecuteScalarAsync();
+                    var newId = Convert.ToInt32(result);
 
-                using (var fetch = new DatabaseCommand())
-                {
-                    fetch.SetCommand("SELECT * FROM stakes WHERE user_id = @user_id ORDER BY id DESC LIMIT 1");
-                    fetch.AddParameter("user_id", user.Id);
-
-                    using (var reader = await fetch.ExecuteDataReaderAsync())
+                    // Fetch the created stake by ID directly
+                    using (var fetch = new DatabaseCommand())
                     {
-                        if (reader != null && reader.Read())
+                        fetch.SetCommand("SELECT * FROM stakes WHERE id = @id");
+                        fetch.AddParameter("id", newId);
+
+                        using (var reader = await fetch.ExecuteDataReaderAsync())
                         {
-                            return MapStake(reader);
+                            if (reader != null && reader.Read())
+                            {
+                                return MapStake(reader);
+                            }
                         }
                     }
                 }
