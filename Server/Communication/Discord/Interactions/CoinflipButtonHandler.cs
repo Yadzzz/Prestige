@@ -9,6 +9,7 @@ using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Infrastructure;
 using Server.Infrastructure.Discord;
+using Server.Infrastructure.Logger;
 
 namespace Server.Communication.Discord.Interactions
 {
@@ -217,7 +218,7 @@ namespace Server.Communication.Discord.Interactions
                     .AddEmbed(embedRematch)
                     .AddComponents(headsButtonRematch, tailsButtonRematch, exitButtonRematch));
 
-                await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: newMessage.Channel.Id);
+                await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: channelForNew.Id);
                 return;
             }
 
@@ -303,6 +304,16 @@ namespace Server.Communication.Discord.Interactions
             var resultHeads = roll < 50; // 50/50
             var win = choseHeads == resultHeads;
 
+            // Persist updated flip baseline FIRST.
+            // If this fails, we must abort to prevent "free rolls" (playing without committing result).
+            if (!await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0))
+            {
+                env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to update outcome for flip {flip.Id}. User: {user.Identifier}. Aborting to prevent exploit.");
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("Failed to process game result. Please try again.").AsEphemeral(true));
+                return;
+            }
+
             long feeK = 0;
             long payoutK = 0;
             long totalWinK = 0;
@@ -340,9 +351,6 @@ namespace Server.Communication.Discord.Interactions
             {
                 // Live feed must never affect gameplay
             }
-
-            // Persist updated flip baseline
-            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0);
 
             // Register wager for race (only on completion)
             var raceName = user.DisplayName ?? user.Username;
@@ -384,8 +392,9 @@ namespace Server.Communication.Discord.Interactions
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
                     return;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to modify original message for flip {flip.Id}. Error: {ex.Message}");
                     // If the channel or message no longer exists (deleted, etc.),
                     // OR if ModifyAsync fails for any other reason (network, etc.),
                     // fall through to the fallback below without breaking the flip

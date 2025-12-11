@@ -21,23 +21,27 @@ namespace Server.Client.Users
             }
             var updated = await UpdateBalanceAsync(identifier, amount);
 
-            try
+            if (updated)
             {
-                if (updated)
+                _ = Task.Run(async () =>
                 {
-                    var env = ServerEnvironment.GetServerEnvironment();
-                    await env.ServerManager.LogsService.LogAsync(
-                        source: nameof(UsersService),
-                        level: "Info",
-                        userIdentifier: identifier,
-                        action: "BalanceIncreased",
-                        message: $"Balance increased by {amount}K for user={identifier}",
-                        exception: null);
-                }
-            }
-            catch
-            {
-                // ignore logging failures
+                    try
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        await env.ServerManager.LogsService.LogAsync(
+                            source: nameof(UsersService),
+                            level: "Info",
+                            userIdentifier: identifier,
+                            action: "BalanceIncreased",
+                            message: $"Balance increased by {amount}K for user={identifier}",
+                            exception: null);
+                    }
+                    catch (Exception ex)
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        env.ServerManager.LoggerManager.LogError($"[UsersService] Failed to log balance increase for {identifier}: {ex.Message}");
+                    }
+                });
             }
 
             return updated;
@@ -57,23 +61,27 @@ namespace Server.Client.Users
             }
             var updated = await UpdateBalanceAsync(identifier, -amount);
 
-            try
+            if (updated)
             {
-                if (updated)
+                _ = Task.Run(async () =>
                 {
-                    var env = ServerEnvironment.GetServerEnvironment();
-                    await env.ServerManager.LogsService.LogAsync(
-                        source: nameof(UsersService),
-                        level: "Info",
-                        userIdentifier: identifier,
-                        action: "BalanceDecreased",
-                        message: $"Balance decreased by {amount}K for user={identifier}",
-                        exception: null);
-                }
-            }
-            catch
-            {
-                // ignore logging failures
+                    try
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        await env.ServerManager.LogsService.LogAsync(
+                            source: nameof(UsersService),
+                            level: "Info",
+                            userIdentifier: identifier,
+                            action: "BalanceDecreased",
+                            message: $"Balance decreased by {amount}K for user={identifier}",
+                            exception: null);
+                    }
+                    catch (Exception ex)
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        env.ServerManager.LoggerManager.LogError($"[UsersService] Failed to log balance decrease for {identifier}: {ex.Message}");
+                    }
+                });
             }
 
             return updated;
@@ -191,38 +199,28 @@ namespace Server.Client.Users
                 return false;
             }
 
-            // Optimization: Try to insert directly. If it fails due to duplicate, we assume user exists.
-
-            if (await UserExistsAsync(identifier))
-            {
-                return true;
-            }
+            // Optimization: Try to insert directly using INSERT IGNORE.
+            // This avoids the extra roundtrip to check if user exists.
 
             try
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO users (identifier, username, display_name, balance, stake_streak, stake_lose_streak) VALUES (@identifier, @username, @display_name, @balance, @stake_streak, @stake_lose_streak)");
+                    command.SetCommand("INSERT IGNORE INTO users (identifier, username, display_name, balance, stake_streak, stake_lose_streak) VALUES (@identifier, @username, @display_name, 0, 0, 0)");
                     command.AddParameter("identifier", identifier);
                     command.AddParameter("username", username);
                     command.AddParameter("display_name", displayName);
-                    command.AddParameter("balance", 0);
-                    command.AddParameter("stake_streak", 0);
-                    command.AddParameter("stake_lose_streak", 0);
 
-                    int rowsAffected = await command.ExecuteQueryAsync();
+                    await command.ExecuteQueryAsync();
 
-                    return rowsAffected > 0;
+                    // With INSERT IGNORE, if it returns 0, it means user exists.
+                    // If it returns 1, user was created.
+                    // In both cases, we successfully ensured the user exists.
+                    return true;
                 }
             }
             catch (Exception ex)
             {
-                // Check if it's a duplicate entry error (MySQL error 1062)
-                if (ex.Message.Contains("Duplicate entry") || (ex.InnerException?.Message.Contains("Duplicate entry") ?? false))
-                {
-                    return true;
-                }
-
                 try
                 {
                     var env = ServerEnvironment.GetServerEnvironment();
@@ -282,6 +280,48 @@ namespace Server.Client.Users
             return UpdateBalanceAsync(identifier, delta).GetAwaiter().GetResult();
         }
 
+        private async Task<User?> CreateAndGetUserAsync(string identifier, string username, string displayName)
+        {
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    // Combined INSERT IGNORE + SELECT to reduce roundtrips
+                    command.SetCommand(@"
+                        INSERT IGNORE INTO users (identifier, username, display_name, balance, stake_streak, stake_lose_streak) 
+                        VALUES (@identifier, @username, @display_name, 0, 0, 0);
+                        SELECT * FROM users WHERE identifier = @identifier LIMIT 1;");
+                    
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("username", username);
+                    command.AddParameter("display_name", displayName);
+
+                    using (var reader = await command.ExecuteDataReaderAsync())
+                    {
+                        if (reader != null && await reader.ReadAsync())
+                        {
+                            return new User
+                            {
+                                Id = Convert.ToInt32(reader["id"]),
+                                Identifier = reader["identifier"].ToString(),
+                                Username = reader["username"].ToString(),
+                                DisplayName = reader["display_name"].ToString(),
+                                Balance = Convert.ToInt64(reader["balance"]),
+                                StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"]),
+                                StakeLoseStreak = reader["stake_lose_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_lose_streak"])
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService] CreateAndGetUserAsync failed for {identifier}: {ex.Message}");
+            }
+            return null;
+        }
+
         public async Task<User?> EnsureUserAsync(string userId, string username, string displayName)
         {
             if (string.IsNullOrEmpty(userId))
@@ -292,13 +332,8 @@ namespace Server.Client.Users
             var user = await GetUserAsync(userId);
             if (user == null)
             {
-                // User does not exist yet; try to create and then fetch.
-                if (!await CreateUserAsync(userId, username, displayName))
-                {
-                    return null;
-                }
-
-                user = await GetUserAsync(userId);
+                // Optimized creation: Try to create and fetch in one go
+                user = await CreateAndGetUserAsync(userId, username, displayName);
             }
 
             return user;
