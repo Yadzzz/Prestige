@@ -23,7 +23,8 @@ namespace Server.Communication.Discord.Commands
             var coinflipsService = serverManager.CoinflipsService;
             var stakesService = serverManager.StakesService;
 
-            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var displayName = ctx.Member?.DisplayName ?? ctx.User.Username;
+            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, displayName);
             if (user == null)
                 return;
 

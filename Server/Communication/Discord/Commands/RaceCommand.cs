@@ -37,7 +37,7 @@ namespace Server.Communication.Discord.Commands
 
             await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(embed)
-                .AddComponents(dropdown));
+                .AddActionRowComponent(dropdown));
         }
 
         [Command("raceend")]

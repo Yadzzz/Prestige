@@ -278,7 +278,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (buttons.Length > 0)
             {
-                builder.AddComponents(buttons);
+                builder.AddActionRowComponent(new DiscordActionRowComponent(buttons));
             }
 
             await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);

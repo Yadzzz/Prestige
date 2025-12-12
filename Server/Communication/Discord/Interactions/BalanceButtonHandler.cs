@@ -105,7 +105,7 @@ namespace Server.Communication.Discord.Interactions
 
             var builder = new DiscordInteractionResponseBuilder()
                 .AddEmbed(embed)
-                .AddComponents(row1);
+                .AddActionRowComponent(row1);
 
             await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
         }
@@ -192,7 +192,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (components.Count > 0)
             {
-                builder.AddComponents(components);
+                builder.AddActionRowComponent(new DiscordActionRowComponent(components));
             }
 
             // Update the message instead of sending a new one

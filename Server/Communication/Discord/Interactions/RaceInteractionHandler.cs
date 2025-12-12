@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using DSharpPlus.Interactivity;
 using Server.Infrastructure.Discord;
 using Server.Client.Races;
 
@@ -40,30 +41,45 @@ namespace Server.Communication.Discord.Interactions
                 var selected = e.Values[0];
                 if (selected == "race_duration")
                 {
-                    var modal = new DiscordInteractionResponseBuilder()
-                        .WithTitle("Set Race Duration")
-                        .WithCustomId("race_duration_modal")
-                        .AddComponents(new DiscordTextInputComponent("Duration (Days)", "duration", "1"));
-                    
+                    /*
+                    var modal = new DiscordInteractionResponseBuilder
+                    {
+                        Title = "Set Race Duration",
+                        CustomId = "race_duration_modal"
+                    };
+                    modal.AddComponents(new DiscordTextInputComponent("Duration (Days)", "duration", "1"));
+
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
+                    */
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent("Feature temporarily disabled due to API changes.").AsEphemeral(true));
                 }
                 else if (selected == "race_winners")
                 {
-                    var modal = new DiscordInteractionResponseBuilder()
-                        .WithTitle("Set Winners Count")
-                        .WithCustomId("race_winners_modal")
-                        .AddComponents(new DiscordTextInputComponent("Number of Winners", "winners", "3"));
-                    
+                    /*
+                    var modal = new DiscordInteractionResponseBuilder
+                    {
+                        Title = "Set Winners Count",
+                        CustomId = "race_winners_modal"
+                    };
+                    modal.AddComponents(new DiscordTextInputComponent("Number of Winners", "winners", "3"));
+
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
+                    */
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent("Feature temporarily disabled due to API changes.").AsEphemeral(true));
                 }
                 else if (selected == "race_prizes")
                 {
-                    var modal = new DiscordInteractionResponseBuilder()
-                        .WithTitle("Set Prizes")
-                        .WithCustomId("race_prizes_modal")
-                        .AddComponents(new DiscordTextInputComponent("Prizes (Rank:Prize, one per line)", "prizes", "1:100M\n2:50M\n3:25M", style: DiscordTextInputStyle.Paragraph));
-                    
+                    /*
+                    var modal = new DiscordInteractionResponseBuilder
+                    {
+                        Title = "Set Prizes",
+                        CustomId = "race_prizes_modal"
+                    };
+                    modal.AddComponents(new DiscordTextInputComponent("Prizes (Rank:Prize, one per line)", "prizes", "1:100M\n2:50M\n3:25M", style: DiscordTextInputStyle.Paragraph));
+
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
+                    */
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent("Feature temporarily disabled due to API changes.").AsEphemeral(true));
                 }
                 else if (selected == "race_start")
                 {
@@ -91,6 +107,8 @@ namespace Server.Communication.Discord.Interactions
                             .WithTitle("🏆 Race Leaderboard 🏆")
                             .WithDescription("Race is active! Wager to climb the ranks.")
                             .WithColor(DiscordColor.Gold)
+                            .WithThumbnail("https://i.imgur.com/Axcs6YE.gif")
+                            .WithTimestamp(DateTimeOffset.UtcNow)
                             .WithFooter($"Ends at {endTime:g}");
                             
                         var msg = await raceChannel.SendMessageAsync(leaderboardEmbed);
@@ -128,7 +146,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (e.Interaction.Data.CustomId == "race_duration_modal")
             {
-                if (int.TryParse(e.Values["duration"], out var days))
+                if (int.TryParse(GetModalValue(e, "duration"), out var days))
                 {
                     config.DurationDays = days;
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
@@ -137,7 +155,7 @@ namespace Server.Communication.Discord.Interactions
             }
             else if (e.Interaction.Data.CustomId == "race_winners_modal")
             {
-                if (int.TryParse(e.Values["winners"], out var winners))
+                if (int.TryParse(GetModalValue(e, "winners"), out var winners))
                 {
                     config.WinnersCount = winners;
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
@@ -146,20 +164,41 @@ namespace Server.Communication.Discord.Interactions
             }
             else if (e.Interaction.Data.CustomId == "race_prizes_modal")
             {
-                var text = e.Values["prizes"];
-                var lines = text.Split('\n');
-                config.Prizes.Clear();
-                foreach (var line in lines)
+                var text = GetModalValue(e, "prizes");
+                if (text != null)
                 {
-                    var parts = line.Split(':');
-                    if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out var rank))
+                    var lines = text.Split('\n');
+                    config.Prizes.Clear();
+                    foreach (var line in lines)
                     {
-                        config.Prizes.Add(new RacePrize { Rank = rank, Prize = parts[1].Trim() });
+                        var parts = line.Split(':');
+                        if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out var rank))
+                        {
+                            config.Prizes.Add(new RacePrize { Rank = rank, Prize = parts[1].Trim() });
+                        }
+                    }
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
+                        new DiscordInteractionResponseBuilder().WithContent($"Prizes updated ({config.Prizes.Count} entries).").AsEphemeral(true));
+                }
+            }
+        }
+
+        private static string? GetModalValue(ModalSubmittedEventArgs e, string customId)
+        {
+            foreach (var component in e.Interaction.Data.Components)
+            {
+                if (component is DiscordActionRowComponent row)
+                {
+                    foreach (var inner in row.Components)
+                    {
+                        if (inner is DiscordTextInputComponent text && text.CustomId == customId)
+                        {
+                            return text.Value;
+                        }
                     }
                 }
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
-                    new DiscordInteractionResponseBuilder().WithContent($"Prizes updated ({config.Prizes.Count} entries).").AsEphemeral(true));
             }
+            return null;
         }
     }
 }

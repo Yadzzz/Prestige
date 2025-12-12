@@ -165,7 +165,7 @@ namespace Server.Communication.Discord.Interactions
                         builder.ClearEmbeds();
                         builder.AddEmbed(updatedEmbed.Build());
                         builder.ClearComponents();
-                        builder.AddComponents(components);
+                        builder.AddActionRowComponent(new DiscordActionRowComponent(components));
                     });
                 }
                 catch (Exception ex)
@@ -224,7 +224,7 @@ namespace Server.Communication.Discord.Interactions
                         builder.ClearEmbeds();
                         builder.AddEmbed(embedBuilder.Build());
                         builder.ClearComponents();
-                        builder.AddComponents(ingameDisabled, cryptoDisabled);
+                        builder.AddActionRowComponent(new DiscordActionRowComponent(new[] { ingameDisabled, cryptoDisabled }));
                     });
                 }
 
@@ -416,7 +416,7 @@ namespace Server.Communication.Discord.Interactions
 
             var responseBuilder = new DiscordInteractionResponseBuilder()
                 .AddEmbed(updatedEmbed)
-                .AddComponents(components);
+                .AddActionRowComponent(new DiscordActionRowComponent(components));
 
             await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
 
@@ -636,7 +636,7 @@ namespace Server.Communication.Discord.Interactions
                             {
                                 if (originalMessage.Embeds.Count > 0) builder.AddEmbed(originalMessage.Embeds[0]);
                                 builder.ClearComponents();
-                                builder.AddComponents(disabledCancel);
+                                builder.AddActionRowComponent(new[] { disabledCancel });
                             });
                         }
                         catch (Exception ex)
@@ -704,7 +704,7 @@ namespace Server.Communication.Discord.Interactions
                         builder.ClearEmbeds();
                         builder.AddEmbed(updatedEmbed.Build());
                         builder.ClearComponents();
-                        builder.AddComponents(components);
+                        builder.AddActionRowComponent(new DiscordActionRowComponent(components));
                     });
                 }
                 catch (Exception ex)

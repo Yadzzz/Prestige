@@ -61,7 +61,7 @@ namespace Server.Communication.Discord.Commands
 
             if (betAmount < GpFormatter.MinimumBetAmountK)
             {
-                await ctx.RespondAsync($"Minimum bet is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
+                await ctx.RespondAsync($"Minimum bet is `{GpFormatter.Format(GpFormatter.MinimumBetAmountK)}`.");
                 return;
             }
 
@@ -100,7 +100,7 @@ namespace Server.Communication.Discord.Commands
             var builder = new DiscordMessageBuilder().AddEmbed(embed);
             if (buttons.Length > 0)
             {
-                builder.AddComponents(buttons);
+                builder.AddActionRowComponent(new DiscordActionRowComponent(buttons));
             }
 
             DSharpPlus.Entities.DiscordMessage message;
@@ -115,7 +115,7 @@ namespace Server.Communication.Discord.Commands
                 var textButtons = BuildButtons(game, useEmojis: false);
                 if (textButtons.Length > 0)
                 {
-                    builder.AddComponents(textButtons);
+                    builder.AddActionRowComponent(new DiscordActionRowComponent(textButtons));
                 }
                 message = await ctx.RespondAsync(builder);
             }
@@ -145,6 +145,7 @@ namespace Server.Communication.Discord.Commands
             // Image Logic
             string imageUrl = "https://i.imgur.com/baRNgRg.gif"; // Default / Start Game
             string resultText = "";
+            bool showBet = !isGameFinished;
 
             if (isGameFinished)
             {
@@ -209,18 +210,18 @@ namespace Server.Communication.Discord.Commands
                         embed.WithColor(DiscordColor.Green);
                         imageUrl = "https://i.imgur.com/J2JWsJD.gif"; // Win
                     }
-                    resultText = $"🎉 You won **{GpFormatter.Format(netChange)}**\n";
+                    resultText = $"🎉 You won `{GpFormatter.Format(totalPayout)}`\n";
                 }
                 else if (netChange < 0)
                 {
                     embed.WithColor(DiscordColor.Red);
-                    resultText = $"You lost **{GpFormatter.Format(Math.Abs(netChange))}**\n";
+                    resultText = $"You lost `{GpFormatter.Format(Math.Abs(netChange))}`\n";
                     imageUrl = "https://i.imgur.com/jtiAW54.gif"; // Lost
                 }
                 else
                 {
                     embed.WithColor(DiscordColor.Orange);
-                    resultText = $"The dealer has scored the same as you.\nYou received back **{GpFormatter.Format(totalPayout)}**\n";
+                    resultText = $"The dealer has scored the same as you.\nYou received back `{GpFormatter.Format(totalPayout)}`\n";
                     imageUrl = "https://i.imgur.com/VOnBLHK.gif"; // Draw
                 }
             }
@@ -241,8 +242,8 @@ namespace Server.Communication.Discord.Commands
             {
                 betAmount = game.PlayerHands.Sum(h => h.BetAmount);
             }
-            
-            var description = $"{resultText}Bet: **{GpFormatter.Format(betAmount)}**\nBalance: **{GpFormatter.Format(user.Balance)}**\n\n";
+            var betLine = showBet ? $"Bet: `{GpFormatter.Format(betAmount)}`\n" : "";
+            var description = $"{resultText}{betLine}Balance: `{GpFormatter.Format(user.Balance)}`\n\n";
             
             // Player hands
             string playerHandsText = "";
@@ -292,7 +293,7 @@ namespace Server.Communication.Discord.Commands
 
             if (isInsuranceOffered)
             {
-                embed.AddField("🛡️ Insurance Offered", "Dealer shows an Ace. Pays 2:1 if Dealer has Blackjack.\nCost: **" + GpFormatter.Format(game.BetAmount / 2) + "**");
+                embed.AddField("🛡️ Insurance Offered", "Dealer shows an Ace. Pays 2:1 if Dealer has Blackjack.\nCost: `" + GpFormatter.Format(game.BetAmount / 2) + "`");
             }
             else if (game.InsuranceTaken)
             {

@@ -116,7 +116,7 @@ namespace Server.Communication.Discord.Commands
 
             var message = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(embed)
-                .AddComponents(headsButton, tailsButton, exitButton));
+                .AddActionRowComponent(new[] { headsButton, tailsButton, exitButton }));
 
             // Only update if the status is still Pending.
             // If the user already clicked a button (race condition), the status might be Finished or Cancelled.

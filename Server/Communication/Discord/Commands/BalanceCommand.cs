@@ -87,7 +87,7 @@ namespace Server.Communication.Discord.Commands
 
                 await ctx.RespondAsync(new DiscordMessageBuilder()
                     .AddEmbed(embed)
-                    .AddComponents(row1));
+                    .AddActionRowComponent(new DiscordActionRowComponent(row1)));
             }
             else
             {

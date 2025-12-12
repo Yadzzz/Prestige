@@ -115,7 +115,7 @@ namespace Server.Communication.Discord.Commands
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(pendingEmbed)
-                .AddComponents(ingameButton, cryptoButton /*, userCancelButton*/));
+                .AddActionRowComponent(new[] { ingameButton, cryptoButton /*, userCancelButton*/ }));
 
             var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.WithdrawStaffChannelId);
 
@@ -132,7 +132,7 @@ namespace Server.Communication.Discord.Commands
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")
                 .AddEmbed(staffEmbed)
-                .AddComponents(acceptButton, cancelButton, denyButton));
+                .AddActionRowComponent(new[] { acceptButton, cancelButton, denyButton }));
 
             await transactionsService.UpdateTransactionMessagesAsync(
                 transaction.Id,

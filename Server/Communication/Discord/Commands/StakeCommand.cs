@@ -133,7 +133,7 @@ namespace Server.Communication.Discord.Commands
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")
                 .AddEmbed(staffEmbed)
-                .AddComponents(winButton, cancelButton, loseButton));
+                .AddActionRowComponent(new[] { winButton, cancelButton, loseButton }));
 
             await stakesService.UpdateStakeMessagesAsync(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
         }

@@ -217,14 +217,14 @@ namespace Server.Communication.Discord.Interactions
                 */
 
                 updateBuilder.ClearComponents();
-                updateBuilder.AddComponents(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton /*, disabledExitButton*/);
+                updateBuilder.AddActionRowComponent(new DiscordActionRowComponent(new[] { disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton }));
 
                 await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, updateBuilder);
 
                 var channelForNew = await client.GetChannelAsync(e.Channel.Id);
                 var newMessage = await channelForNew.SendMessageAsync(new DiscordMessageBuilder()
                     .AddEmbed(embedRematch)
-                    .AddComponents(headsButtonRematch, tailsButtonRematch, exitButtonRematch));
+                    .AddActionRowComponent(new DiscordActionRowComponent(new[] { headsButtonRematch, tailsButtonRematch, exitButtonRematch })));
 
                 await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: channelForNew.Id, expectedStatus: CoinflipStatus.Pending);
                 return;
@@ -398,13 +398,13 @@ namespace Server.Communication.Discord.Interactions
                         mb.ClearEmbeds();
                         mb.AddEmbed(embed);
                         mb.ClearComponents();
-                        mb.AddComponents(rematchRow);
+                        mb.AddActionRowComponent(new DiscordActionRowComponent(rematchRow));
                     });
 
                     // Acknowledge the interaction by updating the same message (no new message sent)
                     var responseBuilder = new DiscordInteractionResponseBuilder()
                         .AddEmbed(embed)
-                        .AddComponents(rematchRow);
+                        .AddActionRowComponent(new DiscordActionRowComponent(rematchRow));
 
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
                     return;
@@ -424,7 +424,7 @@ namespace Server.Communication.Discord.Interactions
             await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder()
                     .AddEmbed(embed)
-                    .AddComponents(rematchRow));
+                    .AddActionRowComponent(new DiscordActionRowComponent(rematchRow)));
         }
 
         private static DiscordEmbedBuilder BuildResultEmbed(User? user, Coinflip flip, long betAmountK, long totalWinK, long preFlipBalanceK, bool win, bool choseHeads, bool resultHeads)

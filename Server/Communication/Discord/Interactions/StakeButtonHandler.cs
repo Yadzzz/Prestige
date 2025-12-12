@@ -209,7 +209,7 @@ namespace Server.Communication.Discord.Interactions
             await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage,
                 new DiscordInteractionResponseBuilder()
                     .AddEmbed(staffEmbed)
-                    .AddComponents(staffComponents));
+                    .AddActionRowComponent(new DiscordActionRowComponent(staffComponents)));
 
             // User-facing embed: send a new message showing result, streak and balance
             if (stake.UserChannelId.HasValue)

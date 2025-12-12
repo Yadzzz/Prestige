@@ -104,7 +104,7 @@ namespace Server.Communication.Discord.Commands
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")
                 .AddEmbed(staffEmbed)
-                .AddComponents(acceptButton, cancelButton, denyButton));
+                .AddActionRowComponent(new[] { acceptButton, cancelButton, denyButton }));
 
             // Persist message/channel IDs so we can update messages on status changes
             await transactionsService.UpdateTransactionMessagesAsync(
