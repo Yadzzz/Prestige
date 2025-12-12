@@ -100,7 +100,7 @@ namespace Server.Communication.Discord.Commands
             var builder = new DiscordMessageBuilder().AddEmbed(embed);
             if (buttons.Length > 0)
             {
-                builder.AddComponents(new DiscordActionRowComponent(buttons));
+                builder.AddComponents(buttons);
             }
 
             DSharpPlus.Entities.DiscordMessage message;
@@ -329,7 +329,7 @@ namespace Server.Communication.Discord.Commands
             if (!currentHand.IsStanding && !currentHand.IsBusted && !is21)
             {
                 if (useEmojis && DiscordIds.BlackjackHitEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_hit_{game.Id}", " ", false, new DiscordComponentEmoji(DiscordIds.BlackjackHitEmojiId)));
+                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_hit_{game.Id}", "Hit", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackHitEmojiId)));
                 else
                     buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_hit_{game.Id}", "Hit"));
             }
@@ -339,7 +339,7 @@ namespace Server.Communication.Discord.Commands
             if (!currentHand.IsStanding && !currentHand.IsBusted)
             {
                 if (useEmojis && DiscordIds.BlackjackStandEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_stand_{game.Id}", " ", false, new DiscordComponentEmoji(DiscordIds.BlackjackStandEmojiId)));
+                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_stand_{game.Id}", "Stand", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackStandEmojiId)));
                 else
                     buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_stand_{game.Id}", "Stand"));
             }
@@ -349,7 +349,7 @@ namespace Server.Communication.Discord.Commands
             if (currentHand.CanDouble() && !is21)
             {
                 if (useEmojis && DiscordIds.BlackjackDoubleEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_double_{game.Id}", " ", false, new DiscordComponentEmoji(DiscordIds.BlackjackDoubleEmojiId)));
+                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_double_{game.Id}", "Double", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackDoubleEmojiId)));
                 else
                     buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_double_{game.Id}", "Double"));
             }
@@ -359,7 +359,7 @@ namespace Server.Communication.Discord.Commands
             if (currentHand.CanSplit())
             {
                 if (useEmojis && DiscordIds.BlackjackSplitEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_split_{game.Id}", " ", false, new DiscordComponentEmoji(DiscordIds.BlackjackSplitEmojiId)));
+                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_split_{game.Id}", "Split", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackSplitEmojiId)));
                 else
                     buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_split_{game.Id}", "Split"));
             }
