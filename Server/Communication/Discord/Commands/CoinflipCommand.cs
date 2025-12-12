@@ -118,7 +118,10 @@ namespace Server.Communication.Discord.Commands
                 .AddEmbed(embed)
                 .AddComponents(headsButton, tailsButton, exitButton));
 
-            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id);
+            // Only update if the status is still Pending.
+            // If the user already clicked a button (race condition), the status might be Finished or Cancelled.
+            // In that case, we do NOT want to overwrite it back to Pending.
+            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id, expectedStatus: CoinflipStatus.Pending);
         }
     }
 }

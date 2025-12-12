@@ -226,7 +226,7 @@ namespace Server.Communication.Discord.Interactions
                     .AddEmbed(embedRematch)
                     .AddComponents(headsButtonRematch, tailsButtonRematch, exitButtonRematch));
 
-                await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: channelForNew.Id);
+                await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: channelForNew.Id, expectedStatus: CoinflipStatus.Pending);
                 return;
             }
 
@@ -234,39 +234,48 @@ namespace Server.Communication.Discord.Interactions
             // This must ALWAYS refund the locked stake for a pending flip
             if (string.Equals(action, "exit", StringComparison.OrdinalIgnoreCase) && (flip.Status == CoinflipStatus.Pending))
             {
-                if (flip.AmountK > 0)
+                // Try to mark as cancelled first to prevent race conditions
+                var success = await coinflipsService.UpdateCoinflipOutcomeAsync(
+                    flip.Id,
+                    flip.ChoseHeads ?? false,
+                    flip.ResultHeads ?? false,
+                    CoinflipStatus.Cancelled,
+                    flip.MessageId ?? 0,
+                    flip.ChannelId ?? 0,
+                    expectedStatus: CoinflipStatus.Pending);
+
+                if (success)
                 {
-                    // Give back the reserved amount
-                    await usersService.AddBalanceAsync(user.Identifier, flip.AmountK);
-
-                    // Mark this flip as cancelled so any later exits won't refund again
-                    await coinflipsService.UpdateCoinflipOutcomeAsync(
-                        flip.Id,
-                        flip.ChoseHeads ?? false,
-                        flip.ResultHeads ?? false,
-                        CoinflipStatus.Cancelled,
-                        flip.MessageId ?? 0,
-                        flip.ChannelId ?? 0);
-                }
-
-                if (flip.ChannelId.HasValue && flip.MessageId.HasValue)
-                {
-                    var channel = await client.GetChannelAsync(flip.ChannelId.Value);
-                    var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value);
-
-                    await originalMessage.ModifyAsync(mb =>
+                    if (flip.AmountK > 0)
                     {
-                        mb.ClearEmbeds();
-                        if (originalMessage.Embeds.Count > 0)
-                        {
-                            mb.AddEmbed(originalMessage.Embeds[0]);
-                        }
-                        mb.ClearComponents();
-                    });
-                }
+                        // Give back the reserved amount
+                        await usersService.AddBalanceAsync(user.Identifier, flip.AmountK);
+                    }
 
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Game cancelled and your bet was refunded."));
+                    if (flip.ChannelId.HasValue && flip.MessageId.HasValue)
+                    {
+                        var channel = await client.GetChannelAsync(flip.ChannelId.Value);
+                        var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value);
+
+                        await originalMessage.ModifyAsync(mb =>
+                        {
+                            mb.ClearEmbeds();
+                            if (originalMessage.Embeds.Count > 0)
+                            {
+                                mb.AddEmbed(originalMessage.Embeds[0]);
+                            }
+                            mb.ClearComponents();
+                        });
+                    }
+
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("Game cancelled and your bet was refunded."));
+                }
+                else
+                {
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("Game already finished or cancelled.").AsEphemeral(true));
+                }
                 return;
             }
 
@@ -314,7 +323,7 @@ namespace Server.Communication.Discord.Interactions
 
             // Persist updated flip baseline FIRST.
             // If this fails, we must abort to prevent "free rolls" (playing without committing result).
-            if (!await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0))
+            if (!await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0, expectedStatus: CoinflipStatus.Pending))
             {
                 env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to update outcome for flip {flip.Id}. User: {user.Identifier}. Aborting to prevent exploit.");
                 await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,

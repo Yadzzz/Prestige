@@ -38,18 +38,25 @@ namespace Server.Communication.Discord.Commands
             var pendingFlips = await coinflipsService.GetPendingCoinflipsByUserIdAsync(user.Id);
             foreach (var flip in pendingFlips)
             {
-                // Refund
-                await usersService.AddBalanceAsync(user.Identifier, flip.AmountK);
-                totalRefundedK += flip.AmountK;
-
-                // Update Status
-                await coinflipsService.UpdateCoinflipOutcomeAsync(
+                // Try to set status to Cancelled first, ensuring it is still Pending
+                var success = await coinflipsService.UpdateCoinflipOutcomeAsync(
                     flip.Id,
                     flip.ChoseHeads ?? false,
                     flip.ResultHeads ?? false,
                     CoinflipStatus.Cancelled,
                     flip.MessageId ?? 0,
-                    flip.ChannelId ?? 0);
+                    flip.ChannelId ?? 0,
+                    expectedStatus: CoinflipStatus.Pending);
+
+                if (!success)
+                {
+                    // If update failed, it means the flip is no longer Pending (race condition), so skip refund
+                    continue;
+                }
+
+                // Refund
+                await usersService.AddBalanceAsync(user.Identifier, flip.AmountK);
+                totalRefundedK += flip.AmountK;
 
                 // Update Discord Message (Disable buttons)
                 if (flip.ChannelId.HasValue && flip.MessageId.HasValue)

@@ -112,13 +112,21 @@ namespace Server.Client.Coinflips
         //     return GetCoinflipByIdAsync(id).GetAwaiter().GetResult();
         // }
 
-        public async Task<bool> UpdateCoinflipOutcomeAsync(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId)
+        public async Task<bool> UpdateCoinflipOutcomeAsync(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId, CoinflipStatus? expectedStatus = null)
         {
             try
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("UPDATE coinflips SET chose_heads = @chose_heads, result_heads = @result_heads, status = @status, message_id = @message_id, channel_id = @channel_id, updated_at = @updated_at WHERE id = @id");
+                    var sql = "UPDATE coinflips SET chose_heads = @chose_heads, result_heads = @result_heads, status = @status, message_id = @message_id, channel_id = @channel_id, updated_at = @updated_at WHERE id = @id";
+                    
+                    if (expectedStatus.HasValue)
+                    {
+                        sql += " AND status = @expected_status";
+                        command.AddParameter("expected_status", (int)expectedStatus.Value);
+                    }
+
+                    command.SetCommand(sql);
                     command.AddParameter("chose_heads", choseHeads);
                     command.AddParameter("result_heads", resultHeads);
                     command.AddParameter("status", (int)status);
