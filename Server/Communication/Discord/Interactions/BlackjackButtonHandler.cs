@@ -270,7 +270,7 @@ namespace Server.Communication.Discord.Interactions
             }
 
             // Update the message
-            var embed = Commands.BlackjackCommand.BuildGameEmbed(game, user);
+            var embed = Commands.BlackjackCommand.BuildGameEmbed(game, user, client);
             var buttons = Commands.BlackjackCommand.BuildButtons(game);
 
             var builder = new DiscordInteractionResponseBuilder()

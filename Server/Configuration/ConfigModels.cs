@@ -52,6 +52,32 @@ namespace Server.Configuration
         public CoinflipEmojis Coinflip { get; set; }
         public LiveFeedEmojis LiveFeed { get; set; }
         public BalanceEmojis Balance { get; set; }
+        public BlackjackCardEmojis BlackjackCards { get; set; }
+    }
+
+    public class BlackjackCardEmojis
+    {
+        public SuitEmojis Clubs { get; set; }
+        public SuitEmojis Diamonds { get; set; }
+        public SuitEmojis Hearts { get; set; }
+        public SuitEmojis Spades { get; set; }
+    }
+
+    public class SuitEmojis
+    {
+        public ulong Two { get; set; }
+        public ulong Three { get; set; }
+        public ulong Four { get; set; }
+        public ulong Five { get; set; }
+        public ulong Six { get; set; }
+        public ulong Seven { get; set; }
+        public ulong Eight { get; set; }
+        public ulong Nine { get; set; }
+        public ulong Ten { get; set; }
+        public ulong Jack { get; set; }
+        public ulong Queen { get; set; }
+        public ulong King { get; set; }
+        public ulong Ace { get; set; }
     }
 
     public class CoinflipEmojis

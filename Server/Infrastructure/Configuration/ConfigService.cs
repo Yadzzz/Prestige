@@ -58,6 +58,44 @@ namespace Server.Infrastructure.Configuration
         public ulong DepositEmojiId { get; set; }
         public ulong WalletEmojiId { get; set; }
         public ulong BuyEmojiId { get; set; }
+
+        // Blackjack Emojis
+        public ulong BlackjackHitEmojiId { get; set; }
+        public ulong BlackjackStandEmojiId { get; set; }
+        public ulong BlackjackDoubleEmojiId { get; set; }
+        public ulong BlackjackSplitEmojiId { get; set; }
+        public ulong BlackjackBacksideEmojiId { get; set; }
+        public ulong BlackjackSpadesEmojiId { get; set; }
+        public ulong BlackjackDiamondsEmojiId { get; set; }
+        public ulong BlackjackHeartsEmojiId { get; set; }
+        public ulong BlackjackClubsEmojiId { get; set; }
+
+        public BlackjackCardConfig BlackjackCards { get; set; }
+    }
+
+    public class BlackjackCardConfig
+    {
+        public SuitConfig Clubs { get; set; }
+        public SuitConfig Diamonds { get; set; }
+        public SuitConfig Hearts { get; set; }
+        public SuitConfig Spades { get; set; }
+    }
+
+    public class SuitConfig
+    {
+        public ulong Two { get; set; }
+        public ulong Three { get; set; }
+        public ulong Four { get; set; }
+        public ulong Five { get; set; }
+        public ulong Six { get; set; }
+        public ulong Seven { get; set; }
+        public ulong Eight { get; set; }
+        public ulong Nine { get; set; }
+        public ulong Ten { get; set; }
+        public ulong Jack { get; set; }
+        public ulong Queen { get; set; }
+        public ulong King { get; set; }
+        public ulong Ace { get; set; }
     }
 
     public static class ConfigService

@@ -51,6 +51,17 @@ namespace Server.Infrastructure.Discord
         public static ulong CoinflipGoldEmojiId => ConfigService.Current.Discord.CoinflipGoldEmojiId; // win
         public static ulong CoinflipSilverEmojiId => ConfigService.Current.Discord.CoinflipSilverEmojiId; // loss
 
+        // Blackjack Emojis
+        public static ulong BlackjackHitEmojiId => ConfigService.Current.Discord.BlackjackHitEmojiId;
+        public static ulong BlackjackStandEmojiId => ConfigService.Current.Discord.BlackjackStandEmojiId;
+        public static ulong BlackjackDoubleEmojiId => ConfigService.Current.Discord.BlackjackDoubleEmojiId;
+        public static ulong BlackjackSplitEmojiId => ConfigService.Current.Discord.BlackjackSplitEmojiId;
+        public static ulong BlackjackBacksideEmojiId => ConfigService.Current.Discord.BlackjackBacksideEmojiId;
+        public static ulong BlackjackSpadesEmojiId => ConfigService.Current.Discord.BlackjackSpadesEmojiId;
+        public static ulong BlackjackDiamondsEmojiId => ConfigService.Current.Discord.BlackjackDiamondsEmojiId;
+        public static ulong BlackjackHeartsEmojiId => ConfigService.Current.Discord.BlackjackHeartsEmojiId;
+        public static ulong BlackjackClubsEmojiId => ConfigService.Current.Discord.BlackjackClubsEmojiId;
+
         // Balance
         public static ulong BalanceSheetEmojiId => ConfigService.Current.Discord.BalanceSheetEmojiId;
         public static ulong WithdrawEmojiId => ConfigService.Current.Discord.WithdrawEmojiId;

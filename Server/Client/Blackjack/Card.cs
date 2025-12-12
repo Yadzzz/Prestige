@@ -1,3 +1,7 @@
+using DSharpPlus;
+using DSharpPlus.Entities;
+using Server.Infrastructure.Configuration;
+
 namespace Server.Client.Blackjack
 {
     public class Card
@@ -28,8 +32,60 @@ namespace Server.Client.Blackjack
             }
         }
 
-        public string GetEmoji()
+        public string GetEmoji(DiscordClient client = null)
         {
+            // Try to get configured card emoji
+            var config = ConfigService.Current?.Discord?.BlackjackCards;
+            if (config != null)
+            {
+                SuitConfig suitConfig = Suit switch
+                {
+                    "Clubs" => config.Clubs,
+                    "Diamonds" => config.Diamonds,
+                    "Hearts" => config.Hearts,
+                    "Spades" => config.Spades,
+                    _ => null
+                };
+
+                if (suitConfig != null)
+                {
+                    ulong emojiId = Rank switch
+                    {
+                        "2" => suitConfig.Two,
+                        "3" => suitConfig.Three,
+                        "4" => suitConfig.Four,
+                        "5" => suitConfig.Five,
+                        "6" => suitConfig.Six,
+                        "7" => suitConfig.Seven,
+                        "8" => suitConfig.Eight,
+                        "9" => suitConfig.Nine,
+                        "10" => suitConfig.Ten,
+                        "J" => suitConfig.Jack,
+                        "Q" => suitConfig.Queen,
+                        "K" => suitConfig.King,
+                        "A" => suitConfig.Ace,
+                        _ => 0
+                    };
+
+                    if (emojiId > 0)
+                    {
+                        if (client != null)
+                        {
+                            try
+                            {
+                                return DiscordEmoji.FromGuildEmote(client, emojiId).ToString();
+                            }
+                            catch
+                            {
+                                // Fallback if emoji not found
+                                return $"<:card:{emojiId}>";
+                            }
+                        }
+                        return $"<:card:{emojiId}>";
+                    }
+                }
+            }
+
             var suitEmoji = Suit switch
             {
                 "Hearts" => "♥️",

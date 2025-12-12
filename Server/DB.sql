@@ -138,3 +138,22 @@
 
 --CREATE INDEX idx_balance_adjustments_type_created_at
 --    ON balance_adjustments (adjustment_type, created_at DESC);
+
+--CREATE TABLE blackjack_games (
+--    id INT AUTO_INCREMENT PRIMARY KEY,
+--    user_id INT NOT NULL,
+--    identifier VARCHAR(64) NOT NULL,
+--    bet_amount BIGINT NOT NULL,
+--    status INT NOT NULL,
+--    deck_state TEXT NOT NULL,
+--    dealer_hand TEXT NOT NULL,
+--    player_hands TEXT NOT NULL,
+--    current_hand_index INT NOT NULL DEFAULT 0,
+--    insurance_taken TINYINT(1) NOT NULL DEFAULT 0,
+--    message_id BIGINT NULL,
+--    channel_id BIGINT NULL,
+--    created_at DATETIME NOT NULL,
+--    updated_at DATETIME NOT NULL
+--);
+
+--CREATE INDEX idx_blackjack_user_status ON blackjack_games(user_id, status);

@@ -65,23 +65,33 @@ namespace Server.Communication.Discord.Commands
                             if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
                             mb.ClearComponents(); // Remove all buttons
                         });
+                        await Task.Delay(100); // Rate limit protection
                     }
                     catch
                     {
                         // Message might be deleted, ignore
                     }
                 }
-                
-                sbGame.AppendLine("`COINFLIP`");
-                sbAmount.AppendLine($"`{GpFormatter.Format(flip.AmountK)}`");
-                if (flip.ChannelId.HasValue && flip.MessageId.HasValue && ctx.Guild != null)
+
+                if (sbGame.Length < 950)
                 {
-                    var url = $"https://discord.com/channels/{ctx.Guild.Id}/{flip.ChannelId}/{flip.MessageId}";
-                    sbPanel.AppendLine($"[Click Here]({url})");
+                    sbGame.AppendLine("`COINFLIP`");
+                    sbAmount.AppendLine($"`{GpFormatter.Format(flip.AmountK)}`");
+                    if (flip.ChannelId.HasValue && flip.MessageId.HasValue && ctx.Guild != null)
+                    {
+                        var url = $"https://discord.com/channels/{ctx.Guild.Id}/{flip.ChannelId}/{flip.MessageId}";
+                        sbPanel.AppendLine($"[Click Here]({url})");
+                    }
+                    else
+                    {
+                        sbPanel.AppendLine("N/A");
+                    }
                 }
-                else
+                else if (!sbGame.ToString().EndsWith("...\r\n"))
                 {
-                    sbPanel.AppendLine("N/A");
+                    sbGame.AppendLine("...");
+                    sbAmount.AppendLine("...");
+                    sbPanel.AppendLine("...");
                 }
 
                 cancelledCount++;
@@ -138,6 +148,7 @@ namespace Server.Communication.Discord.Commands
                             mb.AddEmbed(staffEmbed);
                             mb.ClearComponents(); // Remove all buttons
                         });
+                        await Task.Delay(100); // Rate limit protection
                     }
                     catch
                     {
@@ -145,16 +156,25 @@ namespace Server.Communication.Discord.Commands
                     }
                 }
 
-                sbGame.AppendLine("`STAKE`");
-                sbAmount.AppendLine($"`{GpFormatter.Format(stake.AmountK)}`");
-                if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue && ctx.Guild != null)
+                if (sbGame.Length < 950)
                 {
-                    var url = $"https://discord.com/channels/{ctx.Guild.Id}/{stake.UserChannelId}/{stake.UserMessageId}";
-                    sbPanel.AppendLine($"[Click Here]({url})");
+                    sbGame.AppendLine("`STAKE`");
+                    sbAmount.AppendLine($"`{GpFormatter.Format(stake.AmountK)}`");
+                    if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue && ctx.Guild != null)
+                    {
+                        var url = $"https://discord.com/channels/{ctx.Guild.Id}/{stake.UserChannelId}/{stake.UserMessageId}";
+                        sbPanel.AppendLine($"[Click Here]({url})");
+                    }
+                    else
+                    {
+                        sbPanel.AppendLine("N/A");
+                    }
                 }
-                else
+                else if (!sbGame.ToString().EndsWith("...\r\n"))
                 {
-                    sbPanel.AppendLine("N/A");
+                    sbGame.AppendLine("...");
+                    sbAmount.AppendLine("...");
+                    sbPanel.AppendLine("...");
                 }
 
                 cancelledCount++;
@@ -192,6 +212,7 @@ namespace Server.Communication.Discord.Commands
                             if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
                             mb.ClearComponents(); // Remove all buttons
                         });
+                        await Task.Delay(100); // Rate limit protection
                     }
                     catch
                     {
@@ -199,16 +220,25 @@ namespace Server.Communication.Discord.Commands
                     }
                 }
 
-                sbGame.AppendLine("`BLACKJACK`");
-                sbAmount.AppendLine($"`{GpFormatter.Format(totalBet)}`");
-                if (game.ChannelId.HasValue && game.MessageId.HasValue && ctx.Guild != null)
+                if (sbGame.Length < 950)
                 {
-                    var url = $"https://discord.com/channels/{ctx.Guild.Id}/{game.ChannelId}/{game.MessageId}";
-                    sbPanel.AppendLine($"[Click Here]({url})");
+                    sbGame.AppendLine("`BLACKJACK`");
+                    sbAmount.AppendLine($"`{GpFormatter.Format(totalBet)}`");
+                    if (game.ChannelId.HasValue && game.MessageId.HasValue && ctx.Guild != null)
+                    {
+                        var url = $"https://discord.com/channels/{ctx.Guild.Id}/{game.ChannelId}/{game.MessageId}";
+                        sbPanel.AppendLine($"[Click Here]({url})");
+                    }
+                    else
+                    {
+                        sbPanel.AppendLine("N/A");
+                    }
                 }
-                else
+                else if (!sbGame.ToString().EndsWith("...\r\n"))
                 {
-                    sbPanel.AppendLine("N/A");
+                    sbGame.AppendLine("...");
+                    sbAmount.AppendLine("...");
+                    sbPanel.AppendLine("...");
                 }
 
                 cancelledCount++;
