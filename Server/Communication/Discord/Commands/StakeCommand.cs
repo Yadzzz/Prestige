@@ -1,9 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 using Server.Client.Stakes;
 using Server.Client.Users;
 using Server.Client.Utils;
@@ -12,27 +11,28 @@ using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class StakeCommand : BaseCommandModule
+    public class StakeCommand : ModuleBase<SocketCommandContext>
     {
         private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
+
         [Command("stake")]
-        [Aliases("s")]
-        public async Task Stake(CommandContext ctx, string amount = null)
+        [Alias("s")]
+        public async Task Stake(string amount = null)
         {
-            if (!await DiscordChannelPermissionService.EnforceStakeChannelAsync(ctx))
+            if (!await DiscordChannelPermissionService.EnforceStakeChannelAsync(Context))
             {
                 return;
             }
 
-            if (RateLimiter.IsRateLimited(ctx.User.Id, "stake", RateLimitInterval))
+            if (RateLimiter.IsRateLimited(Context.User.Id, "stake", RateLimitInterval))
             {
-                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                await ReplyAsync("You're doing that too fast. Please wait a moment.");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(amount))
             {
-                await ctx.RespondAsync("Please specify an amount. Usage: `!stake <amount>` (e.g. `!stake 100m`).");
+                await ReplyAsync("Please specify an amount. Usage: `!stake <amount>` (e.g. `!stake 100m`).");
                 return;
             }
 
@@ -41,25 +41,26 @@ namespace Server.Communication.Discord.Commands
             var usersService = serverManager.UsersService;
             var stakesService = serverManager.StakesService;
 
-            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var displayName = (Context.User as SocketGuildUser)?.DisplayName ?? Context.User.Username;
+            var user = await usersService.EnsureUserAsync(Context.User.Id.ToString(), Context.User.Username, displayName);
             if (user == null)
                 return;
 
             if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!stake 100`, `!stake 0.5`, `!stake 1b`, `!stake 1000m`.");
+                await ReplyAsync("Invalid amount. Examples: `!stake 100`, `!stake 0.5`, `!stake 1b`, `!stake 1000m`.");
                 return;
             }
 
             if (amountK < GpFormatter.MinimumBetAmountK)
             {
-                await ctx.RespondAsync($"Minimum stake is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
+                await ReplyAsync($"Minimum stake is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
                 return;
             }
 
             if (user.Balance < amountK)
             {
-                await ctx.RespondAsync("You don't have enough balance for this stake.");
+                await ReplyAsync("You don't have enough balance for this stake.");
                 return;
             }
 
@@ -67,7 +68,7 @@ namespace Server.Communication.Discord.Commands
             var balanceLocked = await usersService.RemoveBalanceAsync(user.Identifier, amountK);
             if (!balanceLocked)
             {
-                await ctx.RespondAsync("Failed to lock balance for this stake. Please try again.");
+                await ReplyAsync("Failed to lock balance for this stake. Please try again.");
                 return;
             }
 
@@ -77,7 +78,7 @@ namespace Server.Communication.Discord.Commands
                 // rollback locked balance on failure
                 await usersService.AddBalanceAsync(user.Identifier, amountK);
 
-                await ctx.RespondAsync("Failed to create stake. Please try again later.");
+                await ReplyAsync("Failed to create stake. Please try again later.");
                 serverManager.LogsService.Log(
                     source: nameof(StakeCommand),
                     level: "Error",
@@ -101,41 +102,44 @@ namespace Server.Communication.Discord.Commands
             var remainingK = user.Balance - stake.AmountK;
             var remainingPretty = GpFormatter.Format(remainingK);
 
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle("⚔️ Stake Request")
                 .WithDescription("Your stake was sent.")
                 .AddField("Amount", $"`{prettyAmount}`", true)
                 .AddField("Remaining", $"`{remainingPretty}`", true)
-                .AddField("Member", ctx.Member.DisplayName, true)
-                .WithColor(DiscordColor.Gold)
-                .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
+                .AddField("Member", displayName, true)
+                .WithColor(Color.Gold)
+                .WithThumbnailUrl("https://i.imgur.com/e45uYPm.gif")
                 .WithFooter(ServerConfiguration.ServerName)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithCurrentTimestamp();
 
             // User cancel button is temporarily disabled; keep code for future use.
-            // var userCancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"stake_usercancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            // var userCancelButton = new ButtonBuilder("Cancel", $"stake_usercancel_{stake.Id}", ButtonStyle.Secondary, emote: new Emoji("❌"));
 
-            var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
-                .AddEmbed(embed));
+            var userMessage = await ReplyAsync(embed: embed.Build());
 
-            var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.StakeStaffChannelId);
+            var staffChannel = await Context.Client.GetChannelAsync(DiscordIds.StakeStaffChannelId) as IMessageChannel;
 
-            var staffEmbed = new DiscordEmbedBuilder()
-                .WithTitle("New Stake Request ⏳")
-                .WithDescription($"User: {ctx.Member.DisplayName} ({user.Identifier})\nAmount: `{prettyAmount}`\nStake ID: `{stake.Id}`\nStatus: **PENDING**")
-                .WithColor(DiscordColor.Orange)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+            if (staffChannel != null)
+            {
+                var staffEmbed = new EmbedBuilder()
+                    .WithTitle("New Stake Request ⏳")
+                    .WithDescription($"User: {displayName} ({user.Identifier})\nAmount: `{prettyAmount}`\nStake ID: `{stake.Id}`\nStatus: **PENDING**")
+                    .WithColor(Color.Orange)
+                    .WithCurrentTimestamp();
 
-            var winButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"stake_win_{stake.Id}", "Win", emoji: new DiscordComponentEmoji("🏆"));
-            var cancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
-            var loseButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", emoji: new DiscordComponentEmoji("❌"));
+                var builder = new ComponentBuilder()
+                    .WithButton("Win", $"stake_win_{stake.Id}", ButtonStyle.Success, emote: new Emoji("🏆"))
+                    .WithButton("Cancel", $"stake_cancel_{stake.Id}", ButtonStyle.Secondary, emote: new Emoji("❌"))
+                    .WithButton("Lose", $"stake_lose_{stake.Id}", ButtonStyle.Danger, emote: new Emoji("❌"));
 
-            var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
-                .WithContent($"<@&{DiscordIds.StaffRoleId}>")
-                .AddEmbed(staffEmbed)
-                .AddComponents(winButton, cancelButton, loseButton));
+                var staffMessage = await staffChannel.SendMessageAsync(
+                    text: $"<@&{DiscordIds.StaffRoleId}>",
+                    embed: staffEmbed.Build(),
+                    components: builder.Build());
 
-            await stakesService.UpdateStakeMessagesAsync(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
+                await stakesService.UpdateStakeMessagesAsync(stake.Id, userMessage.Id, userMessage.Channel.Id, staffMessage.Id, staffMessage.Channel.Id);
+            }
         }
     }
 }

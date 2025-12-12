@@ -1,3 +1,4 @@
+/*
 using DSharpPlus;
 
 namespace Server.Infrastructure.Discord
@@ -11,3 +12,4 @@ namespace Server.Infrastructure.Discord
         }
     }
 }
+*/

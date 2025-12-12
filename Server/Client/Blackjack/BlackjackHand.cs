@@ -1,4 +1,4 @@
-using DSharpPlus;
+using Discord.WebSocket;
 using System.Collections.Generic;
 using System.Linq;
 using Server.Infrastructure.Discord;
@@ -72,7 +72,7 @@ namespace Server.Client.Blackjack
             return Cards.Count == 2 && !IsDoubled;
         }
 
-        public string GetHandDisplay(DiscordClient client, bool hideHoleCard = false)
+        public string GetHandDisplay(DiscordSocketClient client, bool hideHoleCard = false)
         {
             if (hideHoleCard && Cards.Count > 1)
             {
@@ -82,15 +82,7 @@ namespace Server.Client.Blackjack
                 
                 if (backsideId > 0)
                 {
-                     if (client != null)
-                     {
-                         try { backsideEmoji = DSharpPlus.Entities.DiscordEmoji.FromGuildEmote(client, backsideId).ToString(); }
-                         catch { backsideEmoji = $"<:back:{backsideId}>"; }
-                     }
-                     else
-                     {
-                         backsideEmoji = $"<:back:{backsideId}>";
-                     }
+                     backsideEmoji = $"<:back:{backsideId}>";
                 }
 
                 return $"{Cards[0].GetEmoji(client)} {backsideEmoji}";

@@ -1,7 +1,6 @@
-using DSharpPlus;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 using Server.Client.Users;
 using Server.Client.Transactions;
 using Server.Infrastructure;
@@ -10,37 +9,39 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Server.Infrastructure.Discord;
+using System.Threading.Tasks;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class BalanceCommand : BaseCommandModule
+    public class BalanceCommand : ModuleBase<SocketCommandContext>
     {
         private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
+
         [Command("balance")]
-        [Aliases("bal", "wallet", "money", "gp", "b")]
-        public async Task Balance(CommandContext ctx, DiscordMember? member = null)
+        [Alias("bal", "wallet", "money", "gp", "b")]
+        public async Task Balance(SocketGuildUser? member = null)
         {
-            if (RateLimiter.IsRateLimited(ctx.User.Id, "balance", RateLimitInterval))
+            if (RateLimiter.IsRateLimited(Context.User.Id, "balance", RateLimitInterval))
             {
-                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                await ReplyAsync("You're doing that too fast. Please wait a moment.");
                 return;
             }
 
             // Determine target
-            DiscordUser targetUser = member ?? ctx.User;
+            SocketUser targetUser = member ?? Context.User;
 
-            bool isSelf = targetUser.Id == ctx.User.Id;
+            bool isSelf = targetUser.Id == Context.User.Id;
 
             // If checking someone else, enforce permissions
             if (!isSelf)
             {
-                if (ctx.Member == null)
+                if (Context.Guild == null)
                 {
-                    await ctx.RespondAsync("You cannot check other users' balances in DMs.");
+                    await ReplyAsync("You cannot check other users' balances in DMs.");
                     return;
                 }
 
-                if (!ctx.Member.IsStaff())
+                if (Context.User is SocketGuildUser guildUser && !guildUser.IsStaff())
                     return;
             }
 
@@ -48,19 +49,19 @@ namespace Server.Communication.Discord.Commands
             var usersService = env.ServerManager.UsersService;
 
             string displayName = targetUser.Username;
-            if (targetUser is DiscordMember m)
+            if (targetUser is SocketGuildUser m)
             {
                 displayName = m.DisplayName;
             }
-            else if (isSelf && ctx.Member != null)
+            else if (isSelf && Context.User is SocketGuildUser selfMember)
             {
-                displayName = ctx.Member.DisplayName;
+                displayName = selfMember.DisplayName;
             }
 
             var user = await usersService.EnsureUserAsync(targetUser.Id.ToString(), targetUser.Username, displayName);
             if (user == null)
             {
-                if (!isSelf) await ctx.RespondAsync("Failed to resolve target user.");
+                if (!isSelf) await ReplyAsync("Failed to resolve target user.");
                 return;
             }
 
@@ -69,40 +70,34 @@ namespace Server.Communication.Discord.Commands
             if (isSelf)
             {
                 // Self View
-                var embed = new DiscordEmbedBuilder()
+                var embed = new EmbedBuilder()
                     .WithTitle("Balance")
                     .WithDescription($"{displayName}, you have `{formatted}`.")
-                    .WithColor(DiscordColor.Gold)
-                    .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                    .WithColor(Color.Gold)
+                    .WithThumbnailUrl("https://i.imgur.com/DHXgtn5.gif")
                     .WithFooter(ServerConfiguration.ServerName)
-                    .WithTimestamp(DateTimeOffset.UtcNow);
+                    .WithCurrentTimestamp();
 
-                var row1 = new[]
-                {
-                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_buy_{ctx.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
-                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_deposit_{ctx.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
-                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_withdraw_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
-                    new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{ctx.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
-                };
+                var builder = new ComponentBuilder()
+                    .WithButton("Buy", $"bal_buy_{Context.User.Id}", ButtonStyle.Secondary, emote: new Emote(DiscordIds.BuyEmojiId, "buy", false))
+                    .WithButton("Deposit", $"bal_deposit_{Context.User.Id}", ButtonStyle.Secondary, emote: new Emote(DiscordIds.DepositEmojiId, "deposit", false))
+                    .WithButton(" ", $"bal_withdraw_{Context.User.Id}", ButtonStyle.Secondary, emote: new Emote(DiscordIds.WithdrawEmojiId, "withdraw", false))
+                    .WithButton(" ", $"bal_history_{Context.User.Id}", ButtonStyle.Secondary, emote: new Emote(DiscordIds.BalanceSheetEmojiId, "history", false));
 
-                await ctx.RespondAsync(new DiscordMessageBuilder()
-                    .AddEmbed(embed)
-                    .AddComponents(row1));
+                await ReplyAsync(embed: embed.Build(), components: builder.Build());
             }
             else
             {
                 // Staff View
-                var embed = new DiscordEmbedBuilder()
+                var embed = new EmbedBuilder()
                     .WithTitle("User Balance")
                     .WithDescription($"{displayName} has **{formatted}** in their wallet.")
-                    .WithColor(DiscordColor.Blurple)
-                    .WithThumbnail(targetUser.AvatarUrl ?? targetUser.DefaultAvatarUrl)
+                    .WithColor(Color.Blue)
+                    .WithThumbnailUrl(targetUser.GetAvatarUrl() ?? targetUser.GetDefaultAvatarUrl())
                     .WithFooter(ServerConfiguration.ServerName)
-                    .WithTimestamp(DateTimeOffset.UtcNow);
+                    .WithCurrentTimestamp();
 
-                await ctx.RespondAsync(new DiscordMessageBuilder()
-                    .WithContent(targetUser.Mention)
-                    .AddEmbed(embed));
+                await ReplyAsync(message: targetUser.Mention, embed: embed.Build());
             }
         }
     }

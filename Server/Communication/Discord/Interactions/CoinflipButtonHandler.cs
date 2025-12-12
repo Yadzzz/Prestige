@@ -1,9 +1,8 @@
 using System;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
+using Discord;
+using Discord.WebSocket;
 using Server.Client.Coinflips;
 using Server.Client.Users;
 using Server.Client.Utils;
@@ -16,16 +15,15 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class CoinflipButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
+        public static async Task Handle(DiscordSocketClient client, SocketMessageComponent component)
         {
-            if (RateLimiter.IsRateLimited(e.User.Id))
+            if (RateLimiter.IsRateLimited(component.User.Id))
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("You're doing that too fast.").AsEphemeral(true));
+                await component.RespondAsync("You're doing that too fast.", ephemeral: true);
                 return;
             }
 
-            var parts = e.Id.Split('_');
+            var parts = component.Data.CustomId.Split('_');
             if (parts.Length < 3)
                 return;
 
@@ -43,26 +41,21 @@ namespace Server.Communication.Discord.Interactions
             var flip = await coinflipsService.GetCoinflipByIdAsync(flipId);
             if (flip == null)
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Flip not found.").AsEphemeral(true));
+                await component.RespondAsync("Flip not found.", ephemeral: true);
                 return;
             }
 
             var user = await usersService.GetUserAsync(flip.Identifier);
             if (user == null)
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
+                await component.RespondAsync("User not found.", ephemeral: true);
                 return;
             }
 
             // Only the creator of the flip may interact with its buttons
-            if (e.User == null || e.User.Id.ToString() != flip.Identifier)
+            if (component.User == null || component.User.Id.ToString() != flip.Identifier)
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder()
-                        .WithContent("This coinflip doesn't belong to you.")
-                        .AsEphemeral(true));
+                await component.RespondAsync("This coinflip doesn't belong to you.", ephemeral: true);
                 return;
             }
 
@@ -76,10 +69,7 @@ namespace Server.Communication.Discord.Interactions
 
             if (!isRematchAction && flip.Status != CoinflipStatus.Pending)
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder()
-                        .WithContent("This coinflip is already finished.")
-                        .AsEphemeral(true));
+                await component.RespondAsync("This coinflip is already finished.", ephemeral: true);
                 return;
             }
 
@@ -95,8 +85,7 @@ namespace Server.Communication.Discord.Interactions
                 user = await usersService.GetUserAsync(user.Identifier);
                 if (user == null)
                 {
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                        new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
+                    await component.RespondAsync("User not found.", ephemeral: true);
                     return;
                 }
 
@@ -116,22 +105,19 @@ namespace Server.Communication.Discord.Interactions
 
                 if (newAmountK <= 0)
                 {
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                        new DiscordInteractionResponseBuilder().WithContent("Invalid rematch amount.").AsEphemeral(true));
+                    await component.RespondAsync("Invalid rematch amount.", ephemeral: true);
                     return;
                 }
 
                 if (user.Balance < newAmountK)
                 {
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                        new DiscordInteractionResponseBuilder().WithContent("You don't have enough balance for this rematch.").AsEphemeral(true));
+                    await component.RespondAsync("You don't have enough balance for this rematch.", ephemeral: true);
                     return;
                 }
 
                 if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmountK))
                 {
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                        new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance for this rematch. Please try again.").AsEphemeral(true));
+                    await component.RespondAsync("Failed to lock balance for this rematch. Please try again.", ephemeral: true);
                     return;
                 }
 
@@ -140,93 +126,73 @@ namespace Server.Communication.Discord.Interactions
                 {
                     // Refund if we couldn't create a new flip row
                     await usersService.AddBalanceAsync(user.Identifier, newAmountK);
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                        new DiscordInteractionResponseBuilder().WithContent("Failed to create rematch flip. Please try again later.").AsEphemeral(true));
+                    await component.RespondAsync("Failed to create rematch flip. Please try again later.", ephemeral: true);
                     return;
                 }
 
                 var prettyAmount = GpFormatter.Format(newFlip.AmountK);
-                var embedRematch = new DiscordEmbedBuilder()
+                var embedRematch = new EmbedBuilder()
                     .WithTitle("One, two, three")
                     .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
-                    .WithColor(DiscordColor.Gold)
-                    .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
+                    .WithColor(Color.Gold)
+                    .WithThumbnailUrl("https://i.imgur.com/W6mx4qd.gif")
                     .WithFooter(ServerConfiguration.ServerName)
-                    .WithTimestamp(DateTimeOffset.UtcNow);
+                    .WithCurrentTimestamp();
 
-                var headsButtonRematch = new DiscordButtonComponent(
-                    DiscordButtonStyle.Secondary,
-                    $"cf_heads_{newFlip.Id}",
-                    " ",
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId));
-
-                var tailsButtonRematch = new DiscordButtonComponent(
-                    DiscordButtonStyle.Secondary,
-                    $"cf_tails_{newFlip.Id}",
-                    " ",
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId));
-
-                var exitButtonRematch = new DiscordButtonComponent(
-                    DiscordButtonStyle.Secondary,
-                    $"cf_exit_{newFlip.Id}",
-                    "Refund",
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
+                var headsButtonRematch = new ButtonBuilder(" ", $"cf_heads_{newFlip.Id}", ButtonStyle.Secondary, emote: new Emote(DiscordIds.CoinflipHeadsEmojiId, "heads", false));
+                var tailsButtonRematch = new ButtonBuilder(" ", $"cf_tails_{newFlip.Id}", ButtonStyle.Secondary, emote: new Emote(DiscordIds.CoinflipTailsEmojiId, "tails", false));
+                var exitButtonRematch = new ButtonBuilder("Refund", $"cf_exit_{newFlip.Id}", ButtonStyle.Secondary, emote: new Emote(DiscordIds.CoinflipExitEmojiId, "exit", false));
 
                 // Disable buttons on the old result/rematch message but keep them visible
-                var updateBuilder = new DiscordInteractionResponseBuilder();
-                if (e.Message.Embeds.Count > 0)
+                var disabledRmButton = new ButtonBuilder("RM", $"cf_rm_{flip.Id}", string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary, emote: new Emote(DiscordIds.CoinflipRmEmojiId, "rm", false)).WithDisabled(true);
+                var disabledHalfButton = new ButtonBuilder("1/2", $"cf_half_{flip.Id}", string.Equals(action, "half", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary, emote: new Emote(DiscordIds.CoinflipHalfEmojiId, "half", false)).WithDisabled(true);
+                var disabledX2Button = new ButtonBuilder("X2", $"cf_x2_{flip.Id}", string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary, emote: new Emote(DiscordIds.CoinflipX2EmojiId, "x2", false)).WithDisabled(true);
+                var disabledMaxButton = new ButtonBuilder("MAX", $"cf_max_{flip.Id}", string.Equals(action, "max", StringComparison.OrdinalIgnoreCase) ? ButtonStyle.Success : ButtonStyle.Secondary, emote: new Emote(DiscordIds.CoinflipMaxEmojiId, "max", false)).WithDisabled(true);
+
+                await component.UpdateAsync(msg =>
                 {
-                    updateBuilder.AddEmbed(e.Message.Embeds[0]);
+                    // Keep existing embeds
+                    // msg.Embeds is read-only, but we can set msg.Embeds = ...
+                    // But UpdateAsync delegate modifies MessageProperties.
+                    // We don't need to set Embeds if we don't want to change them, but we want to keep them.
+                    // Actually, if we don't set Embeds, they are kept.
+                    // But we want to update components.
+                    msg.Components = new ComponentBuilder()
+                        .WithButton(disabledHalfButton)
+                        .WithButton(disabledRmButton)
+                        .WithButton(disabledX2Button)
+                        .WithButton(disabledMaxButton)
+                        .Build();
+                });
+
+                var channelForNew = client.GetChannel(component.Channel.Id) as IMessageChannel;
+                if (channelForNew != null)
+                {
+                    try
+                    {
+                        var newMessage = await channelForNew.SendMessageAsync(embed: embedRematch.Build(), components: new ComponentBuilder()
+                            .WithButton(headsButtonRematch)
+                            .WithButton(tailsButtonRematch)
+                            .WithButton(exitButtonRematch)
+                            .Build());
+
+                        await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: newMessage.Channel.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Failed to send message, refund and cancel to prevent ghost flips
+                        env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to send rematch message: {ex}");
+                        
+                        await usersService.AddBalanceAsync(user.Identifier, newAmountK);
+                        await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, false, false, CoinflipStatus.Cancelled, 0, 0);
+                        
+                        try 
+                        {
+                            await component.FollowupAsync("Failed to start rematch. Your bet has been refunded.", ephemeral: true);
+                        }
+                        catch { /* Ignore if followup fails */ }
+                    }
                 }
-
-                var disabledRmButton = new DiscordButtonComponent(
-                    string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"cf_rm_{flip.Id}",
-                    "RM",
-                    true,
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId));
-
-                var disabledHalfButton = new DiscordButtonComponent(
-                    string.Equals(action, "half", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"cf_half_{flip.Id}",
-                    "1/2",
-                    true,
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId));
-
-                var disabledX2Button = new DiscordButtonComponent(
-                    string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"cf_x2_{flip.Id}",
-                    "X2",
-                    true,
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId));
-
-                var disabledMaxButton = new DiscordButtonComponent(
-                    string.Equals(action, "max", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"cf_max_{flip.Id}",
-                    "MAX",
-                    true,
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId));
-
-                /*
-                var disabledExitButton = new DiscordButtonComponent(
-                    string.Equals(action, "exit", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Danger : DiscordButtonStyle.Secondary,
-                    $"cf_exit_{flip.Id}",
-                    "Refund",
-                    true,
-                    emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
-                */
-
-                updateBuilder.ClearComponents();
-                updateBuilder.AddComponents(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton /*, disabledExitButton*/);
-
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, updateBuilder);
-
-                var channelForNew = await client.GetChannelAsync(e.Channel.Id);
-                var newMessage = await channelForNew.SendMessageAsync(new DiscordMessageBuilder()
-                    .AddEmbed(embedRematch)
-                    .AddComponents(headsButtonRematch, tailsButtonRematch, exitButtonRematch));
-
-                await coinflipsService.UpdateCoinflipOutcomeAsync(newFlip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: newMessage.Id, channelId: channelForNew.Id);
                 return;
             }
 
@@ -251,41 +217,23 @@ namespace Server.Communication.Discord.Interactions
 
                 if (flip.ChannelId.HasValue && flip.MessageId.HasValue)
                 {
-                    var channel = await client.GetChannelAsync(flip.ChannelId.Value);
-                    var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value);
-
-                    await originalMessage.ModifyAsync(mb =>
+                    var channel = client.GetChannel(flip.ChannelId.Value) as IMessageChannel;
+                    if (channel != null)
                     {
-                        mb.ClearEmbeds();
-                        if (originalMessage.Embeds.Count > 0)
+                        var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value) as IUserMessage;
+                        if (originalMessage != null)
                         {
-                            mb.AddEmbed(originalMessage.Embeds[0]);
+                            await originalMessage.ModifyAsync(mb =>
+                            {
+                                mb.Components = new ComponentBuilder().Build();
+                            });
                         }
-                        mb.ClearComponents();
-                    });
+                    }
                 }
 
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Game cancelled and your bet was refunded."));
+                await component.RespondAsync("Game cancelled and your bet was refunded.");
                 return;
             }
-
-            // Exit on the result/rematch message: just close those buttons, no money back
-            // This is the message that shows win/lose + RM / 1/2 / X2 / MAX / Exit
-            /*
-            if (string.Equals(action, "exit", StringComparison.OrdinalIgnoreCase))
-            {
-                var builder = new DiscordInteractionResponseBuilder();
-                if (e.Message.Embeds.Count > 0)
-                {
-                    builder.AddEmbed(e.Message.Embeds[0]);
-                }
-                builder.ClearComponents();
-
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
-                return;
-            }
-            */
 
             // From here on, we handle the initial Heads/Tails choice (one bet per command)
 
@@ -317,8 +265,7 @@ namespace Server.Communication.Discord.Interactions
             if (!await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0))
             {
                 env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to update outcome for flip {flip.Id}. User: {user.Identifier}. Aborting to prevent exploit.");
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Failed to process game result. Please try again.").AsEphemeral(true));
+                await component.RespondAsync("Failed to process game result. Please try again.", ephemeral: true);
                 return;
             }
 
@@ -367,58 +314,53 @@ namespace Server.Communication.Discord.Interactions
             user = await usersService.GetUserAsync(user.Identifier);
             var embed = BuildResultEmbed(user, flip, betAmountK, totalWinK, preFlipBalanceK, win, choseHeads, resultHeads);
 
-            var rematchRow = new DiscordComponent[]
-            {
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_half_{flip.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId)),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_rm_{flip.Id}",   "RM",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_x2_{flip.Id}",   "X2",  emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"cf_max_{flip.Id}",  "MAX", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId)),
-                //new DiscordButtonComponent(DiscordButtonStyle.Danger,    $"cf_exit_{flip.Id}", "Exit", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))
-            };
+            var rematchRow = new ComponentBuilder()
+                .WithButton("1/2", $"cf_half_{flip.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.CoinflipHalfEmojiId, "half", false))
+                .WithButton("RM", $"cf_rm_{flip.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.CoinflipRmEmojiId, "rm", false))
+                .WithButton("X2", $"cf_x2_{flip.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.CoinflipX2EmojiId, "x2", false))
+                .WithButton("MAX", $"cf_max_{flip.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.CoinflipMaxEmojiId, "max", false))
+                .Build();
 
             // Replace the original request message with the result embed + rematch buttons
             if (flip.ChannelId.HasValue && flip.MessageId.HasValue)
             {
                 try
                 {
-                    var channel = await client.GetChannelAsync(flip.ChannelId.Value);
-                    var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value);
-
-                    await originalMessage.ModifyAsync(mb =>
+                    var channel = client.GetChannel(flip.ChannelId.Value) as IMessageChannel;
+                    if (channel != null)
                     {
-                        mb.ClearEmbeds();
-                        mb.AddEmbed(embed);
-                        mb.ClearComponents();
-                        mb.AddComponents(rematchRow);
-                    });
+                        var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value) as IUserMessage;
+                        if (originalMessage != null)
+                        {
+                            await originalMessage.ModifyAsync(mb =>
+                            {
+                                mb.Embed = embed.Build();
+                                mb.Components = rematchRow;
+                            });
 
-                    // Acknowledge the interaction by updating the same message (no new message sent)
-                    var responseBuilder = new DiscordInteractionResponseBuilder()
-                        .AddEmbed(embed)
-                        .AddComponents(rematchRow);
-
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
-                    return;
+                            // Acknowledge the interaction by updating the same message (no new message sent)
+                            // Since we already modified the message, we can just defer or update again.
+                            // But UpdateAsync is cleaner.
+                            await component.UpdateAsync(msg =>
+                            {
+                                msg.Embed = embed.Build();
+                                msg.Components = rematchRow;
+                            });
+                            return;
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
                     env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to modify original message for flip {flip.Id}. Error: {ex.Message}");
-                    // If the channel or message no longer exists (deleted, etc.),
-                    // OR if ModifyAsync fails for any other reason (network, etc.),
-                    // fall through to the fallback below without breaking the flip
-                    // logic or the user's balance.
                 }
             }
 
-            // Fallback: if we somehow don't have stored IDs or the original message
-            // is gone, respond with a new message showing the result + rematch row.
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder()
-                    .AddEmbed(embed)
-                    .AddComponents(rematchRow));
+            // Fallback
+            await component.RespondAsync(embed: embed.Build(), components: rematchRow);
         }
 
-        private static DiscordEmbedBuilder BuildResultEmbed(User? user, Coinflip flip, long betAmountK, long totalWinK, long preFlipBalanceK, bool win, bool choseHeads, bool resultHeads)
+        private static EmbedBuilder BuildResultEmbed(User? user, Coinflip flip, long betAmountK, long totalWinK, long preFlipBalanceK, bool win, bool choseHeads, bool resultHeads)
         {
             var balanceK = user?.Balance ?? 0L;
             var balancePretty = GpFormatter.Format(balanceK);
@@ -477,35 +419,30 @@ namespace Server.Communication.Discord.Interactions
 
             var thumbnailUrl = SelectThumbnailUrl(win, choseHeads, isBigBet, isAllInWin);
 
-            // Color bar logic:
-            // - normal win: green
-            // - all-in win: light blue (match all-in icon vibe)
-            // - big win (1B+): purple
-            // - loss: red
-            var color = DiscordColor.Red;
+            var color = Color.Red;
             if (win)
             {
                 if (isAllInWin)
                 {
-                    color = new DiscordColor("#4FAEDD"); // light blue
+                    color = new Color(79, 174, 221); // light blue #4FAEDD
                 }
                 else if (isBigBet)
                 {
-                    color = new DiscordColor("#AA66FF"); // purple
+                    color = new Color(170, 102, 255); // purple #AA66FF
                 }
                 else
                 {
-                    color = DiscordColor.SpringGreen;
+                    color = Color.Green;
                 }
             }
 
-            return new DiscordEmbedBuilder()
+            return new EmbedBuilder()
                 .WithTitle(title)
                 .WithDescription($"**{description}**\n\n{body}")
                 .WithColor(color)
-                .WithThumbnail(thumbnailUrl)
+                .WithThumbnailUrl(thumbnailUrl)
                 .WithFooter(ServerConfiguration.ServerName)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithCurrentTimestamp();
         }
 
         private static string SelectThumbnailUrl(bool win, bool choseHeads, bool isBigBet, bool isAllInWin)

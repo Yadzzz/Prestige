@@ -1,9 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 using Server.Client.Coinflips;
 using Server.Client.Users;
 using Server.Client.Utils;
@@ -12,22 +11,22 @@ using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class CoinflipCommand : BaseCommandModule
+    public class CoinflipCommand : ModuleBase<SocketCommandContext>
     {
         private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
 
         [Command("coinflip")]
-        [Aliases("cf")]
-        public async Task Coinflip(CommandContext ctx, string amount = null)
+        [Alias("cf")]
+        public async Task Coinflip(string amount = null)
         {
-            if (!await DiscordChannelPermissionService.EnforceCoinflipChannelAsync(ctx))
+            if (!await DiscordChannelPermissionService.EnforceCoinflipChannelAsync(Context))
             {
                 return;
             }
 
-            if (RateLimiter.IsRateLimited(ctx.User.Id, "coinflip", RateLimitInterval))
+            if (RateLimiter.IsRateLimited(Context.User.Id, "coinflip", RateLimitInterval))
             {
-                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                await ReplyAsync("You're doing that too fast. Please wait a moment.");
                 return;
             }
 
@@ -36,7 +35,7 @@ namespace Server.Communication.Discord.Commands
             var usersService = serverManager.UsersService;
             var coinflipsService = serverManager.CoinflipsService;
 
-            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var user = await usersService.EnsureUserAsync(Context.User.Id.ToString(), Context.User.Username, (Context.User as SocketGuildUser)?.DisplayName ?? Context.User.Username);
             if (user == null)
                 return;
 
@@ -49,25 +48,25 @@ namespace Server.Communication.Discord.Commands
             }
             else if (!GpParser.TryParseAmountInK(amount, out amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!coinflip 100`, `!cf 0.5`, `!cf 1b`, `!cf 1000m`, or `!coinflip` for all-in.");
+                await ReplyAsync("Invalid amount. Examples: `!coinflip 100`, `!cf 0.5`, `!cf 1b`, `!cf 1000m`, or `!coinflip` for all-in.");
                 return;
             }
 
             if (amountK < GpFormatter.MinimumBetAmountK)
             {
-                await ctx.RespondAsync($"Minimum bet is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
+                await ReplyAsync($"Minimum bet is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
                 return;
             }
 
             if (user.Balance < amountK)
             {
-                await ctx.RespondAsync("You don't have enough balance for this flip.");
+                await ReplyAsync("You don't have enough balance for this flip.");
                 return;
             }
 
             if (!await usersService.RemoveBalanceAsync(user.Identifier, amountK))
             {
-                await ctx.RespondAsync("Failed to lock balance for this flip. Please try again.");
+                await ReplyAsync("Failed to lock balance for this flip. Please try again.");
                 return;
             }
 
@@ -75,50 +74,44 @@ namespace Server.Communication.Discord.Commands
             if (flip == null)
             {
                 await usersService.AddBalanceAsync(user.Identifier, amountK);
-                await ctx.RespondAsync("Failed to create coinflip. Please try again later.");
+                await ReplyAsync("Failed to create coinflip. Please try again later.");
                 return;
             }
 
             var prettyAmount = GpFormatter.Format(flip.AmountK);
 
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle("One, two, three")
                 .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
-                .WithColor(DiscordColor.Gold)
-                .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
+                .WithColor(Color.Gold)
+                .WithThumbnailUrl("https://i.imgur.com/W6mx4qd.gif")
                 .WithFooter(ServerConfiguration.ServerName)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithCurrentTimestamp();
 
-            //var headsButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"cf_heads_{flip.Id}", "🪙 Heads");
-            //var tailsButton = new DiscordButtonComponent(DiscordButtonStyle.Primary, $"cf_tails_{flip.Id}", "🧠 Tails");
-            //var exitButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"cf_exit_{flip.Id}", "Exit");
+            var builder = new ComponentBuilder()
+                .WithButton(" ", $"cf_heads_{flip.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.CoinflipHeadsEmojiId, "heads", false))
+                .WithButton(" ", $"cf_tails_{flip.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.CoinflipTailsEmojiId, "tails", false))
+                .WithButton("Refund", $"cf_exit_{flip.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.CoinflipExitEmojiId, "exit", false));
 
-            var headsButton = new DiscordButtonComponent(
-                DiscordButtonStyle.Secondary,
-                $"cf_heads_{flip.Id}",
-                " ",
-                emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId)
-            );
+            try
+            {
+                var message = await ReplyAsync(embed: embed.Build(), components: builder.Build());
+                await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id);
+            }
+            catch (Exception ex)
+            {
+                env.ServerManager.LoggerManager.LogError($"[CoinflipCommand] Failed to send message: {ex}");
 
-            var tailsButton = new DiscordButtonComponent(
-                DiscordButtonStyle.Secondary,
-                $"cf_tails_{flip.Id}",
-                " ",
-                emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId)
-            );
+                // Refund and cancel to prevent ghost flips
+                await usersService.AddBalanceAsync(user.Identifier, amountK);
+                await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, false, false, CoinflipStatus.Cancelled, 0, 0);
 
-            var exitButton = new DiscordButtonComponent(
-                DiscordButtonStyle.Secondary,
-                $"cf_exit_{flip.Id}",
-                "Refund",
-                emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)
-            );
-
-            var message = await ctx.RespondAsync(new DiscordMessageBuilder()
-                .AddEmbed(embed)
-                .AddComponents(headsButton, tailsButton, exitButton));
-
-            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id);
+                try
+                {
+                    await ReplyAsync("Failed to start coinflip. Your bet has been refunded.");
+                }
+                catch { /* Ignore if we can't reply */ }
+            }
         }
     }
 }

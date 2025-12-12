@@ -1,30 +1,28 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
+using Discord;
+using Discord.WebSocket;
 using Server.Client.Stakes;
 using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Infrastructure;
-
 using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Interactions
 {
     public static class StakeButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
+        public static async Task Handle(DiscordSocketClient client, SocketMessageComponent component)
         {
             // User cancel for stakes is temporarily disabled.
-            // if (e.Id.StartsWith("stake_usercancel_", StringComparison.OrdinalIgnoreCase))
+            // if (component.Data.CustomId.StartsWith("stake_usercancel_", StringComparison.OrdinalIgnoreCase))
             // {
-            //     await HandleUserCancelAsync(client, e);
+            //     await HandleUserCancelAsync(client, component);
             //     return;
             // }
 
-            var parts = e.Id.Split('_');
+            var parts = component.Data.CustomId.Split('_');
             if (parts.Length != 3)
                 return;
 
@@ -38,28 +36,23 @@ namespace Server.Communication.Discord.Interactions
 
             // Only staff should be able to resolve stakes via these buttons.
             // If the interaction user is not in the staff role, block it.
-            var member = e.Guild != null ? await e.Guild.GetMemberAsync(e.User.Id) : null;
-            if (!member.IsStaff())
+            var user = component.User as SocketGuildUser;
+            if (user == null || !user.IsStaff())
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder()
-                        .WithContent("You are not allowed to resolve stakes.")
-                        .AsEphemeral(true));
+                await component.RespondAsync("You are not allowed to resolve stakes.", ephemeral: true);
                 return;
             }
 
             var stake = await stakesService.GetStakeByIdAsync(stakeId);
             if (stake == null)
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Stake not found.").AsEphemeral(true));
+                await component.RespondAsync("Stake not found.", ephemeral: true);
                 return;
             }
 
             if (stake.Status != StakeStatus.Pending)
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("This stake has already been processed.").AsEphemeral(true));
+                await component.RespondAsync("This stake has already been processed.", ephemeral: true);
                 return;
             }
 
@@ -83,12 +76,12 @@ namespace Server.Communication.Discord.Interactions
 
             await stakesService.UpdateStakeStatusAsync(stake.Id, newStatus);
 
-            var user = await usersService.GetUserAsync(stake.Identifier);
+            var stakeUser = await usersService.GetUserAsync(stake.Identifier);
 
             // Register wager for race if the stake was resolved as Won or Lost
             if (newStatus == StakeStatus.Won || newStatus == StakeStatus.Lost)
             {
-                var raceName = user?.DisplayName ?? user?.Username ?? stake.Identifier;
+                var raceName = stakeUser?.DisplayName ?? stakeUser?.Username ?? stake.Identifier;
                 await env.ServerManager.RaceService.RegisterWagerAsync(stake.Identifier, raceName, stake.AmountK);
             }
 
@@ -97,14 +90,14 @@ namespace Server.Communication.Discord.Interactions
                 level: "Info",
                 userIdentifier: stake.Identifier,
                 action: "StakeResolved",
-                message: $"Stake resolved id={stake.Id} status={newStatus} amountK={stake.AmountK} staff={e.User.Id}",
+                message: $"Stake resolved id={stake.Id} status={newStatus} amountK={stake.AmountK} staff={component.User.Id}",
                 exception: null,
-                metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"status\":\"{newStatus}\",\"staffId\":\"{e.User.Id}\"}}");
+                metadataJson: $"{{\"referenceId\":{stake.Id},\"kind\":\"Stake\",\"amountK\":{stake.AmountK},\"status\":\"{newStatus}\",\"staffId\":\"{component.User.Id}\"}}");
 
             long feeK = 0;
             long payoutK = 0;
 
-            if (user != null)
+            if (stakeUser != null)
             {
                 if (newStatus == StakeStatus.Won)
                 {
@@ -135,16 +128,16 @@ namespace Server.Communication.Discord.Interactions
                     await usersService.AddBalanceAsync(stake.Identifier, stake.AmountK);
                 }
 
-                user = await usersService.GetUserAsync(stake.Identifier);
+                stakeUser = await usersService.GetUserAsync(stake.Identifier);
             }
 
-            var balanceText = user != null ? GpFormatter.Format(user.Balance) : null;
-            var winStreakText = user != null ? user.StakeStreak.ToString() : null;
-            var loseStreakText = user != null ? user.StakeLoseStreak.ToString() : null;
+            var balanceText = stakeUser != null ? GpFormatter.Format(stakeUser.Balance) : null;
+            var winStreakText = stakeUser != null ? stakeUser.StakeStreak.ToString() : null;
+            var loseStreakText = stakeUser != null ? stakeUser.StakeLoseStreak.ToString() : null;
             var amountText = GpFormatter.Format(stake.AmountK);
             var feeText = feeK > 0 ? GpFormatter.Format(feeK) : null;
             var payoutText = payoutK > 0 ? GpFormatter.Format(payoutK) : null;
-            var staffDisplay = user?.DisplayName ?? user?.Username ?? stake.Identifier;
+            var staffDisplay = stakeUser?.DisplayName ?? stakeUser?.Username ?? stake.Identifier;
 
             // total win = original stake + net profit after fee
             var totalWinK = stake.AmountK + payoutK;
@@ -173,7 +166,7 @@ namespace Server.Communication.Discord.Interactions
                     ? "https://i.imgur.com/DtaZNgy.gif"
                     : "https://i.imgur.com/lTUFG2C.gif";
 
-            var staffEmbed = new DiscordEmbedBuilder()
+            var staffEmbed = new EmbedBuilder()
                 .WithTitle(resultTitle)
                 .WithDescription(newStatus switch
                 {
@@ -182,9 +175,9 @@ namespace Server.Communication.Discord.Interactions
                     StakeStatus.Cancelled => $"User: {staffDisplay} – the `{amountText}` stake was cancelled.",
                     _ => resultDescription
                 })
-                .WithColor(newStatus == StakeStatus.Won ? DiscordColor.Green : newStatus == StakeStatus.Lost ? DiscordColor.Red : DiscordColor.Orange)
-                .WithThumbnail(staffThumbnail)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithColor(newStatus == StakeStatus.Won ? Color.Green : newStatus == StakeStatus.Lost ? Color.Red : Color.Orange)
+                .WithThumbnailUrl(staffThumbnail)
+                .WithCurrentTimestamp();
 
             if (!string.IsNullOrEmpty(balanceText))
             {
@@ -199,17 +192,17 @@ namespace Server.Communication.Discord.Interactions
                     .AddField("Payout", $"`{payoutText}`", true);
             }
 
-            var staffComponents = new DiscordComponent[]
-            {
-                new DiscordButtonComponent(DiscordButtonStyle.Success, $"stake_win_{stake.Id}", "Win", disabled: true, emoji: new DiscordComponentEmoji("🏆")),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"stake_cancel_{stake.Id}", "Cancel", disabled: true, emoji: new DiscordComponentEmoji("❌")),
-                new DiscordButtonComponent(DiscordButtonStyle.Danger, $"stake_lose_{stake.Id}", "Lose", disabled: true, emoji: new DiscordComponentEmoji("❌"))
-            };
+            var staffComponents = new ComponentBuilder()
+                .WithButton("Win", $"stake_win_{stake.Id}", ButtonStyle.Success, emote: new Emoji("🏆"), disabled: true)
+                .WithButton("Cancel", $"stake_cancel_{stake.Id}", ButtonStyle.Secondary, emote: new Emoji("❌"), disabled: true)
+                .WithButton("Lose", $"stake_lose_{stake.Id}", ButtonStyle.Danger, emote: new Emoji("❌"), disabled: true)
+                .Build();
 
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage,
-                new DiscordInteractionResponseBuilder()
-                    .AddEmbed(staffEmbed)
-                    .AddComponents(staffComponents));
+            await component.UpdateAsync(msg =>
+            {
+                msg.Embed = staffEmbed.Build();
+                msg.Components = staffComponents;
+            });
 
             // User-facing embed: send a new message showing result, streak and balance
             if (stake.UserChannelId.HasValue)
@@ -217,76 +210,77 @@ namespace Server.Communication.Discord.Interactions
                 var envInner = env;
                 try
                 {
-                    var userChannel = await client.GetChannelAsync(stake.UserChannelId.Value);
-
-                    var userThumbnail = newStatus == StakeStatus.Won
-                        ? "https://i.imgur.com/qmkJM3O.gif"
-                        : newStatus == StakeStatus.Lost
-                            ? "https://i.imgur.com/DtaZNgy.gif"
-                            : "https://i.imgur.com/lTUFG2C.gif";
-
-                    var userEmbed = new DiscordEmbedBuilder()
-                        .WithTitle(resultTitle)
-                        .WithDescription(resultDescription)
-                        .WithColor(newStatus == StakeStatus.Won ? DiscordColor.SpringGreen :
-                                   newStatus == StakeStatus.Lost ? DiscordColor.Red : DiscordColor.Orange)
-                        .WithThumbnail(userThumbnail)
-                        .WithTimestamp(DateTimeOffset.UtcNow);
-
-                    if (!string.IsNullOrEmpty(balanceText))
+                    var userChannel = client.GetChannel(stake.UserChannelId.Value) as IMessageChannel;
+                    if (userChannel != null)
                     {
-                        // Common top row: win/lose streak and balance
-                        if (newStatus == StakeStatus.Won && !string.IsNullOrEmpty(winStreakText))
+                        var userThumbnail = newStatus == StakeStatus.Won
+                            ? "https://i.imgur.com/qmkJM3O.gif"
+                            : newStatus == StakeStatus.Lost
+                                ? "https://i.imgur.com/DtaZNgy.gif"
+                                : "https://i.imgur.com/lTUFG2C.gif";
+
+                        var userEmbed = new EmbedBuilder()
+                            .WithTitle(resultTitle)
+                            .WithDescription(resultDescription)
+                            .WithColor(newStatus == StakeStatus.Won ? Color.Green :
+                                       newStatus == StakeStatus.Lost ? Color.Red : Color.Orange)
+                            .WithThumbnailUrl(userThumbnail)
+                            .WithCurrentTimestamp();
+
+                        if (!string.IsNullOrEmpty(balanceText))
                         {
-                            userEmbed.AddField("Streak", winStreakText, true);
+                            // Common top row: win/lose streak and balance
+                            if (newStatus == StakeStatus.Won && !string.IsNullOrEmpty(winStreakText))
+                            {
+                                userEmbed.AddField("Streak", winStreakText, true);
+                            }
+                            else if (newStatus == StakeStatus.Lost && !string.IsNullOrEmpty(loseStreakText))
+                            {
+                                userEmbed.AddField("Streak", loseStreakText, true);
+                            }
+                            userEmbed.AddField("Balance", $"`{balanceText}`", true);
+
+                            // Extra field for lost outcome
+                            if (newStatus == StakeStatus.Lost)
+                            {
+                                userEmbed.AddField("You lost", $"`{amountText}`", true);
+                            }
                         }
-                        else if (newStatus == StakeStatus.Lost && !string.IsNullOrEmpty(loseStreakText))
-                        {
-                            userEmbed.AddField("Streak", loseStreakText, true);
-                        }
-                        userEmbed.AddField("Balance", $"`{balanceText}`", true);
 
-                        // Extra field for lost outcome
-                        if (newStatus == StakeStatus.Lost)
-                        {
-                            userEmbed.AddField("You lost", $"`{amountText}`", true);
-                        }
-                    }
+                        await userChannel.SendMessageAsync(text: $"<@{stake.Identifier}>", embed: userEmbed.Build());
 
-                    await userChannel.SendMessageAsync(new DiscordMessageBuilder()
-                        .WithContent($"<@{stake.Identifier}>")
-                        .AddEmbed(userEmbed));
-
-                    // Fire-and-forget live feed entry for stake games.
-                    // Pass the same amount we show to the user.
-                    try
-                    {
-                        envInner.ServerManager.LiveFeedService?.PublishStake(
-                            newStatus == StakeStatus.Won && payoutK > 0 ? totalWinK : stake.AmountK,
-                            newStatus == StakeStatus.Won);
-                    }
-                    catch
-                    {
-                        // Live feed must never affect gameplay
-                    }
-
-                    // Also disable the original user cancel button on the pending stake message, if present
-                    if (stake.UserMessageId.HasValue)
-                    {
+                        // Fire-and-forget live feed entry for stake games.
+                        // Pass the same amount we show to the user.
                         try
                         {
-                            var originalMessage = await userChannel.GetMessageAsync(stake.UserMessageId.Value);
-
-                            await originalMessage.ModifyAsync(builder =>
-                            {
-                                builder.ClearEmbeds();
-                                if (originalMessage.Embeds.Count > 0) builder.AddEmbed(originalMessage.Embeds[0]);
-                                builder.ClearComponents();
-                            });
+                            envInner.ServerManager.LiveFeedService?.PublishStake(
+                                newStatus == StakeStatus.Won && payoutK > 0 ? totalWinK : stake.AmountK,
+                                newStatus == StakeStatus.Won);
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable stake user cancel button: {ex}");
+                            // Live feed must never affect gameplay
+                        }
+
+                        // Also disable the original user cancel button on the pending stake message, if present
+                        if (stake.UserMessageId.HasValue)
+                        {
+                            try
+                            {
+                                var originalMessage = await userChannel.GetMessageAsync(stake.UserMessageId.Value) as IUserMessage;
+                                if (originalMessage != null)
+                                {
+                                    await originalMessage.ModifyAsync(builder =>
+                                    {
+                                        // Keep embeds, clear components
+                                        builder.Components = new ComponentBuilder().Build();
+                                    });
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable stake user cancel button: {ex}");
+                            }
                         }
                     }
                 }
@@ -298,9 +292,9 @@ namespace Server.Communication.Discord.Interactions
 
         }
 
-        private static async Task HandleUserCancelAsync(DiscordClient client, ComponentInteractionCreatedEventArgs e)
+        private static async Task HandleUserCancelAsync(DiscordSocketClient client, SocketMessageComponent component)
         {
-            var parts = e.Id.Split('_');
+            var parts = component.Data.CustomId.Split('_');
             if (parts.Length != 3)
                 return;
 
@@ -314,15 +308,13 @@ namespace Server.Communication.Discord.Interactions
             var stake = await stakesService.GetStakeByIdAsync(stakeId);
             if (stake == null)
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Stake not found.").AsEphemeral(true));
+                await component.RespondAsync("Stake not found.", ephemeral: true);
                 return;
             }
 
-            if (stake.Status != StakeStatus.Pending || stake.Identifier != e.User.Id.ToString())
+            if (stake.Status != StakeStatus.Pending || stake.Identifier != component.User.Id.ToString())
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("You cannot cancel this stake.").AsEphemeral(true));
+                await component.RespondAsync("You cannot cancel this stake.", ephemeral: true);
                 return;
             }
 
@@ -343,36 +335,36 @@ namespace Server.Communication.Discord.Interactions
             {
                 try
                 {
-                    var userChannel = await client.GetChannelAsync(stake.UserChannelId.Value);
-
-                    var userEmbed = new DiscordEmbedBuilder()
-                        .WithTitle("🔁 Stake Cancelled")
-                        .WithDescription("Your stake request was cancelled.")
-                        .WithColor(DiscordColor.Orange)
-                        .WithThumbnail("https://i.imgur.com/lTUFG2C.gif")
-                        .WithTimestamp(DateTimeOffset.UtcNow);
-
-                    await userChannel.SendMessageAsync(new DiscordMessageBuilder()
-                        .WithContent($"<@{stake.Identifier}>")
-                        .AddEmbed(userEmbed));
-
-                    // Disable cancel button on the original user message, if present
-                    if (stake.UserMessageId.HasValue)
+                    var userChannel = client.GetChannel(stake.UserChannelId.Value) as IMessageChannel;
+                    if (userChannel != null)
                     {
-                        try
-                        {
-                            var originalMessage = await userChannel.GetMessageAsync(stake.UserMessageId.Value);
+                        var userEmbed = new EmbedBuilder()
+                            .WithTitle("🔁 Stake Cancelled")
+                            .WithDescription("Your stake request was cancelled.")
+                            .WithColor(Color.Orange)
+                            .WithThumbnailUrl("https://i.imgur.com/lTUFG2C.gif")
+                            .WithCurrentTimestamp();
 
-                            await originalMessage.ModifyAsync(builder =>
-                            {
-                                builder.ClearEmbeds();
-                                if (originalMessage.Embeds.Count > 0) builder.AddEmbed(originalMessage.Embeds[0]);
-                                builder.ClearComponents();
-                            });
-                        }
-                        catch (Exception ex)
+                        await userChannel.SendMessageAsync(text: $"<@{stake.Identifier}>", embed: userEmbed.Build());
+
+                        // Disable cancel button on the original user message, if present
+                        if (stake.UserMessageId.HasValue)
                         {
-                            ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable stake user cancel button on cancel: {ex}");
+                            try
+                            {
+                                var originalMessage = await userChannel.GetMessageAsync(stake.UserMessageId.Value) as IUserMessage;
+                                if (originalMessage != null)
+                                {
+                                    await originalMessage.ModifyAsync(builder =>
+                                    {
+                                        builder.Components = new ComponentBuilder().Build();
+                                    });
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                ServerEnvironment.GetServerEnvironment().ServerManager.LoggerManager.LogError($"Failed to disable stake user cancel button on cancel: {ex}");
+                            }
                         }
                     }
                 }
@@ -386,22 +378,38 @@ namespace Server.Communication.Discord.Interactions
             {
                 try
                 {
-                    var staffChannel = await client.GetChannelAsync(stake.StaffChannelId.Value);
-                    var staffMessage = await staffChannel.GetMessageAsync(stake.StaffMessageId.Value);
-
-                    var staffEmbed = new DiscordEmbedBuilder(staffMessage.Embeds.Count > 0 ? staffMessage.Embeds[0] : new DiscordEmbedBuilder())
-                        .WithTitle("🔁 Stake Cancelled")
-                        .WithDescription($"The `{GpFormatter.Format(stake.AmountK)}` stake for {stake.Identifier} was cancelled by the user.")
-                        .WithColor(DiscordColor.Orange)
-                        .WithThumbnail("https://i.imgur.com/lTUFG2C.gif")
-                        .WithTimestamp(DateTimeOffset.UtcNow);
-
-                    await staffMessage.ModifyAsync(b =>
+                    var staffChannel = client.GetChannel(stake.StaffChannelId.Value) as IMessageChannel;
+                    if (staffChannel != null)
                     {
-                        b.ClearEmbeds();
-                        b.AddEmbed(staffEmbed.Build());
-                        b.ClearComponents();
-                    });
+                        var staffMessage = await staffChannel.GetMessageAsync(stake.StaffMessageId.Value) as IUserMessage;
+                        if (staffMessage != null)
+                        {
+                            var oldEmbed = staffMessage.Embeds.FirstOrDefault();
+                            var staffEmbed = new EmbedBuilder();
+                            if (oldEmbed != null)
+                            {
+                                staffEmbed.WithTitle("🔁 Stake Cancelled")
+                                          .WithDescription($"The `{GpFormatter.Format(stake.AmountK)}` stake for {stake.Identifier} was cancelled by the user.")
+                                          .WithColor(Color.Orange)
+                                          .WithThumbnailUrl("https://i.imgur.com/lTUFG2C.gif")
+                                          .WithCurrentTimestamp();
+                            }
+                            else
+                            {
+                                staffEmbed.WithTitle("🔁 Stake Cancelled")
+                                          .WithDescription($"The `{GpFormatter.Format(stake.AmountK)}` stake for {stake.Identifier} was cancelled by the user.")
+                                          .WithColor(Color.Orange)
+                                          .WithThumbnailUrl("https://i.imgur.com/lTUFG2C.gif")
+                                          .WithCurrentTimestamp();
+                            }
+
+                            await staffMessage.ModifyAsync(b =>
+                            {
+                                b.Embed = staffEmbed.Build();
+                                b.Components = new ComponentBuilder().Build();
+                            });
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -409,8 +417,7 @@ namespace Server.Communication.Discord.Interactions
                 }
             }
 
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().WithContent("Your stake request has been cancelled.").AsEphemeral(true));
+            await component.RespondAsync("Your stake request has been cancelled.", ephemeral: true);
         }
 
         private static async Task UpdateStakeStreakAsync(string identifier, bool incrementWin)

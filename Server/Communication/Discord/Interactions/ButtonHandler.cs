@@ -1,54 +1,54 @@
 using System;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
+using Discord.WebSocket;
 
 namespace Server.Communication.Discord.Interactions
 {
     public class ButtonHandler
     {
-        public static async Task HandleButtons(DiscordClient client, ComponentInteractionCreatedEventArgs e)
+        public static async Task HandleButtons(DiscordSocketClient client, SocketMessageComponent component)
         {
+            var id = component.Data.CustomId;
+
             // Transaction buttons
-            if (e.Id.StartsWith("tx_", StringComparison.OrdinalIgnoreCase))
+            if (id.StartsWith("tx_", StringComparison.OrdinalIgnoreCase))
             {
-                await TransactionButtonHandler.Handle(client, e);
+                await TransactionButtonHandler.Handle(client, component);
                 return;
             }
 
             // Balance buttons
-            if (e.Id.StartsWith("bal_", StringComparison.OrdinalIgnoreCase))
+            if (id.StartsWith("bal_", StringComparison.OrdinalIgnoreCase))
             {
-                await BalanceButtonHandler.Handle(client, e);
+                await BalanceButtonHandler.Handle(client, component);
                 return;
             }
 
             // Stake buttons
-            if (e.Id.StartsWith("stake_", StringComparison.OrdinalIgnoreCase))
+            if (id.StartsWith("stake_", StringComparison.OrdinalIgnoreCase))
             {
-                await StakeButtonHandler.Handle(client, e);
+                await StakeButtonHandler.Handle(client, component);
                 return;
             }
 
             // Coinflip buttons
-            if (e.Id.StartsWith("cf_", StringComparison.OrdinalIgnoreCase))
+            if (id.StartsWith("cf_", StringComparison.OrdinalIgnoreCase))
             {
-                await CoinflipButtonHandler.Handle(client, e);
+                await CoinflipButtonHandler.Handle(client, component);
                 return;
             }
 
             // Blackjack buttons
-            if (e.Id.StartsWith("bj_", StringComparison.OrdinalIgnoreCase))
+            if (id.StartsWith("bj_", StringComparison.OrdinalIgnoreCase))
             {
-                await BlackjackButtonHandler.Handle(client, e);
+                await BlackjackButtonHandler.Handle(client, component);
                 return;
             }
 
             // Race interactions
-            if (e.Id.StartsWith("race_", StringComparison.OrdinalIgnoreCase))
+            if (id.StartsWith("race_", StringComparison.OrdinalIgnoreCase))
             {
-                await RaceInteractionHandler.HandleComponent(client, e);
+                await RaceInteractionHandler.HandleComponent(client, component);
                 return;
             }
 

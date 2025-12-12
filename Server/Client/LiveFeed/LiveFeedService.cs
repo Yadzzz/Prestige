@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.WebSocket;
 using Server.Client.Utils;
 using Server.Infrastructure;
 using Server.Infrastructure.Discord;
@@ -21,7 +21,7 @@ namespace Server.Client.LiveFeed
             _discordBotHost = discordBotHost;
         }
 
-        private DiscordClient? TryGetClient()
+        private DiscordSocketClient? TryGetClient()
         {
             try
             {
@@ -43,7 +43,9 @@ namespace Server.Client.LiveFeed
             {
                 try
                 {
-                    var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
+                    var channel = client.GetChannel(DiscordIds.LiveFeedChannelId) as IMessageChannel;
+                    if (channel == null) return;
+
                     var amountPretty = GpFormatter.Format(amountK);
                     var sideText = resultHeads ? "Heads" : "Tails";
 
@@ -51,29 +53,30 @@ namespace Server.Client.LiveFeed
                     var isBigWin = win && amountK >= 1_000_000L; // >= 1B
 
                     string description;
-                    DiscordColor color;
+                    Color color;
 
                     if (isBigWin)
                     {
                         description = $"{amountPretty} __**BIG WIN!**__ when the coin landed {sideText} <:{nameof(DiscordIds.BigWinMvppEmojiId)}:{DiscordIds.BigWinMvppEmojiId}>";
-                        color = new DiscordColor("#AA66FF"); // purple for big wins
+                        color = new Color(0xAA66FF); // purple for big wins
                     }
                     else if (win)
                     {
                         description = $"{amountPretty} **WIN** when the coin landed {sideText} <:{nameof(DiscordIds.CoinflipGoldEmojiId)}:{DiscordIds.CoinflipGoldEmojiId}>";
-                        color = DiscordColor.SpringGreen;
+                        color = Color.Green;
                     }
                     else
                     {
                         description = $"{amountPretty} **LOST** when the coin landed {sideText} <:{nameof(DiscordIds.CoinflipSilverEmojiId)}:{DiscordIds.CoinflipSilverEmojiId}>";
-                        color = DiscordColor.Red;
+                        color = Color.Red;
                     }
 
-                    var embed = new DiscordEmbedBuilder()
+                    var embed = new EmbedBuilder()
                         .WithDescription(description)
-                        .WithColor(color);
+                        .WithColor(color)
+                        .Build();
 
-                    await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed));
+                    await channel.SendMessageAsync(embed: embed);
                 }
                 catch
                 {
@@ -92,41 +95,44 @@ namespace Server.Client.LiveFeed
             {
                 try
                 {
-                    var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
+                    var channel = client.GetChannel(DiscordIds.LiveFeedChannelId) as IMessageChannel;
+                    if (channel == null) return;
+
                     var amountPretty = GpFormatter.Format(amountK);
 
                     // Big win is based on the total returned amount (amountK).
                     var isBigWin = win && amountK >= 1_000_000L; // >= 1B
 
                     string description;
-                    DiscordColor color;
+                    Color color;
 
                     if (push)
                     {
                         description = $"{amountPretty} **PUSH** in Blackjack 🤝";
-                        color = DiscordColor.Yellow;
+                        color = Color.Gold;
                     }
                     else if (isBigWin)
                     {
                         description = $"{amountPretty} __**BIG WIN!**__ in Blackjack <:{nameof(DiscordIds.BigWinMvppEmojiId)}:{DiscordIds.BigWinMvppEmojiId}>";
-                        color = new DiscordColor("#AA66FF"); // purple for big wins
+                        color = new Color(0xAA66FF); // purple for big wins
                     }
                     else if (win)
                     {
                         description = $"{amountPretty} **WIN** in Blackjack <:{nameof(DiscordIds.CoinflipGoldEmojiId)}:{DiscordIds.CoinflipGoldEmojiId}>";
-                        color = DiscordColor.SpringGreen;
+                        color = Color.Green;
                     }
                     else
                     {
                         description = $"{amountPretty} **LOST** in Blackjack <:{nameof(DiscordIds.CoinflipSilverEmojiId)}:{DiscordIds.CoinflipSilverEmojiId}>";
-                        color = DiscordColor.Red;
+                        color = Color.Red;
                     }
 
-                    var embed = new DiscordEmbedBuilder()
+                    var embed = new EmbedBuilder()
                         .WithDescription(description)
-                        .WithColor(color);
+                        .WithColor(color)
+                        .Build();
 
-                    await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed));
+                    await channel.SendMessageAsync(embed: embed);
                 }
                 catch
                 {
@@ -145,39 +151,42 @@ namespace Server.Client.LiveFeed
             {
                 try
                 {
-                    var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
+                    var channel = client.GetChannel(DiscordIds.LiveFeedChannelId) as IMessageChannel;
+                    if (channel == null) return;
+
                     var amountPretty = GpFormatter.Format(amountK);
 
                     // Big win is based on the total returned amount (amountK).
                     var isBigWin = win && amountK >= 1_000_000L; // >= 1B
 
                     string description;
-                    DiscordColor color;
+                    Color color;
 
                     if (isBigWin)
                     {
                         // Big win is always a win, use MVPP emoji
                         description = $"{amountPretty} __**BIG WIN!**__ from a stake <:{nameof(DiscordIds.BigWinMvppEmojiId)}:{DiscordIds.BigWinMvppEmojiId}>";
-                        color = new DiscordColor("#AA66FF"); // purple for big wins
+                        color = new Color(0xAA66FF); // purple for big wins
                     }
                     else if (win)
                     {
                         // Wpray is the win emoji for stakes
                         description = $"{amountPretty} **WIN** from a stake <:{nameof(DiscordIds.WprayEmojiId)}:{DiscordIds.WprayEmojiId}>";
-                        color = DiscordColor.SpringGreen;
+                        color = Color.Green;
                     }
                     else
                     {
                         // DdpEmojiId is used for stake losses
                         description = $"{amountPretty} **LOST** from a stake <:{nameof(DiscordIds.DdpEmojiId)}:{DiscordIds.DdpEmojiId}>";
-                        color = DiscordColor.Red;
+                        color = Color.Red;
                     }
 
-                    var embed = new DiscordEmbedBuilder()
+                    var embed = new EmbedBuilder()
                         .WithDescription(description)
-                        .WithColor(color);
+                        .WithColor(color)
+                        .Build();
 
-                    await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed));
+                    await channel.SendMessageAsync(embed: embed);
                 }
                 catch
                 {

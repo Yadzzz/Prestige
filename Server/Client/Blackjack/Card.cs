@@ -1,5 +1,4 @@
-using DSharpPlus;
-using DSharpPlus.Entities;
+using Discord.WebSocket;
 using Server.Infrastructure.Configuration;
 
 namespace Server.Client.Blackjack
@@ -32,7 +31,7 @@ namespace Server.Client.Blackjack
             }
         }
 
-        public string GetEmoji(DiscordClient client = null)
+        public string GetEmoji(DiscordSocketClient client = null)
         {
             // Try to get configured card emoji
             var config = ConfigService.Current?.Discord?.BlackjackCards;
@@ -69,18 +68,6 @@ namespace Server.Client.Blackjack
 
                     if (emojiId > 0)
                     {
-                        if (client != null)
-                        {
-                            try
-                            {
-                                return DiscordEmoji.FromGuildEmote(client, emojiId).ToString();
-                            }
-                            catch
-                            {
-                                // Fallback if emoji not found
-                                return $"<:card:{emojiId}>";
-                            }
-                        }
                         return $"<:card:{emojiId}>";
                     }
                 }

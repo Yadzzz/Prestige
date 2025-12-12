@@ -1,9 +1,9 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 using Server.Client.Blackjack;
 using Server.Client.Coinflips;
 using Server.Client.Stakes;
@@ -12,10 +12,10 @@ using Server.Infrastructure;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class CancelCommand : BaseCommandModule
+    public class CancelCommand : ModuleBase<SocketCommandContext>
     {
         [Command("cancel")]
-        public async Task Cancel(CommandContext ctx)
+        public async Task Cancel()
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var serverManager = env.ServerManager;
@@ -23,7 +23,8 @@ namespace Server.Communication.Discord.Commands
             var coinflipsService = serverManager.CoinflipsService;
             var stakesService = serverManager.StakesService;
 
-            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var displayName = (Context.User as SocketGuildUser)?.DisplayName ?? Context.User.Username;
+            var user = await usersService.EnsureUserAsync(Context.User.Id.ToString(), Context.User.Username, displayName);
             if (user == null)
                 return;
 
@@ -56,15 +57,19 @@ namespace Server.Communication.Discord.Commands
                 {
                     try
                     {
-                        var channel = await ctx.Client.GetChannelAsync(flip.ChannelId.Value);
-                        var msg = await channel.GetMessageAsync(flip.MessageId.Value);
-                        
-                        await msg.ModifyAsync(mb =>
+                        var channel = Context.Client.GetChannel(flip.ChannelId.Value) as IMessageChannel;
+                        if (channel != null)
                         {
-                            mb.ClearEmbeds();
-                            if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
-                            mb.ClearComponents(); // Remove all buttons
-                        });
+                            var msg = await channel.GetMessageAsync(flip.MessageId.Value) as IUserMessage;
+                            if (msg != null)
+                            {
+                                await msg.ModifyAsync(mb =>
+                                {
+                                    // Keep existing embeds, remove components
+                                    mb.Components = new ComponentBuilder().Build(); 
+                                });
+                            }
+                        }
                         await Task.Delay(100); // Rate limit protection
                     }
                     catch
@@ -77,9 +82,9 @@ namespace Server.Communication.Discord.Commands
                 {
                     sbGame.AppendLine("`COINFLIP`");
                     sbAmount.AppendLine($"`{GpFormatter.Format(flip.AmountK)}`");
-                    if (flip.ChannelId.HasValue && flip.MessageId.HasValue && ctx.Guild != null)
+                    if (flip.ChannelId.HasValue && flip.MessageId.HasValue && Context.Guild != null)
                     {
-                        var url = $"https://discord.com/channels/{ctx.Guild.Id}/{flip.ChannelId}/{flip.MessageId}";
+                        var url = $"https://discord.com/channels/{Context.Guild.Id}/{flip.ChannelId}/{flip.MessageId}";
                         sbPanel.AppendLine($"[Click Here]({url})");
                     }
                     else
@@ -113,15 +118,18 @@ namespace Server.Communication.Discord.Commands
                 {
                     try
                     {
-                        var channel = await ctx.Client.GetChannelAsync(stake.UserChannelId.Value);
-                        var msg = await channel.GetMessageAsync(stake.UserMessageId.Value);
-
-                        await msg.ModifyAsync(mb =>
+                        var channel = Context.Client.GetChannel(stake.UserChannelId.Value) as IMessageChannel;
+                        if (channel != null)
                         {
-                            mb.ClearEmbeds();
-                            if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
-                            mb.ClearComponents(); // Remove all buttons
-                        });
+                            var msg = await channel.GetMessageAsync(stake.UserMessageId.Value) as IUserMessage;
+                            if (msg != null)
+                            {
+                                await msg.ModifyAsync(mb =>
+                                {
+                                    mb.Components = new ComponentBuilder().Build(); // Remove all buttons
+                                });
+                            }
+                        }
                     }
                     catch
                     {
@@ -134,20 +142,35 @@ namespace Server.Communication.Discord.Commands
                 {
                     try
                     {
-                        var channel = await ctx.Client.GetChannelAsync(stake.StaffChannelId.Value);
-                        var msg = await channel.GetMessageAsync(stake.StaffMessageId.Value);
-
-                        var staffEmbed = new DiscordEmbedBuilder(msg.Embeds[0])
-                            .WithTitle("❌ Stake Cancelled")
-                            .WithDescription($"User: {user.DisplayName} – the **{GpFormatter.Format(stake.AmountK)}** stake was cancelled by user.")
-                            .WithColor(DiscordColor.Orange);
-
-                        await msg.ModifyAsync(mb =>
+                        var channel = Context.Client.GetChannel(stake.StaffChannelId.Value) as IMessageChannel;
+                        if (channel != null)
                         {
-                            mb.ClearEmbeds();
-                            mb.AddEmbed(staffEmbed);
-                            mb.ClearComponents(); // Remove all buttons
-                        });
+                            var msg = await channel.GetMessageAsync(stake.StaffMessageId.Value) as IUserMessage;
+                            if (msg != null)
+                            {
+                                var oldEmbed = msg.Embeds.FirstOrDefault();
+                                var staffEmbed = new EmbedBuilder();
+                                if (oldEmbed != null)
+                                {
+                                    staffEmbed.WithTitle(oldEmbed.Title)
+                                              .WithDescription($"User: {displayName} – the **{GpFormatter.Format(stake.AmountK)}** stake was cancelled by user.")
+                                              .WithColor(Color.Orange);
+                                    // Copy other fields if needed, but description is overwritten
+                                }
+                                else
+                                {
+                                    staffEmbed.WithTitle("❌ Stake Cancelled")
+                                              .WithDescription($"User: {displayName} – the **{GpFormatter.Format(stake.AmountK)}** stake was cancelled by user.")
+                                              .WithColor(Color.Orange);
+                                }
+
+                                await msg.ModifyAsync(mb =>
+                                {
+                                    mb.Embed = staffEmbed.Build();
+                                    mb.Components = new ComponentBuilder().Build(); // Remove all buttons
+                                });
+                            }
+                        }
                         await Task.Delay(100); // Rate limit protection
                     }
                     catch
@@ -160,9 +183,9 @@ namespace Server.Communication.Discord.Commands
                 {
                     sbGame.AppendLine("`STAKE`");
                     sbAmount.AppendLine($"`{GpFormatter.Format(stake.AmountK)}`");
-                    if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue && ctx.Guild != null)
+                    if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue && Context.Guild != null)
                     {
-                        var url = $"https://discord.com/channels/{ctx.Guild.Id}/{stake.UserChannelId}/{stake.UserMessageId}";
+                        var url = $"https://discord.com/channels/{Context.Guild.Id}/{stake.UserChannelId}/{stake.UserMessageId}";
                         sbPanel.AppendLine($"[Click Here]({url})");
                     }
                     else
@@ -203,15 +226,18 @@ namespace Server.Communication.Discord.Commands
                 {
                     try
                     {
-                        var channel = await ctx.Client.GetChannelAsync(game.ChannelId.Value);
-                        var msg = await channel.GetMessageAsync(game.MessageId.Value);
-
-                        await msg.ModifyAsync(mb =>
+                        var channel = Context.Client.GetChannel(game.ChannelId.Value) as IMessageChannel;
+                        if (channel != null)
                         {
-                            mb.ClearEmbeds();
-                            if (msg.Embeds.Count > 0) mb.AddEmbed(msg.Embeds[0]);
-                            mb.ClearComponents(); // Remove all buttons
-                        });
+                            var msg = await channel.GetMessageAsync(game.MessageId.Value) as IUserMessage;
+                            if (msg != null)
+                            {
+                                await msg.ModifyAsync(mb =>
+                                {
+                                    mb.Components = new ComponentBuilder().Build(); // Remove all buttons
+                                });
+                            }
+                        }
                         await Task.Delay(100); // Rate limit protection
                     }
                     catch
@@ -224,9 +250,9 @@ namespace Server.Communication.Discord.Commands
                 {
                     sbGame.AppendLine("`BLACKJACK`");
                     sbAmount.AppendLine($"`{GpFormatter.Format(totalBet)}`");
-                    if (game.ChannelId.HasValue && game.MessageId.HasValue && ctx.Guild != null)
+                    if (game.ChannelId.HasValue && game.MessageId.HasValue && Context.Guild != null)
                     {
-                        var url = $"https://discord.com/channels/{ctx.Guild.Id}/{game.ChannelId}/{game.MessageId}";
+                        var url = $"https://discord.com/channels/{Context.Guild.Id}/{game.ChannelId}/{game.MessageId}";
                         sbPanel.AppendLine($"[Click Here]({url})");
                     }
                     else
@@ -246,20 +272,20 @@ namespace Server.Communication.Discord.Commands
 
             if (cancelledCount > 0)
             {
-                var embed = new DiscordEmbedBuilder()
+                var embed = new EmbedBuilder()
                     .WithTitle($"Games Cancelled ({cancelledCount})")
                     .WithDescription("This is a short-hand view of the cancelled games.")
-                    .WithColor(DiscordColor.Gold)
-                    .WithThumbnail("https://i.imgur.com/HwpWAYS.gif")
+                    .WithColor(Color.Gold)
+                    .WithThumbnailUrl("https://i.imgur.com/HwpWAYS.gif")
                     .AddField("Game", sbGame.ToString(), true)
                     .AddField("Amount", sbAmount.ToString(), true)
                     .AddField("Panel", sbPanel.ToString(), true);
 
-                await ctx.RespondAsync(embed);
+                await ReplyAsync(embed: embed.Build());
             }
             else
             {
-                await ctx.RespondAsync("You have no active bets to cancel.");
+                await ReplyAsync("You have no active bets to cancel.");
             }
         }
     }

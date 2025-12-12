@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.WebSocket;
 using Server.Infrastructure;
 using Server.Infrastructure.Database;
 using Server.Infrastructure.Discord;
@@ -62,22 +62,12 @@ namespace Server.Client.Races
                     var guildId = ConfigService.Current.Discord.GuildId;
                     if (client != null && guildId != 0)
                     {
-                        if (client.Guilds.TryGetValue(guildId, out var guild))
+                        var guild = client.GetGuild(guildId);
+                        if (guild != null)
                         {
                             if (ulong.TryParse(userIdentifier, out var userId))
                             {
-                                DiscordMember member = null;
-                                // Try to get from cache first to avoid API rate limits
-                                if (guild.Members.TryGetValue(userId, out var cachedMember))
-                                {
-                                    member = cachedMember;
-                                }
-                                else
-                                {
-                                    // Fallback to API fetch
-                                    member = await guild.GetMemberAsync(userId);
-                                }
-
+                                var member = guild.GetUser(userId);
                                 if (member != null && member.IsStaff())
                                 {
                                     return;
@@ -217,125 +207,144 @@ namespace Server.Client.Races
 
         private async Task FlushAndBroadcastAsync()
         {
-            var race = _activeRace;
-            if (race == null) return;
-
-            bool isEnding = race.Status == RaceStatus.Active && DateTime.UtcNow > race.EndTime;
-
-            if (!_isDirty && !isEnding) return;
-
-            _isDirty = false;
-
-            // 1. Flush to DB (Bulk)
-            var participants = _activeParticipants.Values.ToList();
-            if (participants.Count > 0)
+            try
             {
-                using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
+                var race = _activeRace;
+                if (race == null) return;
+
+                bool isEnding = race.Status == RaceStatus.Active && DateTime.UtcNow > race.EndTime;
+
+                if (!_isDirty && !isEnding) return;
+
+                _isDirty = false;
+
+                // 1. Flush to DB (Bulk)
+                var participants = _activeParticipants.Values.ToList();
+                if (participants.Count > 0)
                 {
-                    var sb = new System.Text.StringBuilder();
-                    sb.Append("INSERT INTO race_participants (RaceId, UserIdentifier, TotalWagered, Username) VALUES ");
-                    
-                    for (int i = 0; i < participants.Count; i++)
+                    using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
                     {
-                        if (i > 0) sb.Append(",");
-                        sb.Append($"(@r{i}, @u{i}, @w{i}, @n{i})");
-                        
-                        cmd.AddParameter($"@r{i}", participants[i].RaceId);
-                        cmd.AddParameter($"@u{i}", participants[i].UserIdentifier);
-                        cmd.AddParameter($"@w{i}", participants[i].TotalWagered);
-                        cmd.AddParameter($"@n{i}", participants[i].Username);
-                    }
-                    
-                    sb.Append(" ON DUPLICATE KEY UPDATE TotalWagered = VALUES(TotalWagered), Username = VALUES(Username)");
-                    
-                    cmd.SetCommand(sb.ToString());
-                    await cmd.ExecuteQueryAsync();
-                }
-            }
+                        var sb = new System.Text.StringBuilder();
+                        sb.Append("INSERT INTO race_participants (RaceId, UserIdentifier, TotalWagered, Username) VALUES ");
 
-            // 2. Handle Ending & Prize Distribution
-            List<string>? distributionLog = null;
-            if (isEnding)
-            {
-                race.Status = RaceStatus.Finished;
-                using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
-                {
-                    cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
-                    cmd.AddParameter("@Status", race.Status.ToString());
-                    cmd.AddParameter("@Id", race.Id);
-                    await cmd.ExecuteQueryAsync();
-                }
-
-                // Distribute Prizes
-                distributionLog = new List<string>();
-                var winners = GetTopParticipants(50); 
-                var prizes = race.GetPrizes();
-                var usersService = _serverManager.UsersService;
-
-                foreach (var prize in prizes)
-                {
-                    int index = prize.Rank - 1;
-                    if (index >= 0 && index < winners.Count)
-                    {
-                        var winner = winners[index];
-                        if (Server.Client.Utils.GpParser.TryParseAmountInK(prize.Prize, out long amountK))
+                        for (int i = 0; i < participants.Count; i++)
                         {
-                            await usersService.AddBalanceAsync(winner.UserIdentifier, amountK);
-                            distributionLog.Add($"**#{prize.Rank}** {winner.Username}: `{prize.Prize}` ✅");
-                            
-                            _serverManager.LogsService.Log(
-                                source: nameof(RaceService),
-                                level: "Info",
-                                userIdentifier: winner.UserIdentifier,
-                                action: "RacePrize",
-                                message: $"Won rank {prize.Rank} in race {race.Id}. Prize: {prize.Prize} ({amountK}k)",
-                                exception: null);
+                            if (i > 0) sb.Append(",");
+                            sb.Append($"(@r{i}, @u{i}, @w{i}, @n{i})");
+
+                            cmd.AddParameter($"@r{i}", participants[i].RaceId);
+                            cmd.AddParameter($"@u{i}", participants[i].UserIdentifier);
+                            cmd.AddParameter($"@w{i}", participants[i].TotalWagered);
+                            cmd.AddParameter($"@n{i}", participants[i].Username);
+                        }
+
+                        sb.Append(" ON DUPLICATE KEY UPDATE TotalWagered = VALUES(TotalWagered), Username = VALUES(Username)");
+
+                        cmd.SetCommand(sb.ToString());
+                        await cmd.ExecuteQueryAsync();
+                    }
+                }
+
+                // 2. Handle Ending & Prize Distribution
+                List<string>? distributionLog = null;
+                if (isEnding)
+                {
+                    race.Status = RaceStatus.Finished;
+                    using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
+                    {
+                        cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
+                        cmd.AddParameter("@Status", race.Status.ToString());
+                        cmd.AddParameter("@Id", race.Id);
+                        await cmd.ExecuteQueryAsync();
+                    }
+
+                    // Distribute Prizes
+                    distributionLog = new List<string>();
+                    var winners = GetTopParticipants(50);
+                    var prizes = race.GetPrizes();
+                    var usersService = _serverManager.UsersService;
+
+                    foreach (var prize in prizes)
+                    {
+                        int index = prize.Rank - 1;
+                        if (index >= 0 && index < winners.Count)
+                        {
+                            var winner = winners[index];
+                            if (Server.Client.Utils.GpParser.TryParseAmountInK(prize.Prize, out long amountK))
+                            {
+                                await usersService.AddBalanceAsync(winner.UserIdentifier, amountK);
+                                distributionLog.Add($"**#{prize.Rank}** {winner.Username}: `{prize.Prize}` ✅");
+
+                                _serverManager.LogsService.Log(
+                                    source: nameof(RaceService),
+                                    level: "Info",
+                                    userIdentifier: winner.UserIdentifier,
+                                    action: "RacePrize",
+                                    message: $"Won rank {prize.Rank} in race {race.Id}. Prize: {prize.Prize} ({amountK}k)",
+                                    exception: null);
+                            }
                         }
                     }
                 }
-            }
 
-            // 3. Update Discord Message
-            if (race.ChannelId != 0 && race.MessageId != 0)
-            {
-                try
+                // 3. Update Discord Message
+                if (race.ChannelId != 0 && race.MessageId != 0)
                 {
-                    var client = _serverManager.DiscordBotHost?.Client;
-                    if (client != null)
+                    try
                     {
-                        var channel = await client.GetChannelAsync(race.ChannelId);
-                        var embed = BuildRaceEmbed(race, GetTopParticipants(10), isEnding, distributionLog);
+                        var client = _serverManager.DiscordBotHost?.Client;
+                        if (client != null)
+                        {
+                            var channel = client.GetChannel(race.ChannelId) as IMessageChannel;
+                            if (channel != null)
+                            {
+                                var embed = BuildRaceEmbed(race, GetTopParticipants(10), isEnding, distributionLog);
 
-                        try
-                        {
-                            var message = await channel.GetMessageAsync(race.MessageId);
-                            await message.ModifyAsync(embed: embed);
-                        }
-                        catch (DSharpPlus.Exceptions.NotFoundException)
-                        {
-                            var newMsg = await channel.SendMessageAsync(embed);
-                            await SetMessageIdAsync(newMsg.Id);
+                                try
+                                {
+                                    var message = await channel.GetMessageAsync(race.MessageId) as IUserMessage;
+                                    if (message != null)
+                                    {
+                                        await message.ModifyAsync(msg => msg.Embed = embed);
+                                    }
+                                    else
+                                    {
+                                        // Message not found or not a user message
+                                        var newMsg = await channel.SendMessageAsync(embed: embed);
+                                        await SetMessageIdAsync(newMsg.Id);
+                                    }
+                                }
+                                catch (Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.NotFound)
+                                {
+                                    var newMsg = await channel.SendMessageAsync(embed: embed);
+                                    await SetMessageIdAsync(newMsg.Id);
+                                }
+                            }
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        _serverManager.LoggerManager.LogError($"Failed to update race leaderboard: {ex}");
+                    }
                 }
-                catch (Exception ex)
+
+                // 4. Cleanup
+                if (isEnding)
                 {
-                    _serverManager.LoggerManager.LogError($"Failed to update race leaderboard: {ex}");
+                    if (_activeRace == race)
+                    {
+                        _activeRace = null!;
+                        _activeParticipants.Clear();
+                    }
                 }
             }
-
-            // 4. Cleanup
-            if (isEnding)
+            catch (Exception ex)
             {
-                if (_activeRace == race)
-                {
-                    _activeRace = null!;
-                    _activeParticipants.Clear();
-                }
+                _serverManager.LoggerManager.LogError($"[RaceService] Critical error in FlushAndBroadcastAsync: {ex}");
             }
         }
 
-        private DSharpPlus.Entities.DiscordEmbed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding, List<string>? distributionLog = null)
+        private Embed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding, List<string>? distributionLog = null)
         {
             var totalWagered = _activeParticipants.Values.Sum(p => p.TotalWagered);
             var totalWageredFormatted = Server.Client.Utils.GpFormatter.Format(totalWagered);
@@ -376,11 +385,11 @@ namespace Server.Client.Races
             var endTimestamp = new DateTimeOffset(race.EndTime).ToUnixTimeSeconds();
             var timeString = isEnding ? "Ended" : $"<t:{endTimestamp}:R>";
 
-            var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle(isEnding ? "🏁  **RACE ENDED**  🏁" : "🏁  **ACTIVE RACE**  🏁")
                 .WithDescription($"Ends: {timeString}\nTotal Wagered: `{totalWageredFormatted}`")
-                .WithColor(isEnding ? DSharpPlus.Entities.DiscordColor.Gray : DSharpPlus.Entities.DiscordColor.Gold)
-                .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
+                .WithColor(isEnding ? Color.DarkGrey : Color.Gold)
+                .WithThumbnailUrl("https://i.imgur.com/e45uYPm.gif")
                 .AddField("🏆 Leaderboard", sb.ToString(), false);
 
             if (isEnding && distributionLog != null && distributionLog.Count > 0)
@@ -393,7 +402,7 @@ namespace Server.Client.Races
             }
 
             embed.WithFooter($"Race ID: {race.Id} • {ServerConfiguration.ShortName}", null)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithCurrentTimestamp();
 
             if (!isEnding)
             {

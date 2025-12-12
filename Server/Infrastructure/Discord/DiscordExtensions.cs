@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
-using DSharpPlus.Entities;
+using Discord.WebSocket;
 
 namespace Server.Infrastructure.Discord
 {
     public static class DiscordExtensions
     {
-        public static bool IsStaff(this DiscordMember? member)
+        public static bool IsStaff(this SocketGuildUser? member)
         {
             if (member == null) return false;
 

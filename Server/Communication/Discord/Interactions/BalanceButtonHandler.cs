@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
+using Discord;
+using Discord.WebSocket;
 using Server.Client.Transactions;
 using Server.Client.Users;
 using Server.Client.Utils;
+using Server.Infrastructure;
 using Server.Infrastructure.Discord;
 using Server.Communication.Discord.Commands;
 
@@ -14,113 +14,109 @@ namespace Server.Communication.Discord.Interactions
 {
     public static class BalanceButtonHandler
     {
-        public static async Task Handle(DiscordClient client, ComponentInteractionCreatedEventArgs e)
+        public static async Task Handle(DiscordSocketClient client, SocketMessageComponent component)
         {
-            if (RateLimiter.IsRateLimited(e.User.Id))
+            if (RateLimiter.IsRateLimited(component.User.Id))
             {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("You're doing that too fast.").AsEphemeral(true));
+                await component.RespondAsync("You're doing that too fast.", ephemeral: true);
                 return;
             }
 
             // All balance buttons are user-side; only the invoker may use them
-            var identifier = e.User?.Id.ToString();
+            var identifier = component.User?.Id.ToString();
             if (string.IsNullOrEmpty(identifier))
                 return;
 
             // Check ownership if the ID contains the user ID
             // Format: bal_{action}_{userId}_{args}
-            var parts = e.Id.Split('_');
+            var parts = component.Data.CustomId.Split('_');
             if (parts.Length >= 3)
             {
                 var ownerId = parts[2];
                 if (!string.Equals(ownerId, identifier, StringComparison.OrdinalIgnoreCase))
                 {
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                        new DiscordInteractionResponseBuilder().WithContent("This is not your balance menu.").AsEphemeral(true));
+                    await component.RespondAsync("This is not your balance menu.", ephemeral: true);
                     return;
                 }
             }
 
-            if (e.Id.StartsWith("bal_history", StringComparison.OrdinalIgnoreCase))
+            if (component.Data.CustomId.StartsWith("bal_history", StringComparison.OrdinalIgnoreCase))
             {
-                await HandleHistoryAsync(e);
+                await HandleHistoryAsync(component);
                 return;
             }
 
-            if (e.Id.StartsWith("bal_wallet", StringComparison.OrdinalIgnoreCase))
+            if (component.Data.CustomId.StartsWith("bal_wallet", StringComparison.OrdinalIgnoreCase))
             {
-                await HandleWalletAsync(e);
+                await HandleWalletAsync(component);
                 return;
             }
 
-            if (e.Id.StartsWith("bal_deposit", StringComparison.OrdinalIgnoreCase))
+            if (component.Data.CustomId.StartsWith("bal_deposit", StringComparison.OrdinalIgnoreCase))
             {
-                await HandleDepositInfoAsync(e);
+                await HandleDepositInfoAsync(component);
                 return;
             }
 
-            if (e.Id.StartsWith("bal_withdraw", StringComparison.OrdinalIgnoreCase))
+            if (component.Data.CustomId.StartsWith("bal_withdraw", StringComparison.OrdinalIgnoreCase))
             {
-                await HandleWithdrawInfoAsync(e);
+                await HandleWithdrawInfoAsync(component);
                 return;
             }
 
-            if (e.Id.StartsWith("bal_buy", StringComparison.OrdinalIgnoreCase))
+            if (component.Data.CustomId.StartsWith("bal_buy", StringComparison.OrdinalIgnoreCase))
             {
                 // Placeholder: do nothing for now
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.DeferredMessageUpdate);
+                await component.DeferAsync();
                 return;
             }
         }
 
-        private static async Task HandleWalletAsync(ComponentInteractionCreatedEventArgs e)
+        private static async Task HandleWalletAsync(SocketMessageComponent component)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
 
-            var user = await usersService.EnsureUserAsync(e.User.Id.ToString(), e.User.Username, e.User.Username);
+            var user = await usersService.EnsureUserAsync(component.User.Id.ToString(), component.User.Username, component.User.Username);
             if (user == null)
                 return;
 
             var formatted = GpFormatter.Format(user.Balance);
 
             // Build embed
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle("Balance")
-                .WithDescription($"{e.User.Username}, you have `{formatted}`.")
-                .WithColor(DiscordColor.Gold)
-                .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
+                .WithDescription($"{component.User.Username}, you have `{formatted}`.")
+                .WithColor(Color.Gold)
+                .WithThumbnailUrl("https://i.imgur.com/DHXgtn5.gif")
                 .WithFooter(ServerConfiguration.ServerName)
-                .WithTimestamp(System.DateTimeOffset.UtcNow);
+                .WithCurrentTimestamp();
 
             // Buttons row 1
-            var row1 = new[]
+            var builder = new ComponentBuilder()
+                .WithButton("Buy", $"bal_buy_{component.User.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.BuyEmojiId, "buy", false))
+                .WithButton("Deposit", $"bal_deposit_{component.User.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.DepositEmojiId, "deposit", false))
+                .WithButton(" ", $"bal_withdraw_{component.User.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.WithdrawEmojiId, "withdraw", false))
+                .WithButton(" ", $"bal_history_{component.User.Id}", ButtonStyle.Secondary, new Emote(DiscordIds.BalanceSheetEmojiId, "history", false));
+
+            await component.UpdateAsync(msg =>
             {
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_buy_{e.User.Id}", "Buy", emoji: new DiscordComponentEmoji(DiscordIds.BuyEmojiId)),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_deposit_{e.User.Id}", "Deposit", emoji: new DiscordComponentEmoji(DiscordIds.DepositEmojiId)),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_withdraw_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.WithdrawEmojiId)),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{e.User.Id}", " ", emoji: new DiscordComponentEmoji(DiscordIds.BalanceSheetEmojiId)),
-            };
-
-            var builder = new DiscordInteractionResponseBuilder()
-                .AddEmbed(embed)
-                .AddComponents(row1);
-
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
+                msg.Embed = embed.Build();
+                msg.Components = builder.Build();
+            });
         }
 
-        private static async Task HandleHistoryAsync(ComponentInteractionCreatedEventArgs e)
+        private static async Task HandleHistoryAsync(SocketMessageComponent component)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
             var usersService = env.ServerManager.UsersService;
 
-            var identifier = e.User.Id.ToString();
+            var identifier = component.User.Id.ToString();
 
             // Parse page from custom id: bal_history_{userId} or bal_history_{userId}_{page}
             var page = 1;
-            var idParts = e.Id.Split('_');
+            var idParts = component.Data.CustomId.Split('_');
             // bal, history, userId, page
             if (idParts.Length == 4 && int.TryParse(idParts[3], out var parsedPage) && parsedPage > 0)
             {
@@ -132,17 +128,17 @@ namespace Server.Communication.Discord.Interactions
             var user = await usersService.GetUserAsync(identifier);
             var (adjustments, totalCount) = await balanceAdjustmentsService.GetAdjustmentsPageForUserAsync(identifier, page, pageSize);
 
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle("Transaction History")
-                .WithColor(DiscordColor.Blurple)
-                //.WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
-                .WithThumbnail("https://i.imgur.com/Axcs6YE.gif")
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithColor(Color.Blue)
+                //.WithThumbnailUrl("https://i.imgur.com/DHXgtn5.gif")
+                .WithThumbnailUrl("https://i.imgur.com/Axcs6YE.gif")
+                .WithCurrentTimestamp();
 
             if (user != null)
             {
                 var balanceText = GpFormatter.Format(user.Balance);
-                embed.WithDescription($"{e.User.Username}, your current balance is `{balanceText}`.");
+                embed.WithDescription($"{component.User.Username}, your current balance is `{balanceText}`.");
             }
 
             if (adjustments == null || adjustments.Count == 0)
@@ -173,60 +169,48 @@ namespace Server.Communication.Discord.Interactions
             }
 
             // Pagination buttons
-            var components = new System.Collections.Generic.List<DiscordComponent>();
+            var builder = new ComponentBuilder();
             if (page > 1)
             {
-                components.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{identifier}_{page - 1}", "⏮ Prev"));
+                builder.WithButton("⏮ Prev", $"bal_history_{identifier}_{page - 1}", ButtonStyle.Secondary);
             }
             
             // Add Wallet button in the middle
-            components.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_wallet_{identifier}", "Wallet", emoji: new DiscordComponentEmoji(DiscordIds.WalletEmojiId)));
+            builder.WithButton("Wallet", $"bal_wallet_{identifier}", ButtonStyle.Secondary, new Emote(DiscordIds.WalletEmojiId, "wallet", false));
 
             if (adjustments != null && adjustments.Count == pageSize && page * pageSize < totalCount)
             {
-                components.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bal_history_{identifier}_{page + 1}", "Next ⏭"));
-            }
-
-            var builder = new DiscordInteractionResponseBuilder()
-                .AddEmbed(embed);
-
-            if (components.Count > 0)
-            {
-                builder.AddComponents(components);
+                builder.WithButton("Next ⏭", $"bal_history_{identifier}_{page + 1}", ButtonStyle.Secondary);
             }
 
             // Update the message instead of sending a new one
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, builder);
+            await component.UpdateAsync(msg =>
+            {
+                msg.Embed = embed.Build();
+                msg.Components = builder.Build();
+            });
         }
 
-        private static async Task HandleDepositInfoAsync(ComponentInteractionCreatedEventArgs e)
+        private static async Task HandleDepositInfoAsync(SocketMessageComponent component)
         {
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle("How to Deposit")
                 .WithDescription("Use `!d <amount>` or `!deposit <amount>` to create a deposit request.\n\nExamples:\n`!d 100` → deposit 100M\n`!d 0.5` → deposit 0.5M")
-                .WithColor(DiscordColor.Gold)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithColor(Color.Gold)
+                .WithCurrentTimestamp();
 
-            var builder = new DiscordInteractionResponseBuilder()
-                .AddEmbed(embed)
-                .AsEphemeral(true);
-
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, builder);
+            await component.RespondAsync(embed: embed.Build(), ephemeral: true);
         }
 
-        private static async Task HandleWithdrawInfoAsync(ComponentInteractionCreatedEventArgs e)
+        private static async Task HandleWithdrawInfoAsync(SocketMessageComponent component)
         {
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle("How to Withdraw")
                 .WithDescription("Use `!w <amount>` or `!withdraw <amount>` to create a withdrawal request.\n\nExamples:\n`!w 100` → withdraw 100M\n`!w 0.5` → withdraw 0.5M")
-                .WithColor(DiscordColor.Gold)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithColor(Color.Gold)
+                .WithCurrentTimestamp();
 
-            var builder = new DiscordInteractionResponseBuilder()
-                .AddEmbed(embed)
-                .AsEphemeral(true);
-
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, builder);
+            await component.RespondAsync(embed: embed.Build(), ephemeral: true);
         }
     }
 }

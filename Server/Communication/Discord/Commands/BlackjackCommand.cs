@@ -1,10 +1,9 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 using Server.Client.Blackjack;
 using Server.Client.Users;
 using Server.Client.Utils;
@@ -13,28 +12,28 @@ using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class BlackjackCommand : BaseCommandModule
+    public class BlackjackCommand : ModuleBase<SocketCommandContext>
     {
         private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
 
         [Command("blackjack")]
-        [Aliases("bj")]
-        public async Task Blackjack(CommandContext ctx, string amount = null)
+        [Alias("bj")]
+        public async Task Blackjack(string amount = null)
         {
-            if (!await DiscordChannelPermissionService.EnforceBlackjackChannelAsync(ctx))
+            if (!await DiscordChannelPermissionService.EnforceBlackjackChannelAsync(Context))
             {
                 return;
             }
 
-            if (RateLimiter.IsRateLimited(ctx.User.Id, "blackjack", RateLimitInterval))
+            if (RateLimiter.IsRateLimited(Context.User.Id, "blackjack", RateLimitInterval))
             {
-                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                await ReplyAsync("You're doing that too fast. Please wait a moment.");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(amount))
             {
-                await ctx.RespondAsync("Please specify an amount. Usage: `!bj <amount>` (e.g. `!bj 100m`).");
+                await ReplyAsync("Please specify an amount. Usage: `!bj <amount>` (e.g. `!bj 100m`).");
                 return;
             }
 
@@ -43,7 +42,8 @@ namespace Server.Communication.Discord.Commands
             var usersService = serverManager.UsersService;
             var blackjackService = serverManager.BlackjackService;
 
-            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var displayName = (Context.User as SocketGuildUser)?.DisplayName ?? Context.User.Username;
+            var user = await usersService.EnsureUserAsync(Context.User.Id.ToString(), Context.User.Username, displayName);
             if (user == null)
                 return;
 
@@ -55,25 +55,25 @@ namespace Server.Communication.Discord.Commands
             }
             else if (!GpParser.TryParseAmountInK(amount, out betAmount))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!blackjack 100`, `!bj 0.5`, `!bj 1b`, `!bj 1000m`, or `!blackjack` for all-in.");
+                await ReplyAsync("Invalid amount. Examples: `!blackjack 100`, `!bj 0.5`, `!bj 1b`, `!bj 1000m`, or `!blackjack` for all-in.");
                 return;
             }
 
             if (betAmount < GpFormatter.MinimumBetAmountK)
             {
-                await ctx.RespondAsync($"Minimum bet is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
+                await ReplyAsync($"Minimum bet is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
                 return;
             }
 
             if (user.Balance < betAmount)
             {
-                await ctx.RespondAsync("You don't have enough balance for this bet.");
+                await ReplyAsync("You don't have enough balance for this bet.");
                 return;
             }
 
             if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount))
             {
-                await ctx.RespondAsync("Failed to lock balance for this game. Please try again.");
+                await ReplyAsync("Failed to lock balance for this game. Please try again.");
                 return;
             }
 
@@ -84,7 +84,7 @@ namespace Server.Communication.Discord.Commands
             if (game == null)
             {
                 await usersService.AddBalanceAsync(user.Identifier, betAmount);
-                await ctx.RespondAsync("Failed to create blackjack game. Please try again later.");
+                await ReplyAsync("Failed to create blackjack game. Please try again later.");
                 return;
             }
 
@@ -94,41 +94,25 @@ namespace Server.Communication.Discord.Commands
                 user = await usersService.GetUserAsync(user.Identifier);
             }
 
-            var embed = BuildGameEmbed(game, user, ctx.Client);
+            var embed = BuildGameEmbed(game, user, Context.Client);
             var buttons = BuildButtons(game);
 
-            var builder = new DiscordMessageBuilder().AddEmbed(embed);
-            if (buttons.Length > 0)
+            var builder = new ComponentBuilder();
+            foreach (var btn in buttons)
             {
-                builder.AddComponents(buttons);
+                builder.WithButton(btn);
             }
 
-            DSharpPlus.Entities.DiscordMessage message;
-            try
-            {
-                message = await ctx.RespondAsync(builder);
-            }
-            catch (DSharpPlus.Exceptions.BadRequestException)
-            {
-                // Retry without emojis in buttons
-                builder.ClearComponents();
-                var textButtons = BuildButtons(game, useEmojis: false);
-                if (textButtons.Length > 0)
-                {
-                    builder.AddComponents(textButtons);
-                }
-                message = await ctx.RespondAsync(builder);
-            }
-
+            var message = await ReplyAsync(embed: embed.Build(), components: builder.Build());
             await blackjackService.UpdateMessageInfoAsync(game.Id, message.Id, message.Channel.Id);
         }
 
-        public static DiscordEmbedBuilder BuildGameEmbed(BlackjackGame game, User user, DiscordClient client = null)
+        public static EmbedBuilder BuildGameEmbed(BlackjackGame game, User user, DiscordSocketClient client = null)
         {
-            var embed = new DiscordEmbedBuilder()
-                .WithColor(DiscordColor.Gold)
+            var embed = new EmbedBuilder()
+                .WithColor(Color.Gold)
                 .WithFooter($"{ServerConfiguration.ServerName} • {DateTime.UtcNow:yyyy-MM-dd HH:mm}")
-                .WithTimestamp(null); // Timestamp handled in footer text
+                .WithCurrentTimestamp();
 
             var currentHand = game.GetCurrentHand();
             var dealerTotal = game.DealerHand.GetTotal();
@@ -201,26 +185,26 @@ namespace Server.Communication.Discord.Commands
                 {
                     if (game.PlayerHands.Any(h => h.IsBlackjack()))
                     {
-                        embed.WithColor(DiscordColor.Magenta); // Purple for Blackjack
+                        embed.WithColor(Color.Magenta); // Purple for Blackjack
                         imageUrl = "https://i.imgur.com/ecYpqiV.gif"; // Blackjack
                     }
                     else
                     {
-                        embed.WithColor(DiscordColor.Green);
+                        embed.WithColor(Color.Green);
                         imageUrl = "https://i.imgur.com/J2JWsJD.gif"; // Win
                     }
-                    resultText = $"🎉 You won **{GpFormatter.Format(netChange)}**\n";
+                    resultText = $"Win: **{GpFormatter.Format(totalPayout)}**\n";
                 }
                 else if (netChange < 0)
                 {
-                    embed.WithColor(DiscordColor.Red);
-                    resultText = $"You lost **{GpFormatter.Format(Math.Abs(netChange))}**\n";
+                    embed.WithColor(Color.Red);
+                    resultText = $"Lost: **{GpFormatter.Format(Math.Abs(netChange))}**\n";
                     imageUrl = "https://i.imgur.com/jtiAW54.gif"; // Lost
                 }
                 else
                 {
-                    embed.WithColor(DiscordColor.Orange);
-                    resultText = $"The dealer has scored the same as you.\nYou received back **{GpFormatter.Format(totalPayout)}**\n";
+                    embed.WithColor(Color.Orange);
+                    resultText = $"Push: **{GpFormatter.Format(totalPayout)}**\n";
                     imageUrl = "https://i.imgur.com/VOnBLHK.gif"; // Draw
                 }
             }
@@ -233,7 +217,7 @@ namespace Server.Communication.Discord.Commands
                 }
             }
 
-            embed.WithThumbnail(imageUrl);
+            embed.WithThumbnailUrl(imageUrl);
 
             // Bet Info
             var betAmount = currentHand?.BetAmount ?? game.BetAmount;
@@ -242,7 +226,15 @@ namespace Server.Communication.Discord.Commands
                 betAmount = game.PlayerHands.Sum(h => h.BetAmount);
             }
             
-            var description = $"{resultText}Bet: **{GpFormatter.Format(betAmount)}**\nBalance: **{GpFormatter.Format(user.Balance)}**\n\n";
+            string description;
+            if (isGameFinished)
+            {
+                description = $"{resultText}Balance: **{GpFormatter.Format(user.Balance)}**\n\n";
+            }
+            else
+            {
+                description = $"{resultText}Bet: **{GpFormatter.Format(betAmount)}**\nBalance: **{GpFormatter.Format(user.Balance)}**\n\n";
+            }
             
             // Player hands
             string playerHandsText = "";
@@ -302,20 +294,20 @@ namespace Server.Communication.Discord.Commands
             return embed;
         }
 
-        public static DiscordComponent[] BuildButtons(BlackjackGame game, bool useEmojis = true)
+        public static ButtonBuilder[] BuildButtons(BlackjackGame game, bool useEmojis = true)
         {
             if (game.Status == BlackjackGameStatus.Finished)
             {
-                return Array.Empty<DiscordComponent>();
+                return Array.Empty<ButtonBuilder>();
             }
 
             var currentHand = game.GetCurrentHand();
             if (currentHand == null)
             {
-                return Array.Empty<DiscordComponent>();
+                return Array.Empty<ButtonBuilder>();
             }
 
-            var buttons = new System.Collections.Generic.List<DiscordButtonComponent>();
+            var buttons = new System.Collections.Generic.List<ButtonBuilder>();
 
             // Check if we are waiting for dealer (e.g. player has 21/BJ but dealer has Ace)
             bool isInsuranceOffered = game.DealerHand.Cards.Count > 0 
@@ -329,9 +321,9 @@ namespace Server.Communication.Discord.Commands
             if (!currentHand.IsStanding && !currentHand.IsBusted && !is21)
             {
                 if (useEmojis && DiscordIds.BlackjackHitEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_hit_{game.Id}", "Hit", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackHitEmojiId)));
+                    buttons.Add(new ButtonBuilder("Hit", $"bj_hit_{game.Id}", ButtonStyle.Secondary, emote: Emote.Parse($"<:e:{DiscordIds.BlackjackHitEmojiId}>")));
                 else
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_hit_{game.Id}", "Hit"));
+                    buttons.Add(new ButtonBuilder("Hit", $"bj_hit_{game.Id}", ButtonStyle.Secondary));
             }
 
             // Stand button
@@ -339,9 +331,9 @@ namespace Server.Communication.Discord.Commands
             if (!currentHand.IsStanding && !currentHand.IsBusted)
             {
                 if (useEmojis && DiscordIds.BlackjackStandEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_stand_{game.Id}", "Stand", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackStandEmojiId)));
+                    buttons.Add(new ButtonBuilder("Stand", $"bj_stand_{game.Id}", ButtonStyle.Secondary, emote: Emote.Parse($"<:e:{DiscordIds.BlackjackStandEmojiId}>")));
                 else
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_stand_{game.Id}", "Stand"));
+                    buttons.Add(new ButtonBuilder("Stand", $"bj_stand_{game.Id}", ButtonStyle.Secondary));
             }
 
             // Double button
@@ -349,9 +341,9 @@ namespace Server.Communication.Discord.Commands
             if (currentHand.CanDouble() && !is21)
             {
                 if (useEmojis && DiscordIds.BlackjackDoubleEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_double_{game.Id}", "Double", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackDoubleEmojiId)));
+                    buttons.Add(new ButtonBuilder("Double", $"bj_double_{game.Id}", ButtonStyle.Secondary, emote: Emote.Parse($"<:e:{DiscordIds.BlackjackDoubleEmojiId}>")));
                 else
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_double_{game.Id}", "Double"));
+                    buttons.Add(new ButtonBuilder("Double", $"bj_double_{game.Id}", ButtonStyle.Secondary));
             }
 
             // Split button
@@ -359,15 +351,15 @@ namespace Server.Communication.Discord.Commands
             if (currentHand.CanSplit())
             {
                 if (useEmojis && DiscordIds.BlackjackSplitEmojiId > 0)
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_split_{game.Id}", "Split", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackSplitEmojiId)));
+                    buttons.Add(new ButtonBuilder("Split", $"bj_split_{game.Id}", ButtonStyle.Secondary, emote: Emote.Parse($"<:e:{DiscordIds.BlackjackSplitEmojiId}>")));
                 else
-                    buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_split_{game.Id}", "Split"));
+                    buttons.Add(new ButtonBuilder("Split", $"bj_split_{game.Id}", ButtonStyle.Secondary));
             }
 
             // Insurance button
             if (isInsuranceOffered && currentHand.Cards.Count == 2)
             {
-                buttons.Add(new DiscordButtonComponent(DiscordButtonStyle.Danger, $"bj_ins_{game.Id}", "Insurance"));
+                buttons.Add(new ButtonBuilder("Insurance", $"bj_ins_{game.Id}", ButtonStyle.Danger));
             }
 
             return buttons.ToArray();

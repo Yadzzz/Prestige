@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Client.Transactions;
@@ -12,42 +12,42 @@ using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class AdminBalanceCommand : BaseCommandModule
+    public class AdminBalanceCommand : ModuleBase<SocketCommandContext>
     {
         [Command("add")]
-        public async Task AddAsync(CommandContext ctx, string amount, DiscordMember member)
+        public async Task AddAsync(string amount, SocketGuildUser member)
         {
-            if (!ctx.Member.IsStaff())
+            if (!(Context.User as SocketGuildUser).IsStaff())
             {
-                await ctx.RespondAsync("You are not authorized to use this command.");
+                await ReplyAsync("You are not authorized to use this command.");
                 return;
             }
-            await HandleBalanceChangeAsync(ctx, amount, member, BalanceAdjustmentType.AdminAdd);
+            await HandleBalanceChangeAsync(amount, member, BalanceAdjustmentType.AdminAdd);
         }
 
         [Command("gift")]
-        public async Task GiftAsync(CommandContext ctx, string amount, DiscordMember member)
+        public async Task GiftAsync(string amount, SocketGuildUser member)
         {
-            if (!ctx.Member.IsStaff())
+            if (!(Context.User as SocketGuildUser).IsStaff())
             {
-                await ctx.RespondAsync("You are not authorized to use this command.");
+                await ReplyAsync("You are not authorized to use this command.");
                 return;
             }
-            await HandleBalanceChangeAsync(ctx, amount, member, BalanceAdjustmentType.AdminGift);
+            await HandleBalanceChangeAsync(amount, member, BalanceAdjustmentType.AdminGift);
         }
 
         [Command("remove")]
-        public async Task RemoveAsync(CommandContext ctx, string amount, DiscordMember member)
+        public async Task RemoveAsync(string amount, SocketGuildUser member)
         {
-            if (!ctx.Member.IsStaff())
+            if (!(Context.User as SocketGuildUser).IsStaff())
             {
-                await ctx.RespondAsync("You are not authorized to use this command.");
+                await ReplyAsync("You are not authorized to use this command.");
                 return;
             }
-            await HandleBalanceRemovalAsync(ctx, amount, member);
+            await HandleBalanceRemovalAsync(amount, member);
         }
 
-        private async Task HandleBalanceChangeAsync(CommandContext ctx, string amount, DiscordMember targetMember, BalanceAdjustmentType adjustmentType)
+        private async Task HandleBalanceChangeAsync(string amount, SocketGuildUser targetMember, BalanceAdjustmentType adjustmentType)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
@@ -55,30 +55,30 @@ namespace Server.Communication.Discord.Commands
 
             if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!add 10 @user`, `!add 0.5 @user`, `!add 1b @user`, `!add 1000m @user`.");
+                await ReplyAsync("Invalid amount. Examples: `!add 10 @user`, `!add 0.5 @user`, `!add 1b @user`, `!add 1000m @user`.");
                 return;
             }
             if (amountK <= 0)
             {
-                await ctx.RespondAsync("Amount must be greater than zero.");
+                await ReplyAsync("Amount must be greater than zero.");
                 return;
             }
 
             var targetUser = await usersService.EnsureUserAsync(targetMember.Id.ToString(), targetMember.Username, targetMember.DisplayName);
             if (targetUser == null)
             {
-                await ctx.RespondAsync("Failed to resolve target user.");
+                await ReplyAsync("Failed to resolve target user.");
                 return;
             }
 
             var success = await usersService.AddBalanceAsync(targetUser.Identifier, amountK);
             if (!success)
             {
-                await ctx.RespondAsync("Failed to update user balance. Please try again later.");
+                await ReplyAsync("Failed to update user balance. Please try again later.");
                 return;
             }
 
-            var staffIdentifier = ctx.Member?.Id.ToString() ?? ctx.User.Id.ToString();
+            var staffIdentifier = Context.User.Id.ToString();
             await balanceAdjustmentsService.RecordAdjustmentAsync(
                 targetUser,
                 staffIdentifier,
@@ -90,25 +90,23 @@ namespace Server.Communication.Discord.Commands
             var prettyAmount = GpFormatter.Format(amountK);
             var newBalanceText = updatedUser != null ? GpFormatter.Format(updatedUser.Balance) : "unknown";
 
-            var staffName = ctx.Member?.DisplayName ?? ctx.User.Username;
+            var staffName = (Context.User as SocketGuildUser)?.DisplayName ?? Context.User.Username;
 
             var title = adjustmentType == BalanceAdjustmentType.AdminGift ? "Gifted" : "Added Balance";
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle(title)
                 .AddField("Amount", $"**{prettyAmount}**", true)
                 .AddField("Member", targetMember.Username, true)
                 .AddField("Staff", staffName, true)
-                .WithColor(DiscordColor.Green)
-                .WithThumbnail(adjustmentType == BalanceAdjustmentType.AdminGift ? "https://i.imgur.com/vFstFPx.gif" : "https://i.imgur.com/0qEQpNC.gif")
+                .WithColor(Color.Green)
+                .WithThumbnailUrl(adjustmentType == BalanceAdjustmentType.AdminGift ? "https://i.imgur.com/vFstFPx.gif" : "https://i.imgur.com/0qEQpNC.gif")
                 .WithFooter(ServerConfiguration.ServerName)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithCurrentTimestamp();
 
-            await ctx.RespondAsync(new DiscordMessageBuilder()
-                .WithContent(targetMember.Mention)
-                .AddEmbed(embed));
+            await ReplyAsync(message: targetMember.Mention, embed: embed.Build());
         }
 
-        private async Task HandleBalanceRemovalAsync(CommandContext ctx, string amount, DiscordMember targetMember)
+        private async Task HandleBalanceRemovalAsync(string amount, SocketGuildUser targetMember)
         {
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
@@ -116,30 +114,30 @@ namespace Server.Communication.Discord.Commands
 
             if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!remove 10 @user`, `!remove 0.5 @user`, `!remove 1b @user`, `!remove 1000m @user`.");
+                await ReplyAsync("Invalid amount. Examples: `!remove 10 @user`, `!remove 0.5 @user`, `!remove 1b @user`, `!remove 1000m @user`.");
                 return;
             }
             if (amountK <= 0)
             {
-                await ctx.RespondAsync("Amount must be greater than zero.");
+                await ReplyAsync("Amount must be greater than zero.");
                 return;
             }
 
             var targetUser = await usersService.EnsureUserAsync(targetMember.Id.ToString(), targetMember.Username, targetMember.DisplayName);
             if (targetUser == null)
             {
-                await ctx.RespondAsync("Failed to resolve target user.");
+                await ReplyAsync("Failed to resolve target user.");
                 return;
             }
 
             var success = await usersService.RemoveBalanceAsync(targetUser.Identifier, amountK);
             if (!success)
             {
-                await ctx.RespondAsync("Failed to update user balance. Please try again later.");
+                await ReplyAsync("Failed to update user balance. Please try again later.");
                 return;
             }
 
-            var staffIdentifier = ctx.Member?.Id.ToString() ?? ctx.User.Id.ToString();
+            var staffIdentifier = Context.User.Id.ToString();
             await balanceAdjustmentsService.RecordAdjustmentAsync(
                 targetUser,
                 staffIdentifier,
@@ -151,16 +149,14 @@ namespace Server.Communication.Discord.Commands
             var prettyAmount = GpFormatter.Format(amountK);
             var newBalanceText = updatedUser != null ? GpFormatter.Format(updatedUser.Balance) : "unknown";
 
-            var embed = new DiscordEmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle("Balance Adjusted")
                 .WithDescription($"Your balance was decreased by **{prettyAmount}** by staff.")
                 .AddField("Balance", newBalanceText, true)
-                .WithColor(DiscordColor.Red)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithColor(Color.Red)
+                .WithCurrentTimestamp();
 
-            await ctx.RespondAsync(new DiscordMessageBuilder()
-                .WithContent(targetMember.Mention)
-                .AddEmbed(embed));
+            await ReplyAsync(message: targetMember.Mention, embed: embed.Build());
         }
     }
 }

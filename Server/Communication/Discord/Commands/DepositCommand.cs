@@ -1,37 +1,36 @@
 using System;
 using System.Threading.Tasks;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 using Server.Client.Users;
 using Server.Client.Transactions;
 using Server.Client.Utils;
 using Server.Infrastructure;
 using Server.Infrastructure.Discord;
-using DSharpPlus;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class DepositCommand : BaseCommandModule
+    public class DepositCommand : ModuleBase<SocketCommandContext>
     {
         [Command("d")]
-        [Aliases("deposit")] 
-        public async Task Deposit(CommandContext ctx, string amount = null)
+        [Alias("deposit")] 
+        public async Task Deposit(string amount = null)
         {
-            if (!await DiscordChannelPermissionService.EnforceDepositChannelAsync(ctx))
+            if (!await DiscordChannelPermissionService.EnforceDepositChannelAsync(Context))
             {
                 return;
             }
 
-            if (RateLimiter.IsRateLimited(ctx.User.Id))
+            if (RateLimiter.IsRateLimited(Context.User.Id))
             {
-                await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                await ReplyAsync("You're doing that too fast. Please wait a moment.");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(amount))
             {
-                await ctx.RespondAsync("Please specify an amount. Usage: `!d <amount>` (e.g. `!d 100m`).");
+                await ReplyAsync("Please specify an amount. Usage: `!d <amount>` (e.g. `!d 100m`).");
                 return;
             }
 
@@ -40,20 +39,20 @@ namespace Server.Communication.Discord.Commands
             var usersService = serverManager.UsersService;
             var transactionsService = serverManager.TransactionsService;
 
-            var user = await usersService.EnsureUserAsync(ctx.User.Id.ToString(), ctx.User.Username, ctx.Member.DisplayName);
+            var user = await usersService.EnsureUserAsync(Context.User.Id.ToString(), Context.User.Username, (Context.User as SocketGuildUser)?.DisplayName ?? Context.User.Username);
             if (user == null)
                 return;
 
             if (!GpParser.TryParseAmountInK(amount, out var amountK))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!d 100`, `!d 0.5`, `!d 1b`, `!d 1000m`.");
+                await ReplyAsync("Invalid amount. Examples: `!d 100`, `!d 0.5`, `!d 1b`, `!d 1000m`.");
                 return;
             }
 
             var transaction = await transactionsService.CreateDepositRequestAsync(user, amountK);
             if (transaction == null)
             {
-                await ctx.RespondAsync("Failed to create deposit request. Please try again later.");
+                await ReplyAsync("Failed to create deposit request. Please try again later.");
                 await serverManager.LogsService.LogAsync(
                     source: nameof(DepositCommand),
                     level: "Error",
@@ -68,51 +67,53 @@ namespace Server.Communication.Discord.Commands
             var balanceText = GpFormatter.Format(user.Balance);
             var expectedBalanceText = GpFormatter.Format(user.Balance + transaction.AmountK);
 
-            var pendingEmbed = new DiscordEmbedBuilder()
+            var pendingEmbed = new EmbedBuilder()
                 .WithTitle("Deposit Request")
                 .WithDescription("Your deposit request was sent for staff review.")
                 .AddField("Balance", $"**{balanceText}**", true)
                 .AddField("Deposit", $"**{prettyAmount}**", true)
                 .AddField("Expected Balance", $"**{expectedBalanceText}**", true)
-                .WithColor(DiscordColor.Gold)
-                .WithThumbnail("https://i.imgur.com/1hkVfFD.gif")
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithColor(Color.Gold)
+                .WithThumbnailUrl("https://i.imgur.com/1hkVfFD.gif")
+                .WithCurrentTimestamp();
 
-            var userCancelButton = new DiscordButtonComponent(
-                DiscordButtonStyle.Secondary,
-                $"tx_usercancel_{transaction.Id}",
-                "Cancel",
-                emoji: new DiscordComponentEmoji("❌"));
+            // var userCancelButton = new ButtonBuilder()
+            //     .WithLabel("Cancel")
+            //     .WithCustomId($"tx_usercancel_{transaction.Id}")
+            //     .WithStyle(ButtonStyle.Secondary)
+            //     .WithEmote(new Emoji("❌"));
 
-            var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
-                .AddEmbed(pendingEmbed));
-                //.AddComponents(userCancelButton));
+            var userMessage = await ReplyAsync(embed: pendingEmbed.Build());
+                // components: new ComponentBuilder().WithButton(userCancelButton).Build());
 
             // Send to staff channel
-            var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.DepositStaffChannelId);
+            var staffChannel = await Context.Client.GetChannelAsync(DiscordIds.DepositStaffChannelId) as IMessageChannel;
+            if (staffChannel != null)
+            {
+                var staffEmbed = new EmbedBuilder()
+                    .WithTitle("New Deposit Request ⏳")
+                    .WithDescription($"User: {(Context.User as SocketGuildUser)?.DisplayName ?? Context.User.Username} ({user.Identifier})\nAmount: **{prettyAmount}**\nTransaction ID: `{transaction.Id}`\nStatus: **PENDING**")
+                    .WithColor(Color.Orange)
+                    .WithCurrentTimestamp();
 
-            var staffEmbed = new DiscordEmbedBuilder()
-                .WithTitle("New Deposit Request ⏳")
-                .WithDescription($"User: {ctx.Member.DisplayName} ({user.Identifier})\nAmount: **{prettyAmount}**\nTransaction ID: `{transaction.Id}`\nStatus: **PENDING**")
-                .WithColor(DiscordColor.Orange)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                var staffComponents = new ComponentBuilder()
+                    .WithButton("Accept", $"tx_accept_{transaction.Id}", ButtonStyle.Success, new Emoji("✅"))
+                    .WithButton("Cancel", $"tx_cancel_{transaction.Id}", ButtonStyle.Secondary, new Emoji("❌"))
+                    .WithButton("Deny", $"tx_deny_{transaction.Id}", ButtonStyle.Danger, new Emoji("❌"));
 
-            var acceptButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", emoji: new DiscordComponentEmoji("✅"));
-            var cancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
-            var denyButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
+                var staffMessage = await staffChannel.SendMessageAsync(
+                    text: $"<@&{DiscordIds.StaffRoleId}>",
+                    embed: staffEmbed.Build(),
+                    components: staffComponents.Build());
 
-            var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
-                .WithContent($"<@&{DiscordIds.StaffRoleId}>")
-                .AddEmbed(staffEmbed)
-                .AddComponents(acceptButton, cancelButton, denyButton));
-
-            // Persist message/channel IDs so we can update messages on status changes
-            await transactionsService.UpdateTransactionMessagesAsync(
-                transaction.Id,
-                userMessage.Id,
-                userMessage.Channel.Id,
-                staffMessage.Id,
-                staffMessage.Channel.Id);
+                // Persist message/channel IDs so we can update messages on status changes
+                await transactionsService.UpdateTransactionMessagesAsync(
+                    transaction.Id,
+                    userMessage.Id,
+                    userMessage.Channel.Id,
+                    staffMessage.Id,
+                    staffMessage.Channel.Id);
+            }
         }
 
     }
