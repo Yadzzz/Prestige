@@ -411,6 +411,22 @@ namespace Server.Client.Races
                 .ToList();
         }
 
+        public async Task RefreshRaceStateAsync()
+        {
+            // Clear in-memory state to force reload from DB
+            _activeParticipants.Clear();
+            
+            // Reload race and participants
+            LoadActiveRace();
+            
+            if (_activeRace != null)
+            {
+                // Force broadcast to update Discord message
+                _isDirty = true;
+                await FlushAndBroadcastAsync();
+            }
+        }
+
         public async Task SetMessageIdAsync(ulong messageId)
         {
             if (_activeRace == null) return;

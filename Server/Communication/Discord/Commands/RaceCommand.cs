@@ -54,5 +54,19 @@ namespace Server.Communication.Discord.Commands
             await env.ServerManager.RaceService.EndRaceAsync();
             await ctx.RespondAsync("Race ended manually.");
         }
+
+        [Command("raceupdate")]
+        public async Task RaceUpdate(CommandContext ctx)
+        {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You do not have permission to execute this command.");
+                return;
+            }
+
+            var env = ServerEnvironment.GetServerEnvironment();
+            await env.ServerManager.RaceService.RefreshRaceStateAsync();
+            await ctx.RespondAsync("Race state refreshed from database.");
+        }
     }
 }

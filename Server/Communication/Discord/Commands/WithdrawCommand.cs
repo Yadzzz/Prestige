@@ -56,11 +56,9 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            // Minimum withdrawal is 10M => 10,000K internally
-            const long minimumWithdrawalK = 10_000L;
-            if (amountK < minimumWithdrawalK)
+            if (amountK < GpFormatter.MinimumWithdrawAmountK)
             {
-                await ctx.RespondAsync($"Minimum withdrawal is {GpFormatter.Format(minimumWithdrawalK)}.");
+                await ctx.RespondAsync($"Minimum withdrawal is {GpFormatter.Format(GpFormatter.MinimumWithdrawAmountK)}.");
                 return;
             }
 

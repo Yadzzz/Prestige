@@ -50,6 +50,13 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            // Minimum deposit 1M (1000K)
+            if (amountK < GpFormatter.MinimumDepositAmountK)
+            {
+                await ctx.RespondAsync($"Minimum deposit is {GpFormatter.Format(GpFormatter.MinimumDepositAmountK)}.");
+                return;
+            }
+
             var transaction = await transactionsService.CreateDepositRequestAsync(user, amountK);
             if (transaction == null)
             {
