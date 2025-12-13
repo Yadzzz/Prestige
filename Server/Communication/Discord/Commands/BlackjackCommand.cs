@@ -307,7 +307,25 @@ namespace Server.Communication.Discord.Commands
         {
             if (game.Status == BlackjackGameStatus.Finished)
             {
-                return Array.Empty<DiscordComponent>();
+                var rematchButtons = new System.Collections.Generic.List<DiscordButtonComponent>();
+
+                // Rematch buttons
+                if (useEmojis)
+                {
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_half_{game.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId)));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_rm_{game.Id}", "RM", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_x2_{game.Id}", "X2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_max_{game.Id}", "Max", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId)));
+                }
+                else
+                {
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_half_{game.Id}", "1/2"));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_rm_{game.Id}", "RM"));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_x2_{game.Id}", "X2"));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_max_{game.Id}", "Max"));
+                }
+
+                return rematchButtons.ToArray();
             }
 
             var currentHand = game.GetCurrentHand();

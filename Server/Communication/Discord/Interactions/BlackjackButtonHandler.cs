@@ -8,6 +8,7 @@ using Server.Client.Users;
 using Server.Client.Utils;
 using Server.Infrastructure;
 using Server.Communication.Discord.Commands;
+using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Interactions
 {
@@ -53,6 +54,121 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            var user = await usersService.GetUserAsync(game.Identifier);
+            if (user == null)
+            {
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
+                return;
+            }
+
+            // Check for rematch actions
+            bool isRematchAction = string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(action, "half", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(action, "max", StringComparison.OrdinalIgnoreCase);
+
+            if (isRematchAction)
+            {
+                // Calculate new amount
+                long baseAmount = game.BetAmount; // Use the initial bet amount of the game
+                long newAmount = baseAmount;
+
+                if (string.Equals(action, "half", StringComparison.OrdinalIgnoreCase))
+                {
+                    newAmount = Math.Max(GpFormatter.MinimumBetAmountK, baseAmount / 2);
+                }
+                else if (string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase))
+                {
+                    newAmount = baseAmount * 2;
+                }
+                else if (string.Equals(action, "max", StringComparison.OrdinalIgnoreCase))
+                {
+                    newAmount = user.Balance;
+                }
+
+                if (newAmount < GpFormatter.MinimumBetAmountK)
+                {
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent($"Minimum bet is `{GpFormatter.Format(GpFormatter.MinimumBetAmountK)}`.").AsEphemeral(true));
+                    return;
+                }
+
+                if (user.Balance < newAmount)
+                {
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("You don't have enough balance for this rematch.").AsEphemeral(true));
+                    return;
+                }
+
+                if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmount))
+                {
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance for this rematch. Please try again.").AsEphemeral(true));
+                    return;
+                }
+
+                // Update local user balance for display
+                user.Balance -= newAmount;
+
+                var newGame = await blackjackService.CreateGameAsync(user, newAmount);
+                if (newGame == null)
+                {
+                    await usersService.AddBalanceAsync(user.Identifier, newAmount);
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("Failed to create rematch game. Please try again later.").AsEphemeral(true));
+                    return;
+                }
+
+                // If game finished immediately (e.g. Blackjack), refresh user balance
+                if (newGame.Status == BlackjackGameStatus.Finished)
+                {
+                    user = await usersService.GetUserAsync(user.Identifier);
+                }
+
+                // Update OLD message
+                var updateBuilder = new DiscordInteractionResponseBuilder();
+                if (e.Message.Embeds.Count > 0)
+                {
+                    updateBuilder.AddEmbed(e.Message.Embeds[0]);
+                }
+
+                var disabledHalfButton = new DiscordButtonComponent(
+                    string.Equals(action, "half", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
+                    $"bj_half_{game.Id}", "1/2", true, new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId));
+
+                var disabledRmButton = new DiscordButtonComponent(
+                    string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
+                    $"bj_rm_{game.Id}", "RM", true, new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId));
+
+                var disabledX2Button = new DiscordButtonComponent(
+                    string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
+                    $"bj_x2_{game.Id}", "X2", true, new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId));
+
+                var disabledMaxButton = new DiscordButtonComponent(
+                    string.Equals(action, "max", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
+                    $"bj_max_{game.Id}", "Max", true, new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId));
+
+                updateBuilder.AddActionRowComponent(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton);
+                
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, updateBuilder);
+
+                // Send NEW message
+                var newGameEmbed = BlackjackCommand.BuildGameEmbed(newGame, user, client);
+                var newGameButtons = BlackjackCommand.BuildButtons(newGame);
+
+                var newGameBuilder = new DiscordMessageBuilder().AddEmbed(newGameEmbed);
+                if (newGameButtons.Length > 0)
+                {
+                    newGameBuilder.AddActionRowComponent(new DiscordActionRowComponent(newGameButtons));
+                }
+
+                var message = await e.Channel.SendMessageAsync(newGameBuilder);
+                await blackjackService.UpdateMessageInfoAsync(newGame.Id, message.Id, message.Channel.Id);
+
+                return;
+            }
+
             // Game already finished
             if (game.Status == BlackjackGameStatus.Finished)
             {
@@ -60,14 +176,6 @@ namespace Server.Communication.Discord.Interactions
                     new DiscordInteractionResponseBuilder()
                         .WithContent("This game is already finished.")
                         .AsEphemeral(true));
-                return;
-            }
-
-            var user = await usersService.GetUserAsync(game.Identifier);
-            if (user == null)
-            {
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("User not found.").AsEphemeral(true));
                 return;
             }
 
