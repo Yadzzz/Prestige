@@ -41,45 +41,30 @@ namespace Server.Communication.Discord.Interactions
                 var selected = e.Values[0];
                 if (selected == "race_duration")
                 {
-                    /*
-                    var modal = new DiscordInteractionResponseBuilder
-                    {
-                        Title = "Set Race Duration",
-                        CustomId = "race_duration_modal"
-                    };
-                    modal.AddComponents(new DiscordTextInputComponent("Duration (Days)", "duration", "1"));
+                    var modal = new DiscordModalBuilder()
+                        .WithTitle("Set Race Duration")
+                        .WithCustomId("race_duration_modal")
+                        .AddTextInput(new DiscordTextInputComponent("Duration (Days)", "duration", "1"), "Duration (Days)");
 
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
-                    */
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent("Feature temporarily disabled due to API changes.").AsEphemeral(true));
                 }
                 else if (selected == "race_winners")
                 {
-                    /*
-                    var modal = new DiscordInteractionResponseBuilder
-                    {
-                        Title = "Set Winners Count",
-                        CustomId = "race_winners_modal"
-                    };
-                    modal.AddComponents(new DiscordTextInputComponent("Number of Winners", "winners", "3"));
+                    var modal = new DiscordModalBuilder()
+                        .WithTitle("Set Winners Count")
+                        .WithCustomId("race_winners_modal")
+                        .AddTextInput(new DiscordTextInputComponent("Number of Winners", "winners", "3"), "Number of Winners");
 
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
-                    */
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent("Feature temporarily disabled due to API changes.").AsEphemeral(true));
                 }
                 else if (selected == "race_prizes")
                 {
-                    /*
-                    var modal = new DiscordInteractionResponseBuilder
-                    {
-                        Title = "Set Prizes",
-                        CustomId = "race_prizes_modal"
-                    };
-                    modal.AddComponents(new DiscordTextInputComponent("Prizes (Rank:Prize, one per line)", "prizes", "1:100M\n2:50M\n3:25M", style: DiscordTextInputStyle.Paragraph));
+                    var modal = new DiscordModalBuilder()
+                        .WithTitle("Set Prizes")
+                        .WithCustomId("race_prizes_modal")
+                        .AddTextInput(new DiscordTextInputComponent("Prizes (Rank:Prize, one per line)", "prizes", "1:100M\n2:50M\n3:25M", style: DiscordTextInputStyle.Paragraph), "Prizes (Rank:Prize, one per line)");
 
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
-                    */
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent("Feature temporarily disabled due to API changes.").AsEphemeral(true));
                 }
                 else if (selected == "race_start")
                 {
