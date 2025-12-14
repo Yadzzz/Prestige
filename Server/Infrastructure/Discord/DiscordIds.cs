@@ -66,6 +66,11 @@ namespace Server.Infrastructure.Discord
         public static ulong BlackjackHeartsEmojiId => ConfigService.Current.Discord.BlackjackHeartsEmojiId;
         public static ulong BlackjackClubsEmojiId => ConfigService.Current.Discord.BlackjackClubsEmojiId;
 
+        // Blackjack Rematch Emojis
+        public static ulong BlackjackRmEmojiId => ConfigService.Current.Discord.BlackjackRmEmojiId;
+        public static ulong BlackjackRmHalfEmojiId => ConfigService.Current.Discord.BlackjackRmHalfEmojiId;
+        public static ulong BlackjackRmX2EmojiId => ConfigService.Current.Discord.BlackjackRmX2EmojiId;
+
         // Balance
         public static ulong BalanceSheetEmojiId => ConfigService.Current.Discord.BalanceSheetEmojiId;
         public static ulong WithdrawEmojiId => ConfigService.Current.Discord.WithdrawEmojiId;

@@ -13,9 +13,9 @@ namespace Server.Client.HigherLower
     public class HigherLowerService
     {
         private readonly DatabaseManager _databaseManager;
-        private const decimal HouseEdge = 0.05m;
+        private const decimal HouseEdge = 0.03m;
         private const decimal MinMultiplier = 1.10m;
-        private const decimal MaxMultiplier = 10.00m;
+        private const decimal MaxMultiplier = 5.00m;
 
         public HigherLowerService(DatabaseManager databaseManager)
         {

@@ -160,7 +160,7 @@ namespace Server.Communication.Discord.Commands
                         continue;
 
                     var playerTotal = hand.GetTotal();
-                    var isPlayerBlackjack = hand.IsBlackjack();
+                    var isPlayerBlackjack = hand.IsBlackjack() && game.PlayerHands.Count == 1;
                     var isDealerBlackjack = game.DealerHand.IsBlackjack();
 
                     if (isPlayerBlackjack && !isDealerBlackjack)
@@ -179,7 +179,7 @@ namespace Server.Communication.Discord.Commands
                     {
                         totalPayout += hand.BetAmount * 2;
                     }
-                    else if (playerTotal == dealerTotal)
+                    else if (playerTotal == dealerTotal && !isDealerBlackjack)
                     {
                         totalPayout += hand.BetAmount;
                     }
@@ -200,7 +200,7 @@ namespace Server.Communication.Discord.Commands
 
                 if (netChange > 0)
                 {
-                    if (game.PlayerHands.Any(h => h.IsBlackjack()))
+                    if (game.PlayerHands.Any(h => h.IsBlackjack()) && game.PlayerHands.Count == 1)
                     {
                         embed.WithColor(DiscordColor.Magenta); // Purple for Blackjack
                         imageUrl = "https://i.imgur.com/ecYpqiV.gif"; // Blackjack
@@ -221,7 +221,14 @@ namespace Server.Communication.Discord.Commands
                 else
                 {
                     embed.WithColor(DiscordColor.Orange);
-                    resultText = $"The dealer has scored the same as you.\nYou received back `{GpFormatter.Format(totalPayout)}`\n";
+                    if (game.InsuranceTaken && game.DealerHand.IsBlackjack())
+                    {
+                        resultText = $"🛡️ Insurance Saved You!\nYou received back `{GpFormatter.Format(totalPayout)}`\n";
+                    }
+                    else
+                    {
+                        resultText = $"The dealer has scored the same as you.\nYou received back `{GpFormatter.Format(totalPayout)}`\n";
+                    }
                     imageUrl = "https://i.imgur.com/VOnBLHK.gif"; // Draw
                 }
             }
@@ -257,7 +264,7 @@ namespace Server.Communication.Discord.Commands
                 var handDisplay = hand.GetHandDisplay(client);
                 var statusText = "";
                 
-                if (hand.IsBlackjack())
+                if (hand.IsBlackjack() && game.PlayerHands.Count == 1)
                     statusText = " 🎉 **BLACKJACK**";
                 else if (hand.IsBusted)
                     statusText = " 💥 **BUST**";
@@ -312,10 +319,10 @@ namespace Server.Communication.Discord.Commands
                 // Rematch buttons
                 if (useEmojis)
                 {
-                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_half_{game.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId)));
-                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_rm_{game.Id}", "RM", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId)));
-                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_x2_{game.Id}", "X2", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId)));
-                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_max_{game.Id}", "Max", emoji: new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId)));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_half_{game.Id}", "1/2", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackRmHalfEmojiId)));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_rm_{game.Id}", "RM", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackRmEmojiId)));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_x2_{game.Id}", "X2", emoji: new DiscordComponentEmoji(DiscordIds.BlackjackRmX2EmojiId)));
+                    rematchButtons.Add(new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"bj_max_{game.Id}", "Max"));
                 }
                 else
                 {

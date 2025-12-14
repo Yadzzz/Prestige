@@ -51,9 +51,11 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (amountK < GpFormatter.MinimumBetAmountK)
+            // Minimum stake 100m (100,000k)
+            long minStakeK = 100000;
+            if (amountK < minStakeK)
             {
-                await ctx.RespondAsync($"Minimum stake is {GpFormatter.Format(GpFormatter.MinimumBetAmountK)}.");
+                await ctx.RespondAsync($"Minimum stake is {GpFormatter.Format(minStakeK)}.");
                 return;
             }
 

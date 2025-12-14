@@ -53,13 +53,13 @@ namespace Server.Client.Blackjack
                 bool dealerHasAce = dealerUpCard.Rank == "A";
 
                 // 1. If Dealer shows 10/Face, peek for Blackjack immediately.
-                if (dealerHasTen)
-                {
-                    if (game.DealerHand.IsBlackjack())
-                    {
-                        await FinishGameAsync(game);
-                    }
-                }
+                // if (dealerHasTen)
+                // {
+                //     if (game.DealerHand.IsBlackjack())
+                //     {
+                //         await FinishGameAsync(game);
+                //     }
+                // }
 
                 // 2. If Player has Blackjack, finish immediately.
                 // We do not offer insurance or even money if the player has Blackjack.
@@ -310,14 +310,25 @@ namespace Server.Client.Blackjack
             // Insert the new hand after the current hand
             game.PlayerHands.Insert(game.CurrentHandIndex + 1, newHand);
 
-            // Check if current hand is 21 (e.g. split Aces or 10s)
-            if (hand.GetTotal() == 21)
+            // Check for Split Aces (Standard Rule: Only 1 card dealt, then auto-stand)
+            bool isSplitAces = hand.Cards[0].Rank == "A";
+            if (isSplitAces)
             {
                 hand.IsStanding = true;
+                newHand.IsStanding = true;
+                // Since both stand, we might need to advance index or finish
+                // But the loop/logic below handles index incrementing
+            }
+
+            // Check if current hand is 21 (e.g. split Aces or 10s)
+            // Or if we just split Aces (auto-stand)
+            if (hand.GetTotal() == 21 || isSplitAces)
+            {
+                hand.IsStanding = true; // Redundant but safe
                 game.CurrentHandIndex++;
             }
 
-            // Check if all hands finished (e.g. split Aces -> both 21)
+            // Check if all hands finished (e.g. split Aces -> both 21 or just stood)
             if (game.AllHandsFinished())
             {
                 await FinishGameAsync(game);
@@ -438,7 +449,8 @@ namespace Server.Client.Blackjack
 
                     var playerTotal = hand.GetTotal();
                     var dealerTotal = game.DealerHand.GetTotal();
-                    var isPlayerBlackjack = hand.IsBlackjack();
+                    // Standard Rule: Split hands cannot be Blackjack (only 21)
+                    var isPlayerBlackjack = hand.IsBlackjack() && game.PlayerHands.Count == 1;
                     var isDealerBlackjack = game.DealerHand.IsBlackjack();
 
                     if (isPlayerBlackjack && !isDealerBlackjack)
@@ -463,12 +475,12 @@ namespace Server.Client.Blackjack
                         // Player wins
                         totalPayout += hand.BetAmount * 2;
                     }
-                    else if (playerTotal == dealerTotal)
+                    else if (playerTotal == dealerTotal && !isDealerBlackjack)
                     {
-                        // Push
+                        // Push (only if dealer does NOT have Blackjack)
                         totalPayout += hand.BetAmount;
                     }
-                    // else: player loses, no payout
+                    // else: player loses (including if Player has 21 vs Dealer Blackjack)
                 }
 
                 // Handle insurance
