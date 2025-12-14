@@ -59,9 +59,11 @@ namespace Server.Client.Blackjack
             var rank1 = Cards[0].Rank;
             var rank2 = Cards[1].Rank;
 
-            // For face cards, treat them as equal
-            if ((rank1 == "K" || rank1 == "Q" || rank1 == "J") &&
-                (rank2 == "K" || rank2 == "Q" || rank2 == "J"))
+            // Check if both cards have value of 10 (10, J, Q, K)
+            bool isTenValue1 = rank1 == "10" || rank1 == "J" || rank1 == "Q" || rank1 == "K";
+            bool isTenValue2 = rank2 == "10" || rank2 == "J" || rank2 == "Q" || rank2 == "K";
+
+            if (isTenValue1 && isTenValue2)
                 return true;
 
             return rank1 == rank2;
