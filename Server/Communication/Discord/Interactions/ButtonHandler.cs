@@ -45,6 +45,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Higher/Lower buttons
+            if (e.Id.StartsWith("hl_", StringComparison.OrdinalIgnoreCase))
+            {
+                await HigherLowerButtonHandler.Handle(client, e);
+                return;
+            }
+
             // Race interactions
             if (e.Id.StartsWith("race_", StringComparison.OrdinalIgnoreCase))
             {

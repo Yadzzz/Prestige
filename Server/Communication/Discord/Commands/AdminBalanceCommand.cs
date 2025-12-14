@@ -53,9 +53,9 @@ namespace Server.Communication.Discord.Commands
             var usersService = env.ServerManager.UsersService;
             var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
 
-            if (!GpParser.TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!add 10 @user`, `!add 0.5 @user`, `!add 1b @user`, `!add 1000m @user`.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!add 10 @user`, `!add 0.5 @user`, `!add 1b @user`, `!add 1000m @user`.");
                 return;
             }
             if (amountK <= 0)
@@ -114,9 +114,9 @@ namespace Server.Communication.Discord.Commands
             var usersService = env.ServerManager.UsersService;
             var balanceAdjustmentsService = env.ServerManager.BalanceAdjustmentsService;
 
-            if (!GpParser.TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!remove 10 @user`, `!remove 0.5 @user`, `!remove 1b @user`, `!remove 1000m @user`.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!remove 10 @user`, `!remove 0.5 @user`, `!remove 1b @user`, `!remove 1000m @user`.");
                 return;
             }
             if (amountK <= 0)

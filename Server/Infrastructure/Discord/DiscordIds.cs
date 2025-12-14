@@ -47,6 +47,10 @@ namespace Server.Infrastructure.Discord
         // Big win emoji (MVPP)
         public static ulong BigWinMvppEmojiId => ConfigService.Current.Discord.BigWinMvppEmojiId;
 
+        // Higher/Lower Emojis
+        public static ulong HigherLowerHigherEmojiId => ConfigService.Current.Discord.HigherLowerHigherEmojiId;
+        public static ulong HigherLowerLowerEmojiId => ConfigService.Current.Discord.HigherLowerLowerEmojiId;
+
         // Coinflip result emojis
         public static ulong CoinflipGoldEmojiId => ConfigService.Current.Discord.CoinflipGoldEmojiId; // win
         public static ulong CoinflipSilverEmojiId => ConfigService.Current.Discord.CoinflipSilverEmojiId; // loss

@@ -50,9 +50,9 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!GpParser.TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!w 100`, `!w 0.5`, `!w 1b`, `!w 1000m`.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!w 100`, `!w 0.5`, `!w 1b`, `!w 1000m`.");
                 return;
             }
 

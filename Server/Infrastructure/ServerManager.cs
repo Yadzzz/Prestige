@@ -16,6 +16,7 @@ using Server.Client.LiveFeed;
 using Server.Client.Races;
 using Server.Client.AI;
 using Server.Client.Blackjack;
+using Server.Client.HigherLower;
 
 namespace Server.Infrastructure
 {
@@ -31,6 +32,7 @@ namespace Server.Infrastructure
         public StakesService StakesService { get; set; }
         public CoinflipsService CoinflipsService { get; set; }
         public BlackjackService BlackjackService { get; set; }
+        public HigherLowerService HigherLowerService { get; set; }
         public LogsService LogsService { get; set; }
         public LiveFeedService LiveFeedService { get; set; }
         public RaceService RaceService { get; set; }
@@ -52,6 +54,7 @@ namespace Server.Infrastructure
             this.StakesService = new StakesService(this.DatabaseManager);
             this.CoinflipsService = new CoinflipsService(this.DatabaseManager);
             this.BlackjackService = new BlackjackService(this.DatabaseManager);
+            this.HigherLowerService = new HigherLowerService(this.DatabaseManager);
             this.LogsService = new LogsService(this.DatabaseManager);
             this.AiCommandResolverService = new AiCommandResolverService("https://lively-butterfly-20a1.yadmarzan.workers.dev/");
 

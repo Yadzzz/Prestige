@@ -192,6 +192,7 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<AdminBalanceCommand>();
                 commands.RegisterCommands<CoinflipCommand>();
                 commands.RegisterCommands<BlackjackCommand>();
+                commands.RegisterCommands<HigherLowerCommand>();
                 commands.RegisterCommands<RaceCommand>();
                 commands.RegisterCommands<CancelCommand>();
 

@@ -13,10 +13,25 @@ namespace Server.Client.Utils
         // Returns true on success; amountK is the value in thousands.
         public static bool TryParseAmountInK(string input, out long amountK)
         {
+            return TryParseAmountInK(input, out amountK, out _);
+        }
+
+        public static bool TryParseAmountInK(string input, out long amountK, out string error)
+        {
             amountK = 0;
+            error = null;
 
             if (string.IsNullOrWhiteSpace(input))
+            {
+                error = "Amount cannot be empty.";
                 return false;
+            }
+
+            if (input.Contains(","))
+            {
+                error = "Commas are not allowed. Please use dots (.) for decimals.";
+                return false;
+            }
 
             input = input.Trim().ToLowerInvariant();
 
@@ -39,15 +54,28 @@ namespace Server.Client.Utils
             }
 
             if (!decimal.TryParse(input, NumberStyles.Number, CultureInfo.InvariantCulture, out var baseValue))
+            {
+                error = "Invalid number format.";
                 return false;
+            }
 
             if (baseValue <= 0)
+            {
+                error = "Amount must be positive.";
                 return false;
+            }
 
             var resultK = baseValue * multiplier;
 
             amountK = (long)Math.Round(resultK, MidpointRounding.AwayFromZero);
-            return amountK > 0;
+            
+            if (amountK <= 0)
+            {
+                error = "Amount is too small.";
+                return false;
+            }
+
+            return true;
         }
     }
 }

@@ -44,9 +44,9 @@ namespace Server.Communication.Discord.Commands
             if (user == null)
                 return;
 
-            if (!GpParser.TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!d 100`, `!d 0.5`, `!d 1b`, `!d 1000m`.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!d 100`, `!d 0.5`, `!d 1b`, `!d 1000m`.");
                 return;
             }
 
@@ -83,6 +83,7 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Expected Balance", $"**{expectedBalanceText}**", true)
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/1hkVfFD.gif")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var userCancelButton = new DiscordButtonComponent(

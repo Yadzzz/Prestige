@@ -53,9 +53,9 @@ namespace Server.Communication.Discord.Commands
             {
                 betAmount = user.Balance;
             }
-            else if (!GpParser.TryParseAmountInK(amount, out betAmount))
+            else if (!GpParser.TryParseAmountInK(amount, out betAmount, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!blackjack 100`, `!bj 0.5`, `!bj 1b`, `!bj 1000m`, or `!blackjack` for all-in.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!blackjack 100`, `!bj 0.5`, `!bj 1b`, `!bj 1000m`, or `!blackjack` for all-in.");
                 return;
             }
 

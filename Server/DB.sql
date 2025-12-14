@@ -157,3 +157,22 @@
 --);
 
 --CREATE INDEX idx_blackjack_user_status ON blackjack_games(user_id, status);
+
+--CREATE TABLE higher_lower_games (
+--    id INT AUTO_INCREMENT PRIMARY KEY,
+--    user_id INT NOT NULL,
+--    identifier VARCHAR(64) NOT NULL,
+--    bet_amount BIGINT NOT NULL,
+--    current_payout DECIMAL(20, 4) NOT NULL,
+--    current_round INT NOT NULL DEFAULT 0,
+--    max_rounds INT NOT NULL,
+--    status INT NOT NULL,
+--    last_card TEXT NOT NULL,
+--    card_history TEXT NOT NULL,
+--    message_id BIGINT NULL,
+--    channel_id BIGINT NULL,
+--    created_at DATETIME NOT NULL,
+--    updated_at DATETIME NOT NULL
+--);
+
+--CREATE INDEX idx_hl_games_user_status ON higher_lower_games(user_id, status);

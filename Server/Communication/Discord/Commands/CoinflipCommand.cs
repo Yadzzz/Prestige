@@ -47,9 +47,9 @@ namespace Server.Communication.Discord.Commands
                 // No amount specified -> all-in
                 amountK = user.Balance;
             }
-            else if (!GpParser.TryParseAmountInK(amount, out amountK))
+            else if (!GpParser.TryParseAmountInK(amount, out amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!coinflip 100`, `!cf 0.5`, `!cf 1b`, `!cf 1000m`, or `!coinflip` for all-in.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!coinflip 100`, `!cf 0.5`, `!cf 1b`, `!cf 1000m`, or `!coinflip` for all-in.");
                 return;
             }
 

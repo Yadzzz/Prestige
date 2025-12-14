@@ -70,6 +70,10 @@ namespace Server.Infrastructure.Configuration
         public ulong BlackjackHeartsEmojiId { get; set; }
         public ulong BlackjackClubsEmojiId { get; set; }
 
+        // Higher/Lower Emojis
+        public ulong HigherLowerHigherEmojiId { get; set; }
+        public ulong HigherLowerLowerEmojiId { get; set; }
+
         public BlackjackCardConfig BlackjackCards { get; set; }
     }
 

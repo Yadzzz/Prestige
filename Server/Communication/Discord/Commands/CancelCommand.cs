@@ -34,6 +34,7 @@ namespace Server.Communication.Discord.Commands
             var sbGame = new System.Text.StringBuilder();
             var sbAmount = new System.Text.StringBuilder();
             var sbPanel = new System.Text.StringBuilder();
+            int rowsShown = 0;
 
             // 1. Cancel Pending Coinflips
             var pendingFlips = await coinflipsService.GetPendingCoinflipsByUserIdAsync(user.Id);
@@ -59,7 +60,8 @@ namespace Server.Communication.Discord.Commands
                 await usersService.AddBalanceAsync(user.Identifier, flip.AmountK);
                 totalRefundedK += flip.AmountK;
 
-                // Update Discord Message (Disable buttons)
+                // Update Discord Message (Disable buttons) - SKIPPED to avoid Rate Limits
+                /*
                 if (flip.ChannelId.HasValue && flip.MessageId.HasValue)
                 {
                     try
@@ -80,26 +82,29 @@ namespace Server.Communication.Discord.Commands
                         // Message might be deleted, ignore
                     }
                 }
+                */
 
-                if (sbGame.Length < 950)
+                if (rowsShown < 8)
                 {
                     sbGame.AppendLine("`COINFLIP`");
                     sbAmount.AppendLine($"`{GpFormatter.Format(flip.AmountK)}`");
                     if (flip.ChannelId.HasValue && flip.MessageId.HasValue && ctx.Guild != null)
                     {
                         var url = $"https://discord.com/channels/{ctx.Guild.Id}/{flip.ChannelId}/{flip.MessageId}";
-                        sbPanel.AppendLine($"[Click Here]({url})");
+                        sbPanel.AppendLine($"[View]({url})");
                     }
                     else
                     {
                         sbPanel.AppendLine("N/A");
                     }
+                    rowsShown++;
                 }
-                else if (!sbGame.ToString().EndsWith("...\r\n"))
+                else if (rowsShown == 8)
                 {
-                    sbGame.AppendLine("...");
+                    sbGame.AppendLine("... (more hidden)");
                     sbAmount.AppendLine("...");
                     sbPanel.AppendLine("...");
+                    rowsShown++;
                 }
 
                 cancelledCount++;
@@ -116,7 +121,8 @@ namespace Server.Communication.Discord.Commands
                 // Update Status
                 await stakesService.UpdateStakeStatusAsync(stake.Id, StakeStatus.Cancelled);
 
-                // Update User Discord Message (Disable buttons)
+                // Update User Discord Message (Disable buttons) - SKIPPED to avoid Rate Limits
+                /*
                 if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue)
                 {
                     try
@@ -163,31 +169,35 @@ namespace Server.Communication.Discord.Commands
                         // Message might be deleted, ignore
                     }
                 }
+                */
 
-                if (sbGame.Length < 950)
+                if (rowsShown < 8)
                 {
                     sbGame.AppendLine("`STAKE`");
                     sbAmount.AppendLine($"`{GpFormatter.Format(stake.AmountK)}`");
                     if (stake.UserChannelId.HasValue && stake.UserMessageId.HasValue && ctx.Guild != null)
                     {
                         var url = $"https://discord.com/channels/{ctx.Guild.Id}/{stake.UserChannelId}/{stake.UserMessageId}";
-                        sbPanel.AppendLine($"[Click Here]({url})");
+                        sbPanel.AppendLine($"[View]({url})");
                     }
                     else
                     {
                         sbPanel.AppendLine("N/A");
                     }
+                    rowsShown++;
                 }
-                else if (!sbGame.ToString().EndsWith("...\r\n"))
+                else if (rowsShown == 8)
                 {
-                    sbGame.AppendLine("...");
+                    sbGame.AppendLine("... (more hidden)");
                     sbAmount.AppendLine("...");
                     sbPanel.AppendLine("...");
+                    rowsShown++;
                 }
 
                 cancelledCount++;
             }
 
+            /*
             // 3. Cancel Pending Blackjack Games
             var blackjackService = serverManager.BlackjackService;
             var activeGames = await blackjackService.GetActiveGamesByUserIdAsync(user.Id);
@@ -206,7 +216,8 @@ namespace Server.Communication.Discord.Commands
                 // Update Status
                 await blackjackService.UpdateGameStatusAsync(game.Id, BlackjackGameStatus.Finished);
 
-                // Update Discord Message (Disable buttons)
+                // Update Discord Message (Disable buttons) - SKIPPED to avoid Rate Limits
+                /*
                 if (game.ChannelId.HasValue && game.MessageId.HasValue)
                 {
                     try
@@ -227,6 +238,7 @@ namespace Server.Communication.Discord.Commands
                         // Message might be deleted, ignore
                     }
                 }
+                * /
 
                 if (sbGame.Length < 950)
                 {
@@ -251,6 +263,7 @@ namespace Server.Communication.Discord.Commands
 
                 cancelledCount++;
             }
+            */
 
             if (cancelledCount > 0)
             {

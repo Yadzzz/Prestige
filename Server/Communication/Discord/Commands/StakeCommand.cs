@@ -45,9 +45,9 @@ namespace Server.Communication.Discord.Commands
             if (user == null)
                 return;
 
-            if (!GpParser.TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!stake 100`, `!stake 0.5`, `!stake 1b`, `!stake 1000m`.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!stake 100`, `!stake 0.5`, `!stake 1b`, `!stake 1000m`.");
                 return;
             }
 
