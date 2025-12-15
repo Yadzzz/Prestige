@@ -149,7 +149,7 @@
 --    dealer_hand TEXT NOT NULL,
 --    player_hands TEXT NOT NULL,
 --    current_hand_index INT NOT NULL DEFAULT 0,
---    insurance_taken TINYINT(1) NOT NULL DEFAULT 0,
+--    insurance_taken TINYINT UNSIGNED NOT NULL DEFAULT 0,
 --    message_id BIGINT NULL,
 --    channel_id BIGINT NULL,
 --    created_at DATETIME NOT NULL,

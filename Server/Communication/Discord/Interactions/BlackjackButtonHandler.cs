@@ -135,19 +135,19 @@ namespace Server.Communication.Discord.Interactions
 
                 var disabledHalfButton = new DiscordButtonComponent(
                     string.Equals(action, "half", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"bj_half_{game.Id}", "1/2", true, new DiscordComponentEmoji(DiscordIds.CoinflipHalfEmojiId));
+                    $"bj_half_{game.Id}", "1/2", true, new DiscordComponentEmoji(DiscordIds.BlackjackRmHalfEmojiId));
 
                 var disabledRmButton = new DiscordButtonComponent(
                     string.Equals(action, "rm", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"bj_rm_{game.Id}", "RM", true, new DiscordComponentEmoji(DiscordIds.CoinflipRmEmojiId));
+                    $"bj_rm_{game.Id}", "RM", true, new DiscordComponentEmoji(DiscordIds.BlackjackRmEmojiId));
 
                 var disabledX2Button = new DiscordButtonComponent(
                     string.Equals(action, "x2", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"bj_x2_{game.Id}", "X2", true, new DiscordComponentEmoji(DiscordIds.CoinflipX2EmojiId));
+                    $"bj_x2_{game.Id}", "X2", true, new DiscordComponentEmoji(DiscordIds.BlackjackRmX2EmojiId));
 
                 var disabledMaxButton = new DiscordButtonComponent(
                     string.Equals(action, "max", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary,
-                    $"bj_max_{game.Id}", "Max", true, new DiscordComponentEmoji(DiscordIds.CoinflipMaxEmojiId));
+                    $"bj_max_{game.Id}", "Max", true);
 
                 updateBuilder.AddActionRowComponent(disabledHalfButton, disabledRmButton, disabledX2Button, disabledMaxButton);
                 
