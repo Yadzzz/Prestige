@@ -14,15 +14,15 @@ namespace Server.Client.HigherLower
     {
         private readonly DatabaseManager _databaseManager;
         private const decimal HouseEdge = 0.03m;
-        private const decimal MinMultiplier = 1.10m;
-        private const decimal MaxMultiplier = 5.00m;
+        private const decimal MinMultiplier = 1.05m;
+        private const decimal MaxMultiplier = 10.00m;
 
         public HigherLowerService(DatabaseManager databaseManager)
         {
             _databaseManager = databaseManager;
         }
 
-        public decimal CalculateMultiplier(Card card, bool isHigher)
+        public decimal CalculateMultiplier(Card card, bool isHigher, int currentRound)
         {
             int value = HigherLowerGame.GetCardValue(card);
             // Total cards: 13 (A=1 ... K=13)
@@ -33,7 +33,26 @@ namespace Server.Client.HigherLower
             if (winningOutcomes <= 0) return 0m; // Impossible to win
 
             decimal probability = (decimal)winningOutcomes / 13.0m;
-            decimal multiplier = (1.0m / probability) * (1.0m - HouseEdge);
+            decimal rawMultiplier = 1.0m / probability;
+            decimal maxProfit = rawMultiplier - 1.0m;
+
+            // Progressive Profit Scaling
+            // Instead of a flat penalty, we scale the "Profit" portion of the multiplier.
+            // Round 0: Player gets 25% of the fair profit. (Max possible ~4x)
+            // Round 10: Player gets 97% of the fair profit. (Max possible ~12.6x, capped at 10x)
+            // This equation naturally prevents high multipliers in early rounds without artificial round-gating.
+            
+            decimal startScale = 0.25m; // Start at 25% profit
+            decimal endScale = 1.0m - HouseEdge; // End at 97% profit
+            decimal roundsToMax = 10.0m;
+            
+            decimal growthPerRound = (endScale - startScale) / roundsToMax;
+            decimal currentScale = startScale + (currentRound * growthPerRound);
+            
+            // Cap at max profitability (3% edge)
+            if (currentScale > endScale) currentScale = endScale;
+
+            decimal multiplier = 1.0m + (maxProfit * currentScale);
 
             // Apply caps
             if (multiplier < MinMultiplier) multiplier = MinMultiplier;
@@ -156,7 +175,7 @@ namespace Server.Client.HigherLower
 
             if (isCorrect)
             {
-                decimal multiplier = CalculateMultiplier(previousCard, guessHigher);
+                decimal multiplier = CalculateMultiplier(previousCard, guessHigher, game.CurrentRound);
                 game.CurrentPayout *= multiplier;
                 game.CurrentRound++;
 

@@ -177,8 +177,8 @@ namespace Server.Communication.Discord.Commands
             }
 
             var hlService = ServerEnvironment.GetServerEnvironment().ServerManager.HigherLowerService;
-            var higherMult = hlService.CalculateMultiplier(game.LastCard, true);
-            var lowerMult = hlService.CalculateMultiplier(game.LastCard, false);
+            var higherMult = hlService.CalculateMultiplier(game.LastCard, true, game.CurrentRound);
+            var lowerMult = hlService.CalculateMultiplier(game.LastCard, false, game.CurrentRound);
 
             var buttons = new List<DiscordComponent>
             {
