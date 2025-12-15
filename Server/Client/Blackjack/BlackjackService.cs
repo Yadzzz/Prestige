@@ -20,7 +20,7 @@ namespace Server.Client.Blackjack
 
         public async Task<BlackjackGame> CreateGameAsync(User user, long betAmount)
         {
-            if (user == null || betAmount <= 0 || user.Balance < betAmount)
+            if (user == null || betAmount <= 0)
                 return null;
 
             try

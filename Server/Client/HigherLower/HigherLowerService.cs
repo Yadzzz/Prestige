@@ -38,18 +38,18 @@ namespace Server.Client.HigherLower
 
             // Progressive Profit Scaling
             // Instead of a flat penalty, we scale the "Profit" portion of the multiplier.
-            // Round 0: Player gets 25% of the fair profit. (Max possible ~4x)
-            // Round 10: Player gets 97% of the fair profit. (Max possible ~12.6x, capped at 10x)
+            // Round 0: Player gets 50% of the fair profit.
+            // Round 7: Player gets 99% of the fair profit.
             // This equation naturally prevents high multipliers in early rounds without artificial round-gating.
             
-            decimal startScale = 0.25m; // Start at 25% profit
-            decimal endScale = 1.0m - HouseEdge; // End at 97% profit
-            decimal roundsToMax = 10.0m;
+            decimal startScale = 0.50m; // Start at 50% profit
+            decimal endScale = 0.99m; // End at 99% profit
+            decimal roundsToMax = 7.0m;
             
             decimal growthPerRound = (endScale - startScale) / roundsToMax;
             decimal currentScale = startScale + (currentRound * growthPerRound);
             
-            // Cap at max profitability (3% edge)
+            // Cap at max profitability
             if (currentScale > endScale) currentScale = endScale;
 
             decimal multiplier = 1.0m + (maxProfit * currentScale);

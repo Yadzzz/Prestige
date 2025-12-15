@@ -53,6 +53,7 @@ namespace Server.Client.Races
 
             // Optimization: If user is already participating, they have already passed the staff check.
             // This avoids repeated API calls for every wager.
+            /*
             if (!_activeParticipants.ContainsKey(userIdentifier))
             {
                 // Check if user is staff
@@ -91,6 +92,7 @@ namespace Server.Client.Races
                     _serverManager.LoggerManager.LogError($"[RaceService] Failed to check staff status for {userIdentifier}: {ex.Message}");
                 }
             }
+            */
 
             _activeParticipants.AddOrUpdate(userIdentifier,
                 // Add new
