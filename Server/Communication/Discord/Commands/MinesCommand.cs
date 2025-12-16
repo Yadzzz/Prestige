@@ -117,28 +117,42 @@ namespace Server.Communication.Discord.Commands
             long currentPayout = (long)(game.BetAmount * multiplier);
             
             var status = "Active";
-            var color = DiscordColor.Blue;
+            var color = DiscordColor.Gold;
+            string thumbnailUrl = "https://i.imgur.com/IZpipDr.png"; // Starting
 
             if (game.Status == MinesGameStatus.Lost)
             {
-                status = "BOOM! You hit a mine.";
+                status = "BOOM! You hit a mine!";
                 color = DiscordColor.Red;
+                currentPayout = 0;
+                multiplier = 0;
+                nextMultiplier = 0;
+                thumbnailUrl = "https://i.imgur.com/laBZBWa.png";
             }
             else if (game.Status == MinesGameStatus.CashedOut)
             {
-                status = $"Cashed Out! Won {GpFormatter.Format(currentPayout)}";
+                status = $"Survived! Won {GpFormatter.Format(currentPayout)}";
                 color = DiscordColor.Green;
+                nextMultiplier = 0;
+                thumbnailUrl = "https://i.imgur.com/gdhNxb1.png";
+            }
+            else if (game.RevealedTiles.Count > 0)
+            {
+                thumbnailUrl = "https://i.imgur.com/7krPRqX.png"; // Ongoing
             }
 
             var embed = new DiscordEmbedBuilder()
-                .WithTitle($"💣 Mines | {user.DisplayName}")
-                .WithDescription($"Bet: **{GpFormatter.Format(game.BetAmount)}**\nMines: **{game.MinesCount}**\n\n" +
-                                 $"Current Multiplier: **{multiplier:0.00}x**\n" +
-                                 $"Current Payout: **{GpFormatter.Format(currentPayout)}**\n" +
-                                 $"Next Multiplier: **{nextMultiplier:0.00}x**\n\n" +
-                                 $"Status: {status}")
+                .WithTitle($"💣 Mines #{game.Id}")
+                .AddField("Bet", $"**{GpFormatter.Format(game.BetAmount)}**", true)
+                .AddField("Mines", $"**{game.MinesCount}**", true)
+                .AddField("Status", $"**{status}**", true)
+                .AddField("Multiplier", $"**{multiplier:0.00}x**", true)
+                .AddField("Payout", $"**{GpFormatter.Format(currentPayout)}**", true)
+                .AddField("Next", $"**{nextMultiplier:0.00}x**", true)
                 .WithColor(color)
-                .WithFooter($"Game ID: {game.Id}");
+                .WithThumbnail(thumbnailUrl)
+                .WithFooter($"{ServerConfiguration.ServerName} Game ID: {game.Id}")
+                .WithTimestamp(DateTimeOffset.UtcNow);
 
             return embed.Build();
         }
@@ -160,7 +174,7 @@ namespace Server.Communication.Discord.Commands
                         row.Add(new DiscordButtonComponent(
                             DiscordButtonStyle.Secondary,
                             $"mines_cashout_{game.Id}",
-                            "Cashout",
+                            " ",
                             !canCashout,
                             new DiscordComponentEmoji("💰")
                         ));
@@ -173,7 +187,7 @@ namespace Server.Communication.Discord.Commands
                         
                         var style = DiscordButtonStyle.Secondary;
                         var label = " ";
-                        var emoji = new DiscordComponentEmoji("❓"); // Hidden
+                        var emoji = new DiscordComponentEmoji("🔹"); // Hidden
 
                         if (game.Status != MinesGameStatus.Active)
                         {
