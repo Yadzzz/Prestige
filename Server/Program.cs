@@ -1,7 +1,4 @@
 ﻿using Server.Infrastructure;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Server
 {
@@ -17,28 +14,7 @@ namespace Server
             // Start Discord Bot in background
             var botTask = env.ServerManager.DiscordBotHost.StartAsync();
 
-            // Start ASP.NET Core Web Host
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
-            builder.Services.AddControllers();
-            builder.Services.AddSingleton(env.ServerManager); // Inject ServerManager into Controllers
-
-            // Configure Kestrel to listen on a specific port (e.g., 5000)
-            builder.WebHost.ConfigureKestrel(options =>
-            {
-                options.ListenAnyIP(5000); // Listen on port 5000
-            });
-
-            var app = builder.Build();
-
-            app.MapControllers();
-
-            Console.WriteLine("Starting Web Server on port 5000...");
-            var webTask = app.RunAsync();
-
-            // Wait for both (or just wait indefinitely)
-            await Task.WhenAny(botTask, webTask);
+            Console.WriteLine("Bot is running...");
 
             // Handle graceful shutdown
             var tcs = new TaskCompletionSource();
@@ -56,7 +32,8 @@ namespace Server
                 tcs.TrySetResult();
             };
 
-            await tcs.Task;
+            // Wait for shutdown signal or bot crash
+            await Task.WhenAny(botTask, tcs.Task);
         }
     }
 }

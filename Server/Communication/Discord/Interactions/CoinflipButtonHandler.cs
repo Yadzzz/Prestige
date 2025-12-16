@@ -386,37 +386,20 @@ namespace Server.Communication.Discord.Interactions
             };
 
             // Replace the original request message with the result embed + rematch buttons
-            if (flip.ChannelId.HasValue && flip.MessageId.HasValue)
+            try
             {
-                try
-                {
-                    var channel = await client.GetChannelAsync(flip.ChannelId.Value);
-                    var originalMessage = await channel.GetMessageAsync(flip.MessageId.Value);
+                // Acknowledge the interaction by updating the same message (no new message sent)
+                var responseBuilder = new DiscordInteractionResponseBuilder()
+                    .AddEmbed(embed)
+                    .AddActionRowComponent(new DiscordActionRowComponent(rematchRow));
 
-                    await originalMessage.ModifyAsync(mb =>
-                    {
-                        mb.ClearEmbeds();
-                        mb.AddEmbed(embed);
-                        mb.ClearComponents();
-                        mb.AddActionRowComponent(new DiscordActionRowComponent(rematchRow));
-                    });
-
-                    // Acknowledge the interaction by updating the same message (no new message sent)
-                    var responseBuilder = new DiscordInteractionResponseBuilder()
-                        .AddEmbed(embed)
-                        .AddActionRowComponent(new DiscordActionRowComponent(rematchRow));
-
-                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to modify original message for flip {flip.Id}. Error: {ex.Message}");
-                    // If the channel or message no longer exists (deleted, etc.),
-                    // OR if ModifyAsync fails for any other reason (network, etc.),
-                    // fall through to the fallback below without breaking the flip
-                    // logic or the user's balance.
-                }
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
+                return;
+            }
+            catch (Exception ex)
+            {
+                env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to update message for flip {flip.Id}. Error: {ex.Message}");
+                // Fall through to fallback
             }
 
             // Fallback: if we somehow don't have stored IDs or the original message

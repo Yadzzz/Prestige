@@ -60,9 +60,8 @@ namespace Server.Client.Payments
                 { "price_amount", priceAmount },
                 { "price_currency", priceCurrency },
                 { "order_id", orderId },
-                { "order_description", orderDescription },
-                { "success_url", "https://discord.com/channels/@me" },
-                { "cancel_url", "https://discord.com/channels/@me" }
+                { "order_description", orderDescription }
+                // Removed success_url and cancel_url pointing to @me to avoid Unauthorized errors
             };
 
             if (!string.IsNullOrEmpty(callbackUrl))

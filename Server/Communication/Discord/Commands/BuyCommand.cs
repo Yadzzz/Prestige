@@ -16,6 +16,12 @@ namespace Server.Communication.Discord.Commands
         [Command("buy")]
         public async Task Buy(CommandContext ctx, double amountM = 0)
         {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("This command is currently restricted to staff only.");
+                return;
+            }
+
             if (amountM <= 0)
             {
                 await ctx.RespondAsync("Please specify a valid amount of Millions (M) to buy (e.g., `!buy 10` for 10M).");
