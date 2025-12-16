@@ -16,6 +16,12 @@ namespace Server.Infrastructure.Configuration
         public string ShortName { get; set; }
         public string ConnectionString { get; set; }
         public DiscordConfig Discord { get; set; }
+        public PaymentsConfig Payments { get; set; }
+    }
+
+    public class PaymentsConfig
+    {
+        public string NowPaymentsApiKey { get; set; }
     }
 
     public class DiscordConfig

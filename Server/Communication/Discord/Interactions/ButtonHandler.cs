@@ -59,6 +59,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Mines buttons
+            if (e.Id.StartsWith("mines_", StringComparison.OrdinalIgnoreCase))
+            {
+                await MinesButtonHandler.Handle(client, e);
+                return;
+            }
+
             // Other button namespaces (game_, etc.) can be routed here later
         }
     }

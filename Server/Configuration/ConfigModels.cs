@@ -13,6 +13,12 @@ namespace Server.Configuration
         public string ServerName { get; set; }
         public DatabaseConfig Database { get; set; }
         public DiscordConfig Discord { get; set; }
+        public PaymentsConfig Payments { get; set; }
+    }
+
+    public class PaymentsConfig
+    {
+        public string NowPaymentsApiKey { get; set; }
     }
 
     public class DatabaseConfig

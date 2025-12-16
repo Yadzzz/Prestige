@@ -193,7 +193,9 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<CoinflipCommand>();
                 commands.RegisterCommands<BlackjackCommand>();
                 commands.RegisterCommands<HigherLowerCommand>();
+                commands.RegisterCommands<MinesCommand>();
                 commands.RegisterCommands<RaceCommand>();
+                commands.RegisterCommands<BuyCommand>();
                 commands.RegisterCommands<CancelCommand>();
 
             }, new CommandsNextConfiguration

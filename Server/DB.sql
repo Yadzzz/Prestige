@@ -176,3 +176,24 @@
 --);
 
 --CREATE INDEX idx_hl_games_user_status ON higher_lower_games(user_id, status);
+
+
+--CREATE TABLE IF NOT EXISTS `mines_games` (
+--  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--  `user_id` INT UNSIGNED NOT NULL,
+--  `identifier` VARCHAR(64) NOT NULL,
+--  `bet_amount` BIGINT NOT NULL,
+--  `mines_count` INT NOT NULL,
+--  `status` TINYINT NOT NULL,
+--  `mine_locations` TEXT NOT NULL,
+--  `revealed_tiles` TEXT NOT NULL,
+--  `message_id` BIGINT UNSIGNED NULL,
+--  `channel_id` BIGINT UNSIGNED NULL,
+--  `created_at` DATETIME NOT NULL,
+--  `updated_at` DATETIME NOT NULL,
+--  PRIMARY KEY (`id`),
+--  KEY `idx_mines_games_user` (`user_id`),
+--  CONSTRAINT `fk_mines_games_user`
+--    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+--    ON DELETE CASCADE
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
