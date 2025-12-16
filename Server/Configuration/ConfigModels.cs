@@ -19,6 +19,7 @@ namespace Server.Configuration
     public class PaymentsConfig
     {
         public string NowPaymentsApiKey { get; set; }
+        public string IpnCallbackUrl { get; set; }
     }
 
     public class DatabaseConfig

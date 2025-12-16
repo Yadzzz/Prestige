@@ -197,3 +197,17 @@
 --    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
 --    ON DELETE CASCADE
 --) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--CREATE TABLE IF NOT EXISTS payment_orders (
+--    id INT AUTO_INCREMENT PRIMARY KEY,
+--    order_id VARCHAR(255) NOT NULL UNIQUE,
+--    user_id VARCHAR(50) NOT NULL,
+--    channel_id VARCHAR(50) NOT NULL,
+--    amount_m DOUBLE NOT NULL,
+--    price_usd DOUBLE NOT NULL,
+--    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+--    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+--    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--    INDEX idx_order_id (order_id),
+--    INDEX idx_user_id (user_id)
+--);

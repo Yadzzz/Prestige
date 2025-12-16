@@ -6,6 +6,7 @@ using DSharpPlus.Entities;
 using Server.Client.Payments;
 using Server.Client.Users;
 using Server.Infrastructure;
+using Server.Infrastructure.Configuration;
 using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
@@ -13,13 +14,17 @@ namespace Server.Communication.Discord.Commands
     public class BuyCommand : BaseCommandModule
     {
         [Command("buy")]
-        public async Task Buy(CommandContext ctx, double amount = 0)
+        public async Task Buy(CommandContext ctx, double amountM = 0)
         {
-            if (amount <= 0)
+            if (amountM <= 0)
             {
-                await ctx.RespondAsync("Please specify a valid amount to buy (e.g., `!buy 10` for $10).");
+                await ctx.RespondAsync("Please specify a valid amount of Millions (M) to buy (e.g., `!buy 10` for 10M).");
                 return;
             }
+
+            // Rate: Configured in appsettings.json (Default: 1M = $0.15)
+            double ratePerM = ConfigService.Current.Payments?.UsdPerMillion ?? 0.15;
+            double priceUsd = amountM * ratePerM;
 
             var env = ServerEnvironment.GetServerEnvironment();
             var serverManager = env.ServerManager;
@@ -36,11 +41,14 @@ namespace Server.Communication.Discord.Commands
             if (user == null) return;
 
             var orderId = $"BUY-{user.Id}-{DateTime.UtcNow.Ticks}";
-            var description = $"Purchase of ${amount} credits for {user.DisplayName}";
+            var description = $"Purchase of {amountM:N0}M credits for {user.DisplayName}";
+
+            // Save order to DB
+            await serverManager.PaymentOrdersService.CreateOrderAsync(orderId, user.Id.ToString(), ctx.Channel.Id.ToString(), amountM, priceUsd);
 
             // Create Invoice (better for user choice of crypto) or Payment (specific crypto)
             // Let's use Invoice to give them a link where they can choose currency
-            var invoice = await paymentsService.CreateInvoiceAsync(amount, "USD", orderId, description);
+            var invoice = await paymentsService.CreateInvoiceAsync(priceUsd, "USD", orderId, description);
 
             if (invoice == null)
             {
@@ -48,16 +56,16 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            var qrCodeUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={Uri.EscapeDataString(invoice.invoice_url)}";
+
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("🛒 Purchase Credits")
-                .WithDescription($"You are purchasing **${amount}** worth of credits.")
+                .WithDescription($"You are purchasing **{amountM:N0}M** credits for **${priceUsd:N2}**.\n\n**Scan to Pay on Mobile:**")
                 .AddField("Invoice URL", $"[Click here to pay]({invoice.invoice_url})")
+                .WithThumbnail(qrCodeUrl)
                 .WithColor(DiscordColor.Blurple)
                 .WithFooter($"Order ID: {orderId}")
                 .WithTimestamp(DateTime.UtcNow);
-
-            // If we had a QR code URL, we could add it as image
-            // NowPayments invoice URL page has the QR code.
             
             await ctx.RespondAsync(embed: embed);
         }

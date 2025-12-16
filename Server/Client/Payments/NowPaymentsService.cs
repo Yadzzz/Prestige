@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -27,7 +28,7 @@ namespace Server.Client.Payments
                 price_amount = priceAmount,
                 price_currency = priceCurrency,
                 pay_currency = payCurrency,
-                ipn_callback_url = "https://your-callback-url.com/webhook", // Needs to be configured
+                // ipn_callback_url = "https://your-callback-url.com/webhook", // Removed to use Dashboard setting
                 order_id = orderId,
                 order_description = orderDescription
             };
@@ -51,18 +52,25 @@ namespace Server.Client.Payments
         
         public async Task<InvoiceResponse> CreateInvoiceAsync(double priceAmount, string priceCurrency, string orderId, string orderDescription)
         {
-             var request = new
+            var callbackUrl = ConfigService.Current.Payments?.IpnCallbackUrl;
+
+            // Use a dictionary to conditionally add properties
+            var requestData = new Dictionary<string, object>
             {
-                price_amount = priceAmount,
-                price_currency = priceCurrency,
-                order_id = orderId,
-                order_description = orderDescription,
-                ipn_callback_url = "https://your-callback-url.com/webhook", // Needs to be configured
-                success_url = "https://your-website.com/success",
-                cancel_url = "https://your-website.com/cancel"
+                { "price_amount", priceAmount },
+                { "price_currency", priceCurrency },
+                { "order_id", orderId },
+                { "order_description", orderDescription },
+                { "success_url", "https://discord.com/channels/@me" },
+                { "cancel_url", "https://discord.com/channels/@me" }
             };
 
-            var json = JsonSerializer.Serialize(request);
+            if (!string.IsNullOrEmpty(callbackUrl))
+            {
+                requestData.Add("ipn_callback_url", callbackUrl);
+            }
+
+            var json = JsonSerializer.Serialize(requestData);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             try

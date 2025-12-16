@@ -42,6 +42,7 @@ namespace Server.Infrastructure
         public RaceService RaceService { get; set; }
         public AiCommandResolverService AiCommandResolverService { get; set; }
         public NowPaymentsService NowPaymentsService { get; set; }
+        public PaymentOrdersService PaymentOrdersService { get; set; }
 
         public ServerManager()
         {
@@ -62,6 +63,7 @@ namespace Server.Infrastructure
             this.MinesService = new MinesService(this.DatabaseManager, this.UsersService);
             this.HigherLowerService = new HigherLowerService(this.DatabaseManager);
             this.LogsService = new LogsService(this.DatabaseManager);
+            this.PaymentOrdersService = new PaymentOrdersService(this.DatabaseManager);
             this.AiCommandResolverService = new AiCommandResolverService("https://lively-butterfly-20a1.yadmarzan.workers.dev/");
             
             var paymentsApiKey = ConfigService.Current.Payments?.NowPaymentsApiKey;

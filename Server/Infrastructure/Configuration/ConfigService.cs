@@ -22,6 +22,9 @@ namespace Server.Infrastructure.Configuration
     public class PaymentsConfig
     {
         public string NowPaymentsApiKey { get; set; }
+        public string IpnSecret { get; set; }
+        public string IpnCallbackUrl { get; set; }
+        public double UsdPerMillion { get; set; } = 0.15; // Default to 0.15 if not set
     }
 
     public class DiscordConfig
