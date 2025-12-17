@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using DSharpPlus;
@@ -314,6 +315,19 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            /* 
+             * [DOCS - DO NOT REMOVE]
+             * The following line defers the interaction to prevent "Interaction Failed" errors if processing takes >3 seconds.
+             * This adds ONE extra API call (Defer -> Edit).
+             * 
+             * TO REVERT TO SINGLE CALL (Faster, but risks timeout errors):
+             * 1. Remove the 'await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.DeferredMessageUpdate);' line below.
+             * 2. Change 'EditOriginalResponseAsync' at the bottom to 'CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, ...)'
+             * 3. Change 'CreateFollowupMessageAsync' in the fallback to 'CreateResponseAsync'
+             */
+            // Defer to prevent timeout
+            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.DeferredMessageUpdate);
+
             // At this point the stake is already locked in CoinflipCommand; do NOT remove balance again
 
             // Use cryptographically strong RNG for a fair 50/50 outcome
@@ -326,8 +340,8 @@ namespace Server.Communication.Discord.Interactions
             if (!await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads, resultHeads, CoinflipStatus.Finished, flip.MessageId ?? 0, flip.ChannelId ?? 0, expectedStatus: CoinflipStatus.Pending))
             {
                 env.ServerManager.LoggerManager.LogError($"[CoinflipButtonHandler] Failed to update outcome for flip {flip.Id}. User: {user.Identifier}. Aborting to prevent exploit.");
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent("Failed to process game result. Please try again.").AsEphemeral(true));
+                await e.Interaction.CreateFollowupMessageAsync(
+                    new DiscordFollowupMessageBuilder().WithContent("Failed to process game result. Please try again.").AsEphemeral(true));
                 return;
             }
 
@@ -388,12 +402,12 @@ namespace Server.Communication.Discord.Interactions
             // Replace the original request message with the result embed + rematch buttons
             try
             {
-                // Acknowledge the interaction by updating the same message (no new message sent)
-                var responseBuilder = new DiscordInteractionResponseBuilder()
+                // Since we deferred, we must use EditOriginalResponseAsync
+                var webhookBuilder = new DiscordWebhookBuilder()
                     .AddEmbed(embed)
                     .AddActionRowComponent(new DiscordActionRowComponent(rematchRow));
 
-                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, responseBuilder);
+                await e.Interaction.EditOriginalResponseAsync(webhookBuilder);
                 return;
             }
             catch (Exception ex)
@@ -404,8 +418,8 @@ namespace Server.Communication.Discord.Interactions
 
             // Fallback: if we somehow don't have stored IDs or the original message
             // is gone, respond with a new message showing the result + rematch row.
-            await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder()
+            await e.Interaction.CreateFollowupMessageAsync(
+                new DiscordFollowupMessageBuilder()
                     .AddEmbed(embed)
                     .AddActionRowComponent(new DiscordActionRowComponent(rematchRow)));
         }
