@@ -89,6 +89,13 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            // Register wager for race
+            //if (!ctx.Member.IsStaff())
+            {
+                var raceService = serverManager.RaceService;
+                await raceService.RegisterWagerAsync(user.Identifier, user.DisplayName, betAmount);
+            }
+
             var embed = BuildGameEmbed(game, user);
             var buttons = BuildButtons(game);
 
