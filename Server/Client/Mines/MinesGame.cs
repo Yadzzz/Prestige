@@ -38,6 +38,7 @@ namespace Server.Client.Mines
     {
         Active = 0,
         CashedOut = 1,
-        Lost = 2
+        Lost = 2,
+        Cancelled = 3
     }
 }

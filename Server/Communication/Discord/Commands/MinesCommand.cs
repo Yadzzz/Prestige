@@ -21,6 +21,11 @@ namespace Server.Communication.Discord.Commands
         [Command("mines")]
         public async Task Mines(CommandContext ctx, string amount = null, int minesCount = 3)
         {
+            if (!await DiscordChannelPermissionService.EnforceMinesChannelAsync(ctx))
+            {
+                return;
+            }
+
             if (RateLimiter.IsRateLimited(ctx.User.Id, "mines", RateLimitInterval))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
@@ -143,6 +148,15 @@ namespace Server.Communication.Discord.Commands
                 nextMultiplier = 0;
                 thumbnailUrl = "https://i.imgur.com/gdhNxb1.png";
             }
+            else if (game.Status == MinesGameStatus.Cancelled)
+            {
+                status = "Cancelled (Refunded)";
+                color = DiscordColor.Gray;
+                currentPayout = game.BetAmount;
+                multiplier = 1;
+                nextMultiplier = 0;
+                thumbnailUrl = "https://i.imgur.com/IZpipDr.png";
+            }
             else if (game.RevealedTiles.Count > 0)
             {
                 thumbnailUrl = "https://i.imgur.com/7krPRqX.png"; // Ongoing
@@ -175,16 +189,30 @@ namespace Server.Communication.Discord.Commands
                 {
                     int index = i * 5 + j;
                     
-                    if (index == 24) // Cashout button
+                    if (index == 24) // Cashout/Cancel button
                     {
-                        bool canCashout = game.Status == MinesGameStatus.Active && game.RevealedTiles.Count > 0;
-                        row.Add(new DiscordButtonComponent(
-                            DiscordButtonStyle.Secondary,
-                            $"mines_cashout_{game.Id}",
-                            " ",
-                            !canCashout,
-                            new DiscordComponentEmoji("💰")
-                        ));
+                        if (game.RevealedTiles.Count == 0)
+                        {
+                            // Cancel button
+                            row.Add(new DiscordButtonComponent(
+                                DiscordButtonStyle.Danger,
+                                $"mines_cancel_{game.Id}",
+                                "Cancel",
+                                game.Status != MinesGameStatus.Active,
+                                new DiscordComponentEmoji("✖️")
+                            ));
+                        }
+                        else
+                        {
+                            bool canCashout = game.Status == MinesGameStatus.Active;
+                            row.Add(new DiscordButtonComponent(
+                                DiscordButtonStyle.Secondary,
+                                $"mines_cashout_{game.Id}",
+                                "Cashout",
+                                !canCashout,
+                                new DiscordComponentEmoji("💰")
+                            ));
+                        }
                     }
                     else
                     {

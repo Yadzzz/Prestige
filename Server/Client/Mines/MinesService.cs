@@ -87,6 +87,26 @@ namespace Server.Client.Mines
             }
         }
 
+        public async Task<MinesGame> CancelGameAsync(int gameId)
+        {
+            var game = await GetGameAsync(gameId);
+            if (game == null || game.Status != MinesGameStatus.Active) return game;
+            if (game.RevealedTiles.Count > 0) return game; // Cannot cancel if tiles revealed
+
+            game.Status = MinesGameStatus.Cancelled;
+            
+            try
+            {
+                await UpdateGameAsync(game);
+                await _usersService.AddBalanceAsync(game.Identifier, game.BetAmount);
+                return game;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public async Task<MinesGame> CreateGameAsync(User user, long betAmount, int minesCount)
         {
             if (user == null || betAmount <= 0 || minesCount < 1 || minesCount > 23)

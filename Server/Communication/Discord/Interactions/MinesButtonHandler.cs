@@ -70,6 +70,10 @@ namespace Server.Communication.Discord.Interactions
             {
                 updatedGame = await minesService.CashoutAsync(gameId);
             }
+            else if (action == "cancel")
+            {
+                updatedGame = await minesService.CancelGameAsync(gameId);
+            }
 
             if (updatedGame == null)
             {

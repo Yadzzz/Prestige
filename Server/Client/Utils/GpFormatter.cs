@@ -7,7 +7,7 @@ namespace Server.Client.Utils
     public static class GpFormatter
     {
             // Minimum allowed bet/stake for games (0.1M -> 100K internally)
-            public const long MinimumBetAmountK = 1000L;
+            public const long MinimumBetAmountK = 100L;
 
             // Minimum deposit (1M -> 1000K internally)
             public const long MinimumDepositAmountK = 1000L;
