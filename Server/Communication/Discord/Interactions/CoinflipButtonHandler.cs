@@ -442,19 +442,19 @@ namespace Server.Communication.Discord.Interactions
             string description;
             if (win && isAllInWin)
             {
-                description = "OMG! It's a max win!";
+                description = "NO WAY — max win!";
             }
             else if (win && isBigBet)
             {
-                description = "HUGE! Amazing big win!";
+                description = "MASSIVE — big bet win!";
             }
             else if (win)
             {
-                description = "RNGesus is with you!";
+                description = "Let’s go — you hit!";
             }
             else
             {
-                description = "Haha, tough luck...";
+                description = "Ouch… unlucky.";
             }
 
             var body = win
@@ -468,7 +468,7 @@ namespace Server.Communication.Discord.Interactions
             }
             else if (isAllInWin)
             {
-                suffix = "Will you max success again?";
+                suffix = "Think you can do that again?";
             }
             else if (isBigBet)
             {
