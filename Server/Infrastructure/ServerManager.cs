@@ -40,6 +40,7 @@ namespace Server.Infrastructure
         public LogsService LogsService { get; set; }
         public LiveFeedService LiveFeedService { get; set; }
         public RaceService RaceService { get; set; }
+        public Server.Client.Chest.ChestService ChestService { get; set; }
         public AiCommandResolverService AiCommandResolverService { get; set; }
         public NowPaymentsService NowPaymentsService { get; set; }
         public PaymentOrdersService PaymentOrdersService { get; set; }
@@ -55,6 +56,7 @@ namespace Server.Infrastructure
                 DatabaseLoggerEnabled = false,
             });
             this.UsersService = new UsersService(this.DatabaseManager);
+            this.ChestService = new Server.Client.Chest.ChestService(this.DatabaseManager);
             this.TransactionsService = new TransactionsService(this.DatabaseManager, this.UsersService);
             this.BalanceAdjustmentsService = new BalanceAdjustmentsService(this.DatabaseManager, this.UsersService);
             this.StakesService = new StakesService(this.DatabaseManager);

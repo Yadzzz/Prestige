@@ -197,6 +197,7 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<RaceCommand>();
                 commands.RegisterCommands<BuyCommand>();
                 commands.RegisterCommands<CancelCommand>();
+                commands.RegisterCommands<ChestCommand>();
 
             }, new CommandsNextConfiguration
             {

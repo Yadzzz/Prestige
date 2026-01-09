@@ -77,5 +77,16 @@ namespace Server.Infrastructure.Discord
         public static ulong DepositEmojiId => ConfigService.Current.Discord.DepositEmojiId;
         public static ulong WalletEmojiId => ConfigService.Current.Discord.WalletEmojiId;
         public static ulong BuyEmojiId => ConfigService.Current.Discord.BuyEmojiId;
+
+        // Chest Emojis
+        public static ulong ChestZaryteEmojiId => ConfigService.Current.Discord.ChestZaryteEmojiId;
+        public static ulong ChestTbowEmojiId => ConfigService.Current.Discord.ChestTbowEmojiId;
+        public static ulong ChestShadowEmojiId => ConfigService.Current.Discord.ChestShadowEmojiId;
+        public static ulong ChestTorvaLegsEmojiId => ConfigService.Current.Discord.ChestTorvaLegsEmojiId;
+        public static ulong ChestTorvaBodyEmojiId => ConfigService.Current.Discord.ChestTorvaBodyEmojiId;
+        public static ulong ChestTorvaHelmEmojiId => ConfigService.Current.Discord.ChestTorvaHelmEmojiId;
+        public static ulong ChestScytheEmojiId => ConfigService.Current.Discord.ChestScytheEmojiId;
+        public static ulong ChestElysianEmojiId => ConfigService.Current.Discord.ChestElysianEmojiId;
+        public static ulong ChestPickaxeEmojiId => ConfigService.Current.Discord.ChestPickaxeEmojiId;
     }
 }

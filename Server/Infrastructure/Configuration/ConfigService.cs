@@ -88,6 +88,17 @@ namespace Server.Infrastructure.Configuration
         public ulong HigherLowerHigherEmojiId { get; set; }
         public ulong HigherLowerLowerEmojiId { get; set; }
 
+        // Chest Emojis
+        public ulong ChestZaryteEmojiId { get; set; }
+        public ulong ChestTbowEmojiId { get; set; }
+        public ulong ChestShadowEmojiId { get; set; }
+        public ulong ChestTorvaLegsEmojiId { get; set; }
+        public ulong ChestTorvaBodyEmojiId { get; set; }
+        public ulong ChestTorvaHelmEmojiId { get; set; }
+        public ulong ChestScytheEmojiId { get; set; }
+        public ulong ChestElysianEmojiId { get; set; }
+        public ulong ChestPickaxeEmojiId { get; set; }
+
         public BlackjackCardConfig BlackjackCards { get; set; }
     }
 

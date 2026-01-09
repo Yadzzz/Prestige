@@ -52,6 +52,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Chest buttons
+            if (e.Id.StartsWith("chest_", StringComparison.OrdinalIgnoreCase))
+            {
+                await ChestButtonHandler.Handle(client, e);
+                return;
+            }
+
             // Race interactions
             if (e.Id.StartsWith("race_", StringComparison.OrdinalIgnoreCase))
             {
