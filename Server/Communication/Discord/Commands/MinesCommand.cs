@@ -189,27 +189,38 @@ namespace Server.Communication.Discord.Commands
                 {
                     int index = i * 5 + j;
                     
-                    if (index == 24) // Cashout/Cancel button
+                    if (index == 24) // Cashout/Cancel/Replay button
                     {
-                        if (game.RevealedTiles.Count == 0)
+                        if (game.Status != MinesGameStatus.Active)
+                        {
+                            // Replay button
+                            row.Add(new DiscordButtonComponent(
+                                DiscordButtonStyle.Primary,
+                                $"mines_replay_{game.Id}",
+                                " ",
+                                false,
+                                new DiscordComponentEmoji("🔄")
+                            ));
+                        }
+                        else if (game.RevealedTiles.Count == 0)
                         {
                             // Cancel button
                             row.Add(new DiscordButtonComponent(
                                 DiscordButtonStyle.Danger,
                                 $"mines_cancel_{game.Id}",
                                 "Cancel",
-                                game.Status != MinesGameStatus.Active,
+                                false,
                                 new DiscordComponentEmoji("✖️")
                             ));
                         }
                         else
                         {
-                            bool canCashout = game.Status == MinesGameStatus.Active;
+                            // Cashout button
                             row.Add(new DiscordButtonComponent(
                                 DiscordButtonStyle.Secondary,
                                 $"mines_cashout_{game.Id}",
-                                "Cashout",
-                                !canCashout,
+                                " ",
+                                false,
                                 new DiscordComponentEmoji("💰")
                             ));
                         }

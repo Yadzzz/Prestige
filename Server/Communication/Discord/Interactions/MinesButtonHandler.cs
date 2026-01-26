@@ -5,6 +5,7 @@ using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using Server.Client.Mines;
+using Server.Client.Users;
 using Server.Communication.Discord.Commands;
 using Server.Infrastructure;
 
@@ -73,6 +74,40 @@ namespace Server.Communication.Discord.Interactions
             else if (action == "cancel")
             {
                 updatedGame = await minesService.CancelGameAsync(gameId);
+            }
+            else if (action == "replay")
+            {
+                if (user.Balance < game.BetAmount)
+                {
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("You don't have enough balance for this bet.").AsEphemeral(true));
+                    return;
+                }
+
+                if (!await usersService.RemoveBalanceAsync(user.Identifier, game.BetAmount))
+                {
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance.").AsEphemeral(true));
+                    return;
+                }
+
+                user.Balance -= game.BetAmount;
+
+                updatedGame = await minesService.CreateGameAsync(user, game.BetAmount, game.MinesCount);
+
+                if (updatedGame != null)
+                {
+                    updatedGame.MessageId = e.Message.Id;
+                    updatedGame.ChannelId = e.Channel.Id;
+                    await minesService.UpdateGameAsync(updatedGame);
+                }
+                else
+                {
+                    await usersService.AddBalanceAsync(user.Identifier, game.BetAmount);
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
+                        new DiscordInteractionResponseBuilder().WithContent("Failed to start new game.").AsEphemeral(true));
+                    return;
+                }
             }
 
             if (updatedGame == null)
