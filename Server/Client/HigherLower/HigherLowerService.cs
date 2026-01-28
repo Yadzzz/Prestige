@@ -164,9 +164,19 @@ namespace Server.Client.HigherLower
                 isCorrect = newValue < oldValue;
             }
 
-            // Tie is loss
+            // Tie is draw
             if (newValue == oldValue)
-                isCorrect = false;
+            {
+                game.LastCard = newCard;
+                game.CardHistory.Add(newCard);
+                game.UpdatedAt = DateTime.UtcNow;
+                
+                game.Status = HigherLowerGameStatus.Draw;
+                game.CurrentPayout = game.BetAmount;
+                await FinishGameAsync(game);
+                
+                return (game, false, newCard);
+            }
 
             var previousCard = game.LastCard;
             game.LastCard = newCard;
@@ -221,7 +231,7 @@ namespace Server.Client.HigherLower
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
 
-            if (game.Status == HigherLowerGameStatus.Won || game.Status == HigherLowerGameStatus.CashedOut)
+            if (game.Status == HigherLowerGameStatus.Won || game.Status == HigherLowerGameStatus.CashedOut || game.Status == HigherLowerGameStatus.Draw)
             {
                 long payout = (long)game.CurrentPayout;
                 if (payout > 0)
@@ -234,6 +244,11 @@ namespace Server.Client.HigherLower
                 if (user != null)
                 {
                     var raceName = user.DisplayName ?? user.Username ?? user.Identifier;
+                    // For draw, we might choose not to register wager as it's returned, but usually wager counts as valid play. 
+                    // Since it's a refund, maybe it shouldn't count towards racing volume if it's effectively cancelled?
+                    // User said "no one loses", implies just money back. Often draws don't count as wager for rake/races in casinos, 
+                    // but sometimes they do. Given the code registers even on loss, it registers the *bet made*. 
+                    // A draw is a completed game round sequence. I'll keep it registered.
                     await env.ServerManager.RaceService.RegisterWagerAsync(user.Identifier, raceName, game.BetAmount);
                 }
             }

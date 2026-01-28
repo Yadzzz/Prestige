@@ -113,6 +113,8 @@ namespace Server.Communication.Discord.Commands
 
             if (game.Status == HigherLowerGameStatus.Won || game.Status == HigherLowerGameStatus.CashedOut)
                 color = DiscordColor.Green;
+            else if (game.Status == HigherLowerGameStatus.Draw)
+                color = DiscordColor.Orange;
             else if (game.Status == HigherLowerGameStatus.Lost)
                 color = DiscordColor.Red;
 
@@ -166,6 +168,8 @@ namespace Server.Communication.Discord.Commands
                     resultText = $"You Won `{GpFormatter.Format((long)game.CurrentPayout)}`!";
                 else if (game.Status == HigherLowerGameStatus.CashedOut)
                     resultText = $"Cashed Out `{GpFormatter.Format((long)game.CurrentPayout)}`!";
+                else if (game.Status == HigherLowerGameStatus.Draw)
+                    resultText = "Game Draw - Money Refunded!";
                 else
                     resultText = "You Lost!";
 
