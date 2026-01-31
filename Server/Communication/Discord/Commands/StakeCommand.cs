@@ -66,7 +66,7 @@ namespace Server.Communication.Discord.Commands
             }
 
             // Lock stake amount up-front so it can't be reused while pending
-            var balanceLocked = await usersService.RemoveBalanceAsync(user.Identifier, amountK);
+            var balanceLocked = await usersService.RemoveBalanceAsync(user.Identifier, amountK, isWager: true);
             if (!balanceLocked)
             {
                 await ctx.RespondAsync("Failed to lock balance for this stake. Please try again.");

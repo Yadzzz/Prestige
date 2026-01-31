@@ -67,9 +67,18 @@ namespace Server.Communication.Discord.Interactions
             {
                 bool guessHigher = action == "higher";
                 var (updatedGame, isWin, newCard) = await hlService.GuessAsync(gameId, guessHigher);
+
+                string imageUrl = "https://i.imgur.com/lJ8D3h7.gif"; // Default/Draw
+                if (updatedGame.Status != HigherLowerGameStatus.Draw)
+                {
+                    if (guessHigher)
+                        imageUrl = isWin ? "https://i.imgur.com/Kb87Dme.gif" : "https://i.imgur.com/OkFSiRj.gif";
+                    else
+                        imageUrl = isWin ? "https://i.imgur.com/wdEu2IQ.gif" : "https://i.imgur.com/8IHZ2tm.gif";
+                }
                 
                 var user = await usersService.GetUserAsync(game.Identifier);
-                var embed = HigherLowerCommand.BuildGameEmbed(updatedGame, user, client);
+                var embed = HigherLowerCommand.BuildGameEmbed(updatedGame, user, client, imageUrl);
                 var buttons = HigherLowerCommand.BuildButtons(updatedGame);
 
                 var builder = new DiscordMessageBuilder().AddEmbed(embed);

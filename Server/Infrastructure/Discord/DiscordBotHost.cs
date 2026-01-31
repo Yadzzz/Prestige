@@ -56,7 +56,7 @@ namespace Server.Infrastructure.Discord
             builder.ConfigureEventHandlers(b =>
             {
                 b.HandleComponentInteractionCreated(ButtonHandler.HandleButtons);
-                b.HandleModalSubmitted(RaceInteractionHandler.HandleModal);
+                b.HandleModalSubmitted(ModalHandler.HandleModals);
 
                 b.HandleSessionCreated(async (s, e) =>
                 {
@@ -198,6 +198,8 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<BuyCommand>();
                 commands.RegisterCommands<CancelCommand>();
                 commands.RegisterCommands<ChestCommand>();
+                commands.RegisterCommands<ReferralCommands>();
+                commands.RegisterCommands<WagerLockCommand>();
 
             }, new CommandsNextConfiguration
             {

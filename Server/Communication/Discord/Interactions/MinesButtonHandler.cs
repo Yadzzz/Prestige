@@ -84,7 +84,7 @@ namespace Server.Communication.Discord.Interactions
                     return;
                 }
 
-                if (!await usersService.RemoveBalanceAsync(user.Identifier, game.BetAmount))
+                if (!await usersService.RemoveBalanceAsync(user.Identifier, game.BetAmount, isWager: true))
                 {
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance.").AsEphemeral(true));

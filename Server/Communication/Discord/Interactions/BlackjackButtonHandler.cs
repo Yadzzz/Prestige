@@ -101,7 +101,7 @@ namespace Server.Communication.Discord.Interactions
                     return;
                 }
 
-                if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmount))
+                if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmount, isWager: true))
                 {
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance for this rematch. Please try again.").AsEphemeral(true));
@@ -252,7 +252,7 @@ namespace Server.Communication.Discord.Interactions
                         return;
                     }
 
-                    if (currentHand != null && await usersService.RemoveBalanceAsync(user.Identifier, currentHand.BetAmount))
+                    if (currentHand != null && await usersService.RemoveBalanceAsync(user.Identifier, currentHand.BetAmount, isWager: true))
                     {
                         success = await blackjackService.DoubleAsync(game, user);
                         if (!success)
@@ -295,7 +295,7 @@ namespace Server.Communication.Discord.Interactions
                         return;
                     }
 
-                    if (await usersService.RemoveBalanceAsync(user.Identifier, game.BetAmount))
+                    if (await usersService.RemoveBalanceAsync(user.Identifier, game.BetAmount, isWager: true))
                     {
                         success = await blackjackService.SplitAsync(game, user);
                         if (!success)
@@ -325,7 +325,7 @@ namespace Server.Communication.Discord.Interactions
                         return;
                     }
 
-                    if (await usersService.RemoveBalanceAsync(user.Identifier, insuranceCost))
+                    if (await usersService.RemoveBalanceAsync(user.Identifier, insuranceCost, isWager: true))
                     {
                         success = await blackjackService.TakeInsuranceAsync(game, user);
                         if (!success)

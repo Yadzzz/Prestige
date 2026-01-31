@@ -65,7 +65,7 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!await usersService.RemoveBalanceAsync(user.Identifier, amountK))
+            if (!await usersService.RemoveBalanceAsync(user.Identifier, amountK, isWager: true))
             {
                 await ctx.RespondAsync("Failed to lock balance for this flip. Please try again.");
                 return;

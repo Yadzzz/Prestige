@@ -53,13 +53,22 @@ namespace Server.Client.Users
         //     return AddBalanceAsync(identifier, amount).GetAwaiter().GetResult();
         // }
 
-        public async Task<bool> RemoveBalanceAsync(string identifier, long amount)
+        public async Task<bool> RemoveBalanceAsync(string identifier, long amount, bool isWager = false)
         {
             if (amount <= 0)
             {
                 return false;
             }
-            var updated = await UpdateBalanceAsync(identifier, -amount);
+            
+            bool updated;
+            if (isWager)
+            {
+                updated = await ReduceBalanceAndWagerLockAsync(identifier, amount);
+            }
+            else
+            {
+                updated = await UpdateBalanceAsync(identifier, -amount);
+            }
 
             if (updated)
             {
@@ -73,7 +82,7 @@ namespace Server.Client.Users
                             level: "Info",
                             userIdentifier: identifier,
                             action: "BalanceDecreased",
-                            message: $"Balance decreased by {amount}K for user={identifier}",
+                            message: $"Balance decreased by {amount}K for user={identifier} (isWager={isWager})",
                             exception: null);
                     }
                     catch (Exception ex)
@@ -162,6 +171,7 @@ namespace Server.Client.Users
                                 Username = reader["username"].ToString(),
                                 DisplayName = reader["display_name"].ToString(),
                                 Balance = Convert.ToInt64(reader["balance"]),
+                                WagerLock = reader["wager_lock_amount"] == DBNull.Value ? 0 : Convert.ToInt64(reader["wager_lock_amount"]),
                                 StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"]),
                                 StakeLoseStreak = reader["stake_lose_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_lose_streak"])
                             };
@@ -182,6 +192,47 @@ namespace Server.Client.Users
                 }
             }
 
+            return null;
+        }
+
+        public async Task<User?> GetUserByUsernameAsync(string username)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                return null;
+            }
+
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("SELECT * FROM users WHERE username = @username LIMIT 1");
+                    command.AddParameter("username", username);
+
+                    using (var reader = await command.ExecuteDataReaderAsync())
+                    {
+                        if (reader != null && await reader.ReadAsync())
+                        {
+                            return new User
+                            {
+                                Id = Convert.ToInt32(reader["id"]),
+                                Identifier = reader["identifier"].ToString(),
+                                Username = reader["username"].ToString(),
+                                DisplayName = reader["display_name"].ToString(),
+                                Balance = Convert.ToInt64(reader["balance"]),
+                                WagerLock = reader["wager_lock_amount"] == DBNull.Value ? 0 : Convert.ToInt64(reader["wager_lock_amount"]),
+                                StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"]),
+                                StakeLoseStreak = reader["stake_lose_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_lose_streak"])
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService.GetUserByUsernameAsync] username={username} ex={ex}");
+            }
             return null;
         }
 
@@ -270,6 +321,70 @@ namespace Server.Client.Users
                 {
                     Console.WriteLine($"[UsersService.UpdateBalanceError] {ex}");
                 }
+                return false;
+            }
+        }
+
+        private async Task<bool> ReduceBalanceAndWagerLockAsync(string identifier, long amount)
+        {
+            if (string.IsNullOrEmpty(identifier) || amount <= 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    // Decrease balance by amount
+                    // And reduce wager_lock_amount by amount, but clamp to 0 (don't go negative)
+                    command.SetCommand(@"
+                        UPDATE users 
+                        SET balance = balance - @amount, 
+                            wager_lock_amount = CASE 
+                                WHEN wager_lock_amount > @amount THEN wager_lock_amount - @amount 
+                                ELSE 0 
+                            END
+                        WHERE identifier = @identifier");
+                    
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("amount", amount);
+
+                    var result = await command.ExecuteQueryAsync();
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService.ReduceBalanceAndWagerLockAsync] identifier={identifier} amount={amount} ex={ex}");
+                return false;
+            }
+        }
+
+        public async Task<bool> AddWagerLockAsync(string identifier, long amount)
+        {
+            if (string.IsNullOrEmpty(identifier) || amount == 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("UPDATE users SET wager_lock_amount = wager_lock_amount + @amount WHERE identifier = @identifier");
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("amount", amount);
+
+                    var result = await command.ExecuteQueryAsync();
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService.AddWagerLockAsync] identifier={identifier} amount={amount} ex={ex}");
                 return false;
             }
         }

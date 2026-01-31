@@ -69,6 +69,12 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            if (user.WagerLock > 0)
+            {
+                await ctx.RespondAsync($"You have a wager lock of {GpFormatter.Format(user.WagerLock)}. You must wager this amount before withdrawing.");
+                return;
+            }
+
             // Lock the withdrawal amount up-front, similar to stakes
             var balanceLocked = await usersService.RemoveBalanceAsync(user.Identifier, amountK);
             if (!balanceLocked)

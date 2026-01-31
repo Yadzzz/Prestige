@@ -65,7 +65,7 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount))
+            if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount, isWager: true))
             {
                 await ctx.RespondAsync("Failed to lock balance for this game. Please try again.");
                 return;

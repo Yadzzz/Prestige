@@ -77,7 +77,7 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount))
+            if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount, isWager: true))
             {
                 await ctx.RespondAsync("Failed to lock balance. Please try again.");
                 return;
@@ -159,8 +159,8 @@ namespace Server.Communication.Discord.Commands
             }
             else if (game.RevealedTiles.Count > 0)
             {
-                //thumbnailUrl = "https://i.imgur.com/7krPRqX.png"; // Ongoing
-                thumbnailUrl = "https://i.imgur.com/I80hcLH.gif"; // Ongoing
+                thumbnailUrl = "https://i.imgur.com/7krPRqX.png"; // Ongoing
+                //thumbnailUrl = "https://i.imgur.com/I80hcLH.gif"; // Ongoing
             }
 
             var embed = new DiscordEmbedBuilder()

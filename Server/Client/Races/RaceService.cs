@@ -305,17 +305,41 @@ namespace Server.Client.Races
                     if (client != null)
                     {
                         var channel = await client.GetChannelAsync(race.ChannelId);
-                        var embed = BuildRaceEmbed(race, GetTopParticipants(10), isEnding, distributionLog);
+                        
+                        var topParticipants = GetTopParticipants(10);
+                        var imageStream = RaceImageGenerator.GenerateLeaderboardImage(topParticipants, race.GetPrizes());
+                        var useImage = imageStream != null;
+
+                        var embed = BuildRaceEmbed(race, topParticipants, isEnding, distributionLog, useImage);
+
+                        var builder = new DiscordMessageBuilder();
+                        
+                        if (useImage)
+                        {
+                            builder.AddFile("race_leaderboard.png", imageStream);
+                            // Set the image url to the attachment
+                            // Note: Embed builder needs to set Image Url to "attachment://filename"
+                            // But BuildRaceEmbed returns a built embed. I need to modify BuildRaceEmbed to handle this
+                            // or modify the embed here. Since BuildRaceEmbed returns DiscordEmbed (immutable-ish), 
+                            // I should change BuildRaceEmbed to return DiscordEmbedBuilder or modify it before building.
+                        }
+                        
+                        builder.AddEmbed(embed);
 
                         try
                         {
                             var message = await channel.GetMessageAsync(race.MessageId);
-                            await message.ModifyAsync(embed: embed);
+                            // Modifying with a new builder *should* handle the attachment replacement logic in newer D#+
+                            await message.ModifyAsync(builder);
                         }
                         catch (DSharpPlus.Exceptions.NotFoundException)
                         {
-                            var newMsg = await channel.SendMessageAsync(embed);
+                            var newMsg = await channel.SendMessageAsync(builder);
                             await SetMessageIdAsync(newMsg.Id);
+                        }
+                        finally
+                        {
+                            imageStream?.Dispose();
                         }
                     }
                 }
@@ -336,37 +360,40 @@ namespace Server.Client.Races
             }
         }
 
-        private DSharpPlus.Entities.DiscordEmbed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding, List<string>? distributionLog = null)
+        private DSharpPlus.Entities.DiscordEmbed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding, List<string>? distributionLog = null, bool useImage = false)
         {
             var totalWagered = _activeParticipants.Values.Sum(p => p.TotalWagered);
             var totalWageredFormatted = Server.Client.Utils.GpFormatter.Format(totalWagered);
             
             var sb = new System.Text.StringBuilder();
-            if (topParticipants.Count == 0)
+            if (!useImage)
             {
-                sb.AppendLine("No wagers yet. Be the first!");
-            }
-            else
-            {
-                int rank = 1;
-                foreach (var p in topParticipants)
+                if (topParticipants.Count == 0)
                 {
-                    string medal = rank switch
+                    sb.AppendLine("No wagers yet. Be the first!");
+                }
+                else
+                {
+                    int rank = 1;
+                    foreach (var p in topParticipants)
                     {
-                        1 => "🥇",
-                        2 => "🥈",
-                        3 => "🥉",
-                        4 => "4️⃣",
-                        5 => "5️⃣",
-                        6 => "6️⃣",
-                        7 => "7️⃣",
-                        8 => "8️⃣",
-                        9 => "9️⃣",
-                        10 => "🔟",
-                        _ => $"#{rank}"
-                    };
-                    sb.AppendLine($"{medal} **{p.Username}** — `{Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}`");
-                    rank++;
+                        string medal = rank switch
+                        {
+                            1 => "🥇",
+                            2 => "🥈",
+                            3 => "🥉",
+                            4 => "4️⃣",
+                            5 => "5️⃣",
+                            6 => "6️⃣",
+                            7 => "7️⃣",
+                            8 => "8️⃣",
+                            9 => "9️⃣",
+                            10 => "🔟",
+                            _ => $"#{rank}"
+                        };
+                        sb.AppendLine($"{medal} **{p.Username}** — `{Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}`");
+                        rank++;
+                    }
                 }
             }
 
@@ -380,9 +407,19 @@ namespace Server.Client.Races
             var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
                 .WithTitle(isEnding ? "🏁  **RACE ENDED**  🏁" : "🏁  **ACTIVE RACE**  🏁")
                 .WithDescription($"Ends: {timeString}\nTotal Wagered: `{totalWageredFormatted}`")
-                .WithColor(isEnding ? DSharpPlus.Entities.DiscordColor.Gray : DSharpPlus.Entities.DiscordColor.Gold)
-                .WithThumbnail("https://i.imgur.com/e45uYPm.gif")
-                .AddField("🏆 Leaderboard", sb.ToString(), false);
+                .WithColor(isEnding ? DSharpPlus.Entities.DiscordColor.Gray : DSharpPlus.Entities.DiscordColor.Gold);
+
+            if (useImage)
+            {
+                embed.WithImageUrl("attachment://race_leaderboard.png");
+                // No thumbnail if using big image? Or keep it?
+                // Left thumbnail can clutter. Let's exclude it.
+            }
+            else
+            {
+                embed.WithThumbnail("https://i.imgur.com/e45uYPm.gif");
+                embed.AddField("🏆 Leaderboard", sb.ToString(), false);
+            }
 
             if (isEnding && distributionLog != null && distributionLog.Count > 0)
             {
@@ -390,15 +427,24 @@ namespace Server.Client.Races
             }
             else
             {
-                embed.AddField("🎁 Prizes", prizeDesc, false);
+                // Only show prize list in text if not implied by the table image?
+                // The image format has a "PRIZE" column.
+                // So if useImage is true, we might hide the text prize list too to reduce noise.
+                // However, the prompt image shows "Prize (GP)" column.
+                // So yes, hide the prizes text list if useImage is true.
+                if (!useImage)
+                {
+                    embed.AddField("🎁 Prizes", prizeDesc, false);
+                }
             }
 
             embed.WithFooter($"Race ID: {race.Id} • {ServerConfiguration.ShortName}", null)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            if (!isEnding)
+            if (!isEnding) // No footer update text needed if image updates?
             {
-                embed.AddField("\u200b", "-# *Updates every 30 seconds*", false);
+                 // Keep "updates every 30s"
+                 embed.AddField("\u200b", "-# *Updates every 30 seconds*", false);
             }
 
             return embed.Build();

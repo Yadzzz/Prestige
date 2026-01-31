@@ -76,7 +76,7 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount))
+            if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount, isWager: true))
             {
                 await ctx.RespondAsync("Failed to lock balance for this game. Please try again.");
                 return;
@@ -106,7 +106,7 @@ namespace Server.Communication.Discord.Commands
             await hlService.UpdateMessageInfoAsync(game.Id, message.Id, message.Channel.Id);
         }
 
-        public static DiscordEmbedBuilder BuildGameEmbed(HigherLowerGame game, User user, DiscordClient client = null)
+        public static DiscordEmbedBuilder BuildGameEmbed(HigherLowerGame game, User user, DiscordClient client = null, string imageUrl = "https://i.imgur.com/lJ8D3h7.gif")
         {
             var isGameFinished = game.Status != HigherLowerGameStatus.Active;
             var color = DiscordColor.Blue;
@@ -122,7 +122,8 @@ namespace Server.Communication.Discord.Commands
                 .WithTitle("Higher / Lower")
                 .WithColor(color)
                 .WithDescription($"**{user.DisplayName}**'s Game")
-                .WithThumbnail("https://i.imgur.com/WRJoody.png")
+                .WithThumbnail(imageUrl)
+                //.WithThumbnail("https://i.imgur.com/WRJoody.png")
                 .WithFooter($"Round {game.CurrentRound + 1}/{game.MaxRounds} | ID: {game.Id}");
 
             embed.AddField("Bet", $"`{GpFormatter.Format(game.BetAmount)}`", true);

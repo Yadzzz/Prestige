@@ -129,7 +129,7 @@ namespace Server.Communication.Discord.Interactions
                     return;
                 }
 
-                if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmountK))
+                if (!await usersService.RemoveBalanceAsync(user.Identifier, newAmountK, isWager: true))
                 {
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to lock balance for this rematch. Please try again.").AsEphemeral(true));

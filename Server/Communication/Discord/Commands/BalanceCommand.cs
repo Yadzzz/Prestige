@@ -69,9 +69,15 @@ namespace Server.Communication.Discord.Commands
             if (isSelf)
             {
                 // Self View
+                var description = $"{displayName}, you have `{formatted}`.";
+                if (user.WagerLock > 0)
+                {
+                    description += $"\n\n🔒 **Required Wager:** `{GpFormatter.Format(user.WagerLock)}`";
+                }
+
                 var embed = new DiscordEmbedBuilder()
                     .WithTitle("Balance")
-                    .WithDescription($"{displayName}, you have `{formatted}`.")
+                    .WithDescription(description)
                     .WithColor(DiscordColor.Gold)
                     .WithThumbnail("https://i.imgur.com/DHXgtn5.gif")
                     .WithFooter(ServerConfiguration.ServerName)

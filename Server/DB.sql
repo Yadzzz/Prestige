@@ -211,3 +211,30 @@
 --    INDEX idx_order_id (order_id),
 --    INDEX idx_user_id (user_id)
 --);
+
+--CREATE TABLE IF NOT EXISTS `referral_codes` (
+--  `code` VARCHAR(50) NOT NULL,
+--  `owner_identifier` VARCHAR(64) NOT NULL,
+--  `reward_amount` BIGINT NOT NULL DEFAULT 0,
+--  `referrer_reward_amount` BIGINT NOT NULL DEFAULT 0,
+--  `max_uses` INT NOT NULL DEFAULT 0,
+--  `current_uses` INT NOT NULL DEFAULT 0,
+--  `wager_lock` BIGINT NOT NULL DEFAULT 0,
+--  `new_users_only` BOOLEAN NOT NULL DEFAULT 0,
+--  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--  PRIMARY KEY (`code`),
+--  KEY `idx_referral_owner` (`owner_identifier`)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--CREATE TABLE IF NOT EXISTS `referral_usages` (
+--  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--  `code` VARCHAR(50) NOT NULL,
+--  `user_identifier` VARCHAR(64) NOT NULL,
+--  `redeemed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--  PRIMARY KEY (`id`),
+--  UNIQUE KEY `uq_code_user` (`code`, `user_identifier`),
+--  KEY `idx_usage_user` (`user_identifier`),
+--  CONSTRAINT `fk_referral_usages_code` FOREIGN KEY (`code`) REFERENCES `referral_codes` (`code`) ON DELETE CASCADE
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--ALTER TABLE `users` ADD COLUMN `wager_lock_amount` BIGINT NOT NULL DEFAULT 0;

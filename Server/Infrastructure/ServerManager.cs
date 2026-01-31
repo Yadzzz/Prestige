@@ -19,6 +19,7 @@ using Server.Client.Blackjack;
 using Server.Client.Mines;
 using Server.Client.HigherLower;
 using Server.Client.Payments;
+using Server.Client.Referrals;
 using Server.Infrastructure.Configuration;
 
 namespace Server.Infrastructure
@@ -44,6 +45,7 @@ namespace Server.Infrastructure
         public AiCommandResolverService AiCommandResolverService { get; set; }
         public NowPaymentsService NowPaymentsService { get; set; }
         public PaymentOrdersService PaymentOrdersService { get; set; }
+        public ReferralService ReferralService { get; set; }
 
         public ServerManager()
         {
@@ -66,6 +68,7 @@ namespace Server.Infrastructure
             this.HigherLowerService = new HigherLowerService(this.DatabaseManager);
             this.LogsService = new LogsService(this.DatabaseManager);
             this.PaymentOrdersService = new PaymentOrdersService(this.DatabaseManager);
+            this.ReferralService = new ReferralService(this.DatabaseManager, this.UsersService);
             this.AiCommandResolverService = new AiCommandResolverService("https://lively-butterfly-20a1.yadmarzan.workers.dev/");
             
             var paymentsApiKey = ConfigService.Current.Payments?.NowPaymentsApiKey;

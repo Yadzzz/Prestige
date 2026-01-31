@@ -47,6 +47,11 @@ namespace Server.Client.Utils
                 multiplier = 1_000m; // 1M = 1,000K
                 input = input[..^1];
             }
+            else if (input.EndsWith("k"))
+            {
+                multiplier = 1m; // 1K = 1K
+                input = input[..^1];
+            }
             else
             {
                 // No suffix -> interpret as millions for users

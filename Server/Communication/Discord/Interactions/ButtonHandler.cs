@@ -66,6 +66,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Referral interactions
+            if (e.Id.StartsWith("ref_", StringComparison.OrdinalIgnoreCase))
+            {
+                await ReferralInteractionHandler.HandleComponent(client, e);
+                return;
+            }
+
             // Mines buttons
             if (e.Id.StartsWith("mines_", StringComparison.OrdinalIgnoreCase))
             {

@@ -47,7 +47,7 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!await env.ServerManager.UsersService.RemoveBalanceAsync(user.Identifier, amountK))
+            if (!await env.ServerManager.UsersService.RemoveBalanceAsync(user.Identifier, amountK, isWager: true))
             {
                 await ctx.RespondAsync("Failed to lock balance.");
                 return;
