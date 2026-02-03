@@ -81,7 +81,7 @@ namespace Server.Infrastructure.Discord
             // Configure New Commands (Replacement for SlashCommands)
             builder.UseCommands((serviceProvider, extension) =>
             {
-                extension.AddCommands([typeof(PingSlashCommand)]);
+                extension.AddCommands([typeof(PingSlashCommand), typeof(BroadcastSlashCommand)]);
             }, new CommandsConfiguration
             {
                 DebugGuildId = _options.GuildId != 0 ? _options.GuildId : 0
@@ -202,11 +202,13 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<WagerLockCommand>();
                 commands.RegisterCommands<CrackerCommand>();
 
+                commands.RegisterCommands<HelpCommand>();
 
             }, new CommandsNextConfiguration
             {
                 StringPrefixes = new[] { "!" },
-                EnableMentionPrefix = false
+                EnableMentionPrefix = false,
+                EnableDefaultHelp = false
             });
 
             _client = builder.Build();

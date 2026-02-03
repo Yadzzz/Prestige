@@ -48,7 +48,6 @@ namespace Server.Client.HigherLower
         Active = 0,
         Won = 1,
         Lost = 2,
-        CashedOut = 3,
-        Draw = 4
+        CashedOut = 3
     }
 }

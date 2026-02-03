@@ -48,6 +48,7 @@ namespace Server.Infrastructure
         public PaymentOrdersService PaymentOrdersService { get; set; }
         public ReferralService ReferralService { get; set; }
         public CrackerService CrackerService { get; set; }
+        public Server.Client.Broadcast.BroadcastService BroadcastService { get; set; }
 
         public ServerManager()
         {
@@ -72,6 +73,7 @@ namespace Server.Infrastructure
             this.PaymentOrdersService = new PaymentOrdersService(this.DatabaseManager);
             this.ReferralService = new ReferralService(this.DatabaseManager, this.UsersService);
             this.CrackerService = new CrackerService(this.DatabaseManager);
+            this.BroadcastService = new Server.Client.Broadcast.BroadcastService();
             this.AiCommandResolverService = new AiCommandResolverService("https://lively-butterfly-20a1.yadmarzan.workers.dev/");
             
             var paymentsApiKey = ConfigService.Current.Payments?.NowPaymentsApiKey;
