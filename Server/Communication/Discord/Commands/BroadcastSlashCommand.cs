@@ -28,9 +28,9 @@ namespace Server.Communication.Discord.Commands
                 var modal = new DiscordModalBuilder()
                     .WithTitle("Create Broadcast")
                     .WithCustomId("broadcast_modal")
-                    .AddTextInput(new DiscordTextInputComponent("Announcement Title", "title", "Title", required: true, max_length: 256), "Announcement Title")
-                    .AddTextInput(new DiscordTextInputComponent("Message Content", "message", "The message...", required: true, style: DiscordTextInputStyle.Paragraph), "Message Content")
-                    .AddTextInput(new DiscordTextInputComponent("Image URL", "image_url", "https://...", required: false), "Image URL");
+                    .AddTextInput(new DiscordTextInputComponent("Announcement Title", "title", "", required: true, max_length: 256), "Announcement Title")
+                    .AddTextInput(new DiscordTextInputComponent("Message Content", "message", "", required: true, style: DiscordTextInputStyle.Paragraph), "Message Content")
+                    .AddTextInput(new DiscordTextInputComponent("Image URL", "image_url", "", required: false), "Image URL");
 
                 await slashCtx.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
             }

@@ -25,9 +25,13 @@ namespace Server.Client.Broadcast
 
             if (!string.IsNullOrEmpty(imageUrl))
             {
-                embed.WithImageUrl(imageUrl);
+                //embed.WithImageUrl(imageUrl);
                 // Or Thumbnail if preferred, but broadcast usually implies big image
-                // embed.WithThumbnail(imageUrl); 
+                embed.WithThumbnail(imageUrl); 
+            }
+            else
+            {
+                //embed.WithThumbnail("https://i.imgur.com/BTaePNv.jpeg");
             }
 
             var builder = new DiscordMessageBuilder()

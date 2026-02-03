@@ -200,11 +200,13 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<ChestCommand>();
                 commands.RegisterCommands<ReferralCommands>();
                 commands.RegisterCommands<WagerLockCommand>();
+                commands.RegisterCommands<HelpCommand>();
 
             }, new CommandsNextConfiguration
             {
                 StringPrefixes = new[] { "!" },
-                EnableMentionPrefix = false
+                EnableMentionPrefix = false,
+                EnableDefaultHelp = false
             });
 
             _client = builder.Build();
