@@ -11,7 +11,10 @@ namespace Server
             var env = ServerEnvironment.GetServerEnvironment();
             env.Initialize();
 
-            await env.ServerManager.DiscordBotHost.StartAsync();
+            // Start Discord Bot in background
+            var botTask = env.ServerManager.DiscordBotHost.StartAsync();
+
+            Console.WriteLine("Bot is running...");
 
             // Handle graceful shutdown
             var tcs = new TaskCompletionSource();
@@ -29,7 +32,8 @@ namespace Server
                 tcs.TrySetResult();
             };
 
-            await tcs.Task;
+            // Wait for shutdown signal or bot crash
+            await Task.WhenAny(botTask, tcs.Task);
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Server.Communication.Discord.Interactions
 {
     public class ButtonHandler
     {
-        public static async Task HandleButtons(DiscordClient client, ComponentInteractionCreateEventArgs e)
+        public static async Task HandleButtons(DiscordClient client, ComponentInteractionCreatedEventArgs e)
         {
             // Transaction buttons
             if (e.Id.StartsWith("tx_", StringComparison.OrdinalIgnoreCase))
@@ -38,10 +38,52 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Blackjack buttons
+            if (e.Id.StartsWith("bj_", StringComparison.OrdinalIgnoreCase))
+            {
+                await BlackjackButtonHandler.Handle(client, e);
+                return;
+            }
+
+            // Higher/Lower buttons
+            if (e.Id.StartsWith("hl_", StringComparison.OrdinalIgnoreCase))
+            {
+                await HigherLowerButtonHandler.Handle(client, e);
+                return;
+            }
+
+            // Chest buttons
+            if (e.Id.StartsWith("chest_", StringComparison.OrdinalIgnoreCase))
+            {
+                await ChestButtonHandler.Handle(client, e);
+                return;
+            }
+
             // Race interactions
             if (e.Id.StartsWith("race_", StringComparison.OrdinalIgnoreCase))
             {
                 await RaceInteractionHandler.HandleComponent(client, e);
+                return;
+            }
+
+            // Referral interactions
+            if (e.Id.StartsWith("ref_", StringComparison.OrdinalIgnoreCase))
+            {
+                await ReferralInteractionHandler.HandleComponent(client, e);
+                return;
+            }
+
+            // Mines buttons
+            if (e.Id.StartsWith("mines_", StringComparison.OrdinalIgnoreCase))
+            {
+                await MinesButtonHandler.Handle(client, e);
+                return;
+            }
+
+            // Cracker buttons
+            if (e.Id.StartsWith("cracker_", StringComparison.OrdinalIgnoreCase))
+            {
+                await CrackerButtonHandler.Handle(client, e);
                 return;
             }
 

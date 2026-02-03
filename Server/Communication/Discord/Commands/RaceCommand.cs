@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Linq;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
@@ -10,9 +11,15 @@ namespace Server.Communication.Discord.Commands
     public class RaceCommand : BaseCommandModule
     {
         [Command("racecreate")]
-        [RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
+        //[RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
         public async Task RaceCreate(CommandContext ctx)
         {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You do not have permission to execute this command.");
+                return;
+            }
+
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Race Configuration")
                 .WithDescription("Configure the new race using the menu below.")
@@ -30,16 +37,36 @@ namespace Server.Communication.Discord.Commands
 
             await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(embed)
-                .AddComponents(dropdown));
+                .AddActionRowComponent(dropdown));
         }
 
         [Command("raceend")]
-        [RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
+        //[RequireRoles(RoleCheckMode.Any, DiscordIds.StaffRoleId)]
         public async Task RaceEnd(CommandContext ctx)
         {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You do not have permission to execute this command.");
+                return;
+            }
+
             var env = ServerEnvironment.GetServerEnvironment();
-            env.ServerManager.RaceService.EndRace();
+            await env.ServerManager.RaceService.EndRaceAsync();
             await ctx.RespondAsync("Race ended manually.");
+        }
+
+        [Command("raceupdate")]
+        public async Task RaceUpdate(CommandContext ctx)
+        {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You do not have permission to execute this command.");
+                return;
+            }
+
+            var env = ServerEnvironment.GetServerEnvironment();
+            await env.ServerManager.RaceService.RefreshRaceStateAsync();
+            await ctx.RespondAsync("Race state refreshed from database.");
         }
     }
 }

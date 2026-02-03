@@ -47,9 +47,9 @@ namespace Server.Communication.Discord.Commands
                 // No amount specified -> all-in
                 amountK = user.Balance;
             }
-            else if (!GpParser.TryParseAmountInK(amount, out amountK))
+            else if (!GpParser.TryParseAmountInK(amount, out amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!coinflip 100`, `!cf 0.5`, `!cf 1b`, `!cf 1000m`, or `!coinflip` for all-in.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!coinflip 100`, `!cf 0.5`, `!cf 1b`, `!cf 1000m`, or `!coinflip` for all-in.");
                 return;
             }
 
@@ -65,16 +65,16 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!usersService.RemoveBalance(user.Identifier, amountK))
+            if (!await usersService.RemoveBalanceAsync(user.Identifier, amountK, isWager: true))
             {
                 await ctx.RespondAsync("Failed to lock balance for this flip. Please try again.");
                 return;
             }
 
-            var flip = coinflipsService.CreateCoinflip(user, amountK);
+            var flip = await coinflipsService.CreateCoinflipAsync(user, amountK);
             if (flip == null)
             {
-                usersService.AddBalance(user.Identifier, amountK);
+                await usersService.AddBalanceAsync(user.Identifier, amountK);
                 await ctx.RespondAsync("Failed to create coinflip. Please try again later.");
                 return;
             }
@@ -86,29 +86,29 @@ namespace Server.Communication.Discord.Commands
                 .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
-                .WithFooter("Prestige Bets")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            //var headsButton = new DiscordButtonComponent(ButtonStyle.Success, $"cf_heads_{flip.Id}", "🪙 Heads");
-            //var tailsButton = new DiscordButtonComponent(ButtonStyle.Primary, $"cf_tails_{flip.Id}", "🧠 Tails");
-            //var exitButton = new DiscordButtonComponent(ButtonStyle.Danger, $"cf_exit_{flip.Id}", "Exit");
+            //var headsButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"cf_heads_{flip.Id}", "🪙 Heads");
+            //var tailsButton = new DiscordButtonComponent(DiscordButtonStyle.Primary, $"cf_tails_{flip.Id}", "🧠 Tails");
+            //var exitButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"cf_exit_{flip.Id}", "Exit");
 
             var headsButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"cf_heads_{flip.Id}",
                 " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId)
             );
 
             var tailsButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"cf_tails_{flip.Id}",
                 " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId)
             );
 
             var exitButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"cf_exit_{flip.Id}",
                 "Refund",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)
@@ -116,9 +116,12 @@ namespace Server.Communication.Discord.Commands
 
             var message = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(embed)
-                .AddComponents(headsButton, tailsButton, exitButton));
+                .AddActionRowComponent(new[] { headsButton, tailsButton, exitButton }));
 
-            coinflipsService.UpdateCoinflipOutcome(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id);
+            // Only update if the status is still Pending.
+            // If the user already clicked a button (race condition), the status might be Finished or Cancelled.
+            // In that case, we do NOT want to overwrite it back to Pending.
+            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id, expectedStatus: CoinflipStatus.Pending);
         }
     }
 }

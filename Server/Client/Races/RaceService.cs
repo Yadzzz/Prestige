@@ -4,8 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DSharpPlus;
+using DSharpPlus.Entities;
 using Server.Infrastructure;
 using Server.Infrastructure.Database;
+using Server.Infrastructure.Discord;
+using Server.Infrastructure.Configuration;
 
 namespace Server.Client.Races
 {
@@ -26,7 +30,7 @@ namespace Server.Client.Races
             LoadActiveRace();
 
             // Flush to DB and update Discord every 60 seconds
-            _flushTimer = new Timer(async _ => await FlushAndBroadcastAsync(), null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
+            _flushTimer = new Timer(async _ => await FlushAndBroadcastAsync(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         }
 
         public Race GetActiveRace()
@@ -34,7 +38,7 @@ namespace Server.Client.Races
             return _activeRace;
         }
 
-        public void RegisterWager(string userIdentifier, string username, long amount)
+        public async Task RegisterWagerAsync(string userIdentifier, string username, long amount)
         {
             var race = _activeRace;
             if (race == null || race.Status != RaceStatus.Active)
@@ -46,6 +50,48 @@ namespace Server.Client.Races
                 // The background timer will handle closing the race.
                 return;
             }
+
+            // Optimization: If user is already participating, they have already passed the staff check.
+            // This avoids repeated API calls for every wager.
+            if (!_activeParticipants.ContainsKey(userIdentifier))
+            {
+                // Check if user is staff
+                try
+                {
+                    var client = _serverManager.DiscordBotHost.Client;
+                    var guildId = ConfigService.Current.Discord.GuildId;
+                    if (client != null && guildId != 0)
+                    {
+                        if (client.Guilds.TryGetValue(guildId, out var guild))
+                        {
+                            if (ulong.TryParse(userIdentifier, out var userId))
+                            {
+                                DiscordMember member = null;
+                                // Try to get from cache first to avoid API rate limits
+                                if (guild.Members.TryGetValue(userId, out var cachedMember))
+                                {
+                                    member = cachedMember;
+                                }
+                                else
+                                {
+                                    // Fallback to API fetch
+                                    member = await guild.GetMemberAsync(userId);
+                                }
+
+                                if (member != null && member.IsStaff())
+                                {
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _serverManager.LoggerManager.LogError($"[RaceService] Failed to check staff status for {userIdentifier}: {ex.Message}");
+                }
+            }
+            
 
             _activeParticipants.AddOrUpdate(userIdentifier,
                 // Add new
@@ -68,7 +114,7 @@ namespace Server.Client.Races
             _isDirty = true;
         }
 
-        public Race CreateRace(DateTime endTime, List<RacePrize> prizes, ulong channelId)
+        public async Task<Race> CreateRaceAsync(DateTime endTime, List<RacePrize> prizes, ulong channelId)
         {
             if (_activeRace != null && _activeRace.Status == RaceStatus.Active)
             {
@@ -94,7 +140,8 @@ namespace Server.Client.Races
                 cmd.AddParameter("@Prizes", race.PrizeDistributionJson);
                 cmd.AddParameter("@Channel", race.ChannelId);
                 
-                race.Id = Convert.ToInt32(cmd.ExecuteScalar());
+                var result = await cmd.ExecuteScalarAsync();
+                race.Id = Convert.ToInt32(result);
             }
 
             _activeRace = race;
@@ -102,25 +149,24 @@ namespace Server.Client.Races
             return race;
         }
 
-        public void EndRace()
+        public Race CreateRace(DateTime endTime, List<RacePrize> prizes, ulong channelId)
+        {
+            return CreateRaceAsync(endTime, prizes, channelId).GetAwaiter().GetResult();
+        }
+
+        public async Task EndRaceAsync()
         {
             if (_activeRace == null) return;
 
-            _activeRace.Status = RaceStatus.Finished;
-            
-            using (var cmd = _serverManager.DatabaseManager.CreateDatabaseCommand())
-            {
-                cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
-                cmd.AddParameter("@Status", _activeRace.Status.ToString());
-                cmd.AddParameter("@Id", _activeRace.Id);
-                cmd.ExecuteQuery();
-            }
+            // Force the race to end immediately.
+            // FlushAndBroadcastAsync handles the logic of updating Discord, DB, and clearing memory.
+            _activeRace.EndTime = DateTime.UtcNow.AddSeconds(-1);
+            await FlushAndBroadcastAsync();
+        }
 
-            // Final flush
-            FlushAndBroadcastAsync().Wait();
-            
-            _activeRace = null;
-            _activeParticipants.Clear();
+        public void EndRace()
+        {
+            EndRaceAsync().GetAwaiter().GetResult();
         }
 
         private void LoadActiveRace()
@@ -204,90 +250,12 @@ namespace Server.Client.Races
                     sb.Append(" ON DUPLICATE KEY UPDATE TotalWagered = VALUES(TotalWagered), Username = VALUES(Username)");
                     
                     cmd.SetCommand(sb.ToString());
-                    cmd.ExecuteQuery();
+                    await cmd.ExecuteQueryAsync();
                 }
             }
 
-            // 2. Update Discord Message
-            if (race.ChannelId != 0 && race.MessageId != 0)
-            {
-                try
-                {
-                    var client = _serverManager.DiscordBotHost?.Client;
-                    if (client != null)
-                    {
-                        var channel = await client.GetChannelAsync(race.ChannelId);
-                        var message = await channel.GetMessageAsync(race.MessageId);
-
-                        var top = GetTopParticipants(10);
-                        var sb = new System.Text.StringBuilder();
-                        int rank = 1;
-                        foreach (var p in top)
-                        {
-                            string medal = rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"#{rank}" };
-                            sb.AppendLine($"{medal} **{p.Username}** - {Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}");
-                            rank++;
-                        }
-
-                        if (sb.Length == 0) sb.Append("No wagers yet.");
-
-                        var prizes = race.GetPrizes();
-                        var prizeDesc = string.Join("\n", prizes.Select(x => $"Rank {x.Rank}: {x.Prize}"));
-
-                        var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
-                            .WithTitle("🏆 Race Leaderboard 🏆")
-                            .WithDescription(sb.ToString())
-                            .WithColor(DSharpPlus.Entities.DiscordColor.Gold)
-                            .AddField("Prizes", string.IsNullOrEmpty(prizeDesc) ? "None" : prizeDesc)
-                            .WithFooter(isEnding ? "Race Ended" : $"Ends at {race.EndTime:g}");
-
-                        await message.ModifyAsync(embed: embed.Build());
-                    }
-                }
-                catch (DSharpPlus.Exceptions.NotFoundException)
-                {
-                    // Message was deleted; try to repost it
-                    try
-                    {
-                        var client = _serverManager.DiscordBotHost?.Client;
-                        if (client != null)
-                        {
-                            var channel = await client.GetChannelAsync(race.ChannelId);
-                            
-                            var top = GetTopParticipants(10);
-                            var sb = new System.Text.StringBuilder();
-                            int rank = 1;
-                            foreach (var p in top)
-                            {
-                                string medal = rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"#{rank}" };
-                                sb.AppendLine($"{medal} **{p.Username}** - {Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}");
-                                rank++;
-                            }
-                            if (sb.Length == 0) sb.Append("No wagers yet.");
-
-                            var prizes = race.GetPrizes();
-                            var prizeDesc = string.Join("\n", prizes.Select(x => $"Rank {x.Rank}: {x.Prize}"));
-
-                            var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
-                                .WithTitle("🏆 Race Leaderboard 🏆")
-                                .WithDescription(sb.ToString())
-                                .WithColor(DSharpPlus.Entities.DiscordColor.Gold)
-                                .AddField("Prizes", string.IsNullOrEmpty(prizeDesc) ? "None" : prizeDesc)
-                                .WithFooter(isEnding ? "Race Ended" : $"Ends at {race.EndTime:g}");
-
-                            var newMsg = await channel.SendMessageAsync(embed.Build());
-                            SetMessageId(newMsg.Id);
-                        }
-                    }
-                    catch { /* Ignore if we can't repost */ }
-                }
-                catch (Exception ex)
-                {
-                    _serverManager.LoggerManager.LogError($"Failed to update race leaderboard: {ex}");
-                }
-            }
-
-            // 3. End if needed
+            // 2. Handle Ending & Prize Distribution
+            List<string>? distributionLog = null;
             if (isEnding)
             {
                 race.Status = RaceStatus.Finished;
@@ -296,15 +264,190 @@ namespace Server.Client.Races
                     cmd.SetCommand("UPDATE races SET Status = @Status WHERE Id = @Id");
                     cmd.AddParameter("@Status", race.Status.ToString());
                     cmd.AddParameter("@Id", race.Id);
-                    cmd.ExecuteQuery();
+                    await cmd.ExecuteQueryAsync();
                 }
-                
+
+                // Distribute Prizes
+                distributionLog = new List<string>();
+                var winners = GetTopParticipants(50); 
+                var prizes = race.GetPrizes();
+                var usersService = _serverManager.UsersService;
+
+                foreach (var prize in prizes)
+                {
+                    int index = prize.Rank - 1;
+                    if (index >= 0 && index < winners.Count)
+                    {
+                        var winner = winners[index];
+                        if (Server.Client.Utils.GpParser.TryParseAmountInK(prize.Prize, out long amountK))
+                        {
+                            await usersService.AddBalanceAsync(winner.UserIdentifier, amountK);
+                            distributionLog.Add($"**#{prize.Rank}** {winner.Username}: `{prize.Prize}` ✅");
+                            
+                            _serverManager.LogsService.Log(
+                                source: nameof(RaceService),
+                                level: "Info",
+                                userIdentifier: winner.UserIdentifier,
+                                action: "RacePrize",
+                                message: $"Won rank {prize.Rank} in race {race.Id}. Prize: {prize.Prize} ({amountK}k)",
+                                exception: null);
+                        }
+                    }
+                }
+            }
+
+            // 3. Update Discord Message
+            if (race.ChannelId != 0 && race.MessageId != 0)
+            {
+                try
+                {
+                    var client = _serverManager.DiscordBotHost?.Client;
+                    if (client != null)
+                    {
+                        var channel = await client.GetChannelAsync(race.ChannelId);
+                        
+                        var topParticipants = GetTopParticipants(10);
+                        var imageStream = RaceImageGenerator.GenerateLeaderboardImage(topParticipants, race.GetPrizes());
+                        var useImage = imageStream != null;
+
+                        var embed = BuildRaceEmbed(race, topParticipants, isEnding, distributionLog, useImage);
+
+                        var builder = new DiscordMessageBuilder();
+                        
+                        if (useImage)
+                        {
+                            builder.AddFile("race_leaderboard.png", imageStream);
+                            // Set the image url to the attachment
+                            // Note: Embed builder needs to set Image Url to "attachment://filename"
+                            // But BuildRaceEmbed returns a built embed. I need to modify BuildRaceEmbed to handle this
+                            // or modify the embed here. Since BuildRaceEmbed returns DiscordEmbed (immutable-ish), 
+                            // I should change BuildRaceEmbed to return DiscordEmbedBuilder or modify it before building.
+                        }
+                        
+                        builder.AddEmbed(embed);
+
+                        try
+                        {
+                            var message = await channel.GetMessageAsync(race.MessageId);
+                            // Modifying with a new builder *should* handle the attachment replacement logic in newer D#+
+                            await message.ModifyAsync(builder);
+                        }
+                        catch (DSharpPlus.Exceptions.NotFoundException)
+                        {
+                            var newMsg = await channel.SendMessageAsync(builder);
+                            await SetMessageIdAsync(newMsg.Id);
+                        }
+                        finally
+                        {
+                            imageStream?.Dispose();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _serverManager.LoggerManager.LogError($"Failed to update race leaderboard: {ex}");
+                }
+            }
+
+            // 4. Cleanup
+            if (isEnding)
+            {
                 if (_activeRace == race)
                 {
-                    _activeRace = null;
+                    _activeRace = null!;
                     _activeParticipants.Clear();
                 }
             }
+        }
+
+        private DSharpPlus.Entities.DiscordEmbed BuildRaceEmbed(Race race, List<RaceParticipant> topParticipants, bool isEnding, List<string>? distributionLog = null, bool useImage = false)
+        {
+            var totalWagered = _activeParticipants.Values.Sum(p => p.TotalWagered);
+            var totalWageredFormatted = Server.Client.Utils.GpFormatter.Format(totalWagered);
+            
+            var sb = new System.Text.StringBuilder();
+            if (!useImage)
+            {
+                if (topParticipants.Count == 0)
+                {
+                    sb.AppendLine("No wagers yet. Be the first!");
+                }
+                else
+                {
+                    int rank = 1;
+                    foreach (var p in topParticipants)
+                    {
+                        string medal = rank switch
+                        {
+                            1 => "🥇",
+                            2 => "🥈",
+                            3 => "🥉",
+                            4 => "4️⃣",
+                            5 => "5️⃣",
+                            6 => "6️⃣",
+                            7 => "7️⃣",
+                            8 => "8️⃣",
+                            9 => "9️⃣",
+                            10 => "🔟",
+                            _ => $"#{rank}"
+                        };
+                        sb.AppendLine($"{medal} **{p.Username}** — `{Server.Client.Utils.GpFormatter.Format(p.TotalWagered)}`");
+                        rank++;
+                    }
+                }
+            }
+
+            var prizes = race.GetPrizes();
+            var prizeDesc = string.Join("\n", prizes.Select(x => $"`#{x.Rank}` {x.Prize}"));
+            if (string.IsNullOrEmpty(prizeDesc)) prizeDesc = "None";
+
+            var endTimestamp = new DateTimeOffset(race.EndTime).ToUnixTimeSeconds();
+            var timeString = isEnding ? "Ended" : $"<t:{endTimestamp}:R>";
+
+            var embed = new DSharpPlus.Entities.DiscordEmbedBuilder()
+                .WithTitle(isEnding ? "🏁  **RACE ENDED**  🏁" : "🏁  **ACTIVE RACE**  🏁")
+                .WithDescription($"Ends: {timeString}\nTotal Wagered: `{totalWageredFormatted}`")
+                .WithColor(isEnding ? DSharpPlus.Entities.DiscordColor.Gray : DSharpPlus.Entities.DiscordColor.Gold);
+
+            if (useImage)
+            {
+                embed.WithImageUrl("attachment://race_leaderboard.png");
+                // No thumbnail if using big image? Or keep it?
+                // Left thumbnail can clutter. Let's exclude it.
+            }
+            else
+            {
+                embed.WithThumbnail("https://i.imgur.com/e45uYPm.gif");
+                embed.AddField("🏆 Leaderboard", sb.ToString(), false);
+            }
+
+            if (isEnding && distributionLog != null && distributionLog.Count > 0)
+            {
+                embed.AddField("🎁 Winners Paid", string.Join("\n", distributionLog), false);
+            }
+            else
+            {
+                // Only show prize list in text if not implied by the table image?
+                // The image format has a "PRIZE" column.
+                // So if useImage is true, we might hide the text prize list too to reduce noise.
+                // However, the prompt image shows "Prize (GP)" column.
+                // So yes, hide the prizes text list if useImage is true.
+                if (!useImage)
+                {
+                    embed.AddField("🎁 Prizes", prizeDesc, false);
+                }
+            }
+
+            embed.WithFooter($"Race ID: {race.Id} • {ServerConfiguration.ShortName}", null)
+                .WithTimestamp(DateTimeOffset.UtcNow);
+
+            if (!isEnding) // No footer update text needed if image updates?
+            {
+                 // Keep "updates every 30s"
+                 embed.AddField("\u200b", "-# *Updates every 30 seconds*", false);
+            }
+
+            return embed.Build();
         }
         
         public List<RaceParticipant> GetTopParticipants(int count)
@@ -315,7 +458,23 @@ namespace Server.Client.Races
                 .ToList();
         }
 
-        public void SetMessageId(ulong messageId)
+        public async Task RefreshRaceStateAsync()
+        {
+            // Clear in-memory state to force reload from DB
+            _activeParticipants.Clear();
+            
+            // Reload race and participants
+            LoadActiveRace();
+            
+            if (_activeRace != null)
+            {
+                // Force broadcast to update Discord message
+                _isDirty = true;
+                await FlushAndBroadcastAsync();
+            }
+        }
+
+        public async Task SetMessageIdAsync(ulong messageId)
         {
             if (_activeRace == null) return;
             _activeRace.MessageId = messageId;
@@ -325,8 +484,13 @@ namespace Server.Client.Races
                 cmd.SetCommand("UPDATE races SET MessageId = @MsgId WHERE Id = @Id");
                 cmd.AddParameter("@MsgId", messageId);
                 cmd.AddParameter("@Id", _activeRace.Id);
-                cmd.ExecuteQuery();
+                await cmd.ExecuteQueryAsync();
             }
+        }
+
+        public void SetMessageId(ulong messageId)
+        {
+            SetMessageIdAsync(messageId).GetAwaiter().GetResult();
         }
 
         public async Task StopAsync()

@@ -1,20 +1,24 @@
-using System.Threading.Tasks;
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.Processors.SlashCommands;
+using DSharpPlus.Commands.Trees.Metadata;
 using DSharpPlus.Entities;
-using DSharpPlus.SlashCommands;
+using System.ComponentModel;
+using System.Threading.Tasks;
 
 namespace Server.Communication.Discord.Commands
 {
-    public class PingSlashCommand : ApplicationCommandModule
+    public class PingSlashCommand
     {
-        [SlashCommand("ping", "Simple health check command.")]
-        public async Task PingAsync(InteractionContext ctx)
+        [Command("ping")]
+        [Description("Simple health check command.")]
+        public async Task PingAsync(CommandContext ctx)
         {
             var embed = new DiscordEmbedBuilder()
                 .WithTitle("Pong")
-                .WithDescription("Prestige bot is online and responding.")
+                .WithDescription($"{ServerConfiguration.ShortName} bot is online and responding.")
                 .WithColor(DiscordColor.Blurple);
 
-            await ctx.CreateResponseAsync(embed.Build());
+            await ctx.RespondAsync(embed.Build());
         }
     }
 }

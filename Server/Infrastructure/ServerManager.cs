@@ -15,6 +15,13 @@ using Server.Client.Coinflips;
 using Server.Client.LiveFeed;
 using Server.Client.Races;
 using Server.Client.AI;
+using Server.Client.Blackjack;
+using Server.Client.Mines;
+using Server.Client.HigherLower;
+using Server.Client.Payments;
+using Server.Client.Referrals;
+using Server.Client.Cracker;
+using Server.Infrastructure.Configuration;
 
 namespace Server.Infrastructure
 {
@@ -29,10 +36,19 @@ namespace Server.Infrastructure
         public BalanceAdjustmentsService BalanceAdjustmentsService { get; set; }
         public StakesService StakesService { get; set; }
         public CoinflipsService CoinflipsService { get; set; }
+        public BlackjackService BlackjackService { get; set; }
+        public MinesService MinesService { get; set; }
+        public HigherLowerService HigherLowerService { get; set; }
         public LogsService LogsService { get; set; }
         public LiveFeedService LiveFeedService { get; set; }
         public RaceService RaceService { get; set; }
+        public Server.Client.Chest.ChestService ChestService { get; set; }
         public AiCommandResolverService AiCommandResolverService { get; set; }
+        public NowPaymentsService NowPaymentsService { get; set; }
+        public PaymentOrdersService PaymentOrdersService { get; set; }
+        public ReferralService ReferralService { get; set; }
+        public CrackerService CrackerService { get; set; }
+        public Server.Client.Broadcast.BroadcastService BroadcastService { get; set; }
 
         public ServerManager()
         {
@@ -45,21 +61,41 @@ namespace Server.Infrastructure
                 DatabaseLoggerEnabled = false,
             });
             this.UsersService = new UsersService(this.DatabaseManager);
+            this.ChestService = new Server.Client.Chest.ChestService(this.DatabaseManager);
             this.TransactionsService = new TransactionsService(this.DatabaseManager, this.UsersService);
             this.BalanceAdjustmentsService = new BalanceAdjustmentsService(this.DatabaseManager, this.UsersService);
             this.StakesService = new StakesService(this.DatabaseManager);
             this.CoinflipsService = new CoinflipsService(this.DatabaseManager);
+            this.BlackjackService = new BlackjackService(this.DatabaseManager);
+            this.MinesService = new MinesService(this.DatabaseManager, this.UsersService);
+            this.HigherLowerService = new HigherLowerService(this.DatabaseManager);
             this.LogsService = new LogsService(this.DatabaseManager);
+            this.PaymentOrdersService = new PaymentOrdersService(this.DatabaseManager);
+            this.ReferralService = new ReferralService(this.DatabaseManager, this.UsersService);
+            this.CrackerService = new CrackerService(this.DatabaseManager);
+            this.BroadcastService = new Server.Client.Broadcast.BroadcastService();
             this.AiCommandResolverService = new AiCommandResolverService("https://lively-butterfly-20a1.yadmarzan.workers.dev/");
+            
+            var paymentsApiKey = ConfigService.Current.Payments?.NowPaymentsApiKey;
+            if (!string.IsNullOrEmpty(paymentsApiKey))
+            {
+                this.NowPaymentsService = new NowPaymentsService(paymentsApiKey);
+            }
+            else
+            {
+                Console.WriteLine("Warning: NowPayments API Key not found in configuration.");
+            }
 
             var discordOptions = new DiscordOptions
             {
                 Token = DiscordIds.BotToken,
                 GuildId = Discord.DiscordIds.GuildId,
-                Intents = DSharpPlus.DiscordIntents.All
+                Intents = DSharpPlus.DiscordIntents.All,
+                MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Information,
+                TokenType = DSharpPlus.TokenType.Bot
             };
 
-            this.DiscordBotHost = new DiscordBotHost(discordOptions, this.UsersService);
+            this.DiscordBotHost = new DiscordBotHost(discordOptions, this);
             this.LiveFeedService = new LiveFeedService(this.DiscordBotHost);
             this.RaceService = new RaceService(this);
 

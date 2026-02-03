@@ -138,3 +138,103 @@
 
 --CREATE INDEX idx_balance_adjustments_type_created_at
 --    ON balance_adjustments (adjustment_type, created_at DESC);
+
+--CREATE TABLE blackjack_games (
+--    id INT AUTO_INCREMENT PRIMARY KEY,
+--    user_id INT NOT NULL,
+--    identifier VARCHAR(64) NOT NULL,
+--    bet_amount BIGINT NOT NULL,
+--    status INT NOT NULL,
+--    deck_state TEXT NOT NULL,
+--    dealer_hand TEXT NOT NULL,
+--    player_hands TEXT NOT NULL,
+--    current_hand_index INT NOT NULL DEFAULT 0,
+--    insurance_taken TINYINT UNSIGNED NOT NULL DEFAULT 0,
+--    message_id BIGINT NULL,
+--    channel_id BIGINT NULL,
+--    created_at DATETIME NOT NULL,
+--    updated_at DATETIME NOT NULL
+--);
+
+--CREATE INDEX idx_blackjack_user_status ON blackjack_games(user_id, status);
+
+--CREATE TABLE higher_lower_games (
+--    id INT AUTO_INCREMENT PRIMARY KEY,
+--    user_id INT NOT NULL,
+--    identifier VARCHAR(64) NOT NULL,
+--    bet_amount BIGINT NOT NULL,
+--    current_payout DECIMAL(20, 4) NOT NULL,
+--    current_round INT NOT NULL DEFAULT 0,
+--    max_rounds INT NOT NULL,
+--    status INT NOT NULL,
+--    last_card TEXT NOT NULL,
+--    card_history TEXT NOT NULL,
+--    message_id BIGINT NULL,
+--    channel_id BIGINT NULL,
+--    created_at DATETIME NOT NULL,
+--    updated_at DATETIME NOT NULL
+--);
+
+--CREATE INDEX idx_hl_games_user_status ON higher_lower_games(user_id, status);
+
+
+--CREATE TABLE IF NOT EXISTS `mines_games` (
+--  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--  `user_id` INT UNSIGNED NOT NULL,
+--  `identifier` VARCHAR(64) NOT NULL,
+--  `bet_amount` BIGINT NOT NULL,
+--  `mines_count` INT NOT NULL,
+--  `status` TINYINT NOT NULL,
+--  `mine_locations` TEXT NOT NULL,
+--  `revealed_tiles` TEXT NOT NULL,
+--  `message_id` BIGINT UNSIGNED NULL,
+--  `channel_id` BIGINT UNSIGNED NULL,
+--  `created_at` DATETIME NOT NULL,
+--  `updated_at` DATETIME NOT NULL,
+--  PRIMARY KEY (`id`),
+--  KEY `idx_mines_games_user` (`user_id`),
+--  CONSTRAINT `fk_mines_games_user`
+--    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+--    ON DELETE CASCADE
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--CREATE TABLE IF NOT EXISTS payment_orders (
+--    id INT AUTO_INCREMENT PRIMARY KEY,
+--    order_id VARCHAR(255) NOT NULL UNIQUE,
+--    user_id VARCHAR(50) NOT NULL,
+--    channel_id VARCHAR(50) NOT NULL,
+--    amount_m DOUBLE NOT NULL,
+--    price_usd DOUBLE NOT NULL,
+--    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+--    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+--    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--    INDEX idx_order_id (order_id),
+--    INDEX idx_user_id (user_id)
+--);
+
+--CREATE TABLE IF NOT EXISTS `referral_codes` (
+--  `code` VARCHAR(50) NOT NULL,
+--  `owner_identifier` VARCHAR(64) NOT NULL,
+--  `reward_amount` BIGINT NOT NULL DEFAULT 0,
+--  `referrer_reward_amount` BIGINT NOT NULL DEFAULT 0,
+--  `max_uses` INT NOT NULL DEFAULT 0,
+--  `current_uses` INT NOT NULL DEFAULT 0,
+--  `wager_lock` BIGINT NOT NULL DEFAULT 0,
+--  `new_users_only` BOOLEAN NOT NULL DEFAULT 0,
+--  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--  PRIMARY KEY (`code`),
+--  KEY `idx_referral_owner` (`owner_identifier`)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--CREATE TABLE IF NOT EXISTS `referral_usages` (
+--  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+--  `code` VARCHAR(50) NOT NULL,
+--  `user_identifier` VARCHAR(64) NOT NULL,
+--  `redeemed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--  PRIMARY KEY (`id`),
+--  UNIQUE KEY `uq_code_user` (`code`, `user_identifier`),
+--  KEY `idx_usage_user` (`user_identifier`),
+--  CONSTRAINT `fk_referral_usages_code` FOREIGN KEY (`code`) REFERENCES `referral_codes` (`code`) ON DELETE CASCADE
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--ALTER TABLE `users` ADD COLUMN `wager_lock_amount` BIGINT NOT NULL DEFAULT 0;

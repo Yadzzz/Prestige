@@ -14,21 +14,24 @@ namespace Server.Communication.Discord.Commands
 {
     public class DepositCommand : BaseCommandModule
     {
-        private static readonly TimeSpan RateLimitInterval = TimeSpan.FromSeconds(1);
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, DateTime> LastUsed = new();
-
         [Command("d")]
         [Aliases("deposit")] 
-        public async Task Deposit(CommandContext ctx, string amount)
+        public async Task Deposit(CommandContext ctx, string amount = null)
         {
             if (!await DiscordChannelPermissionService.EnforceDepositChannelAsync(ctx))
             {
                 return;
             }
 
-            if (IsRateLimited(ctx.User.Id))
+            if (RateLimiter.IsRateLimited(ctx.User.Id))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(amount))
+            {
+                await ctx.RespondAsync("Please specify an amount. Usage: `!d <amount>` (e.g. `!d 100m`).");
                 return;
             }
 
@@ -41,17 +44,24 @@ namespace Server.Communication.Discord.Commands
             if (user == null)
                 return;
 
-            if (!GpParser.TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!d 100`, `!d 0.5`, `!d 1b`, `!d 1000m`.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!d 100`, `!d 0.5`, `!d 1b`, `!d 1000m`.");
                 return;
             }
 
-            var transaction = transactionsService.CreateDepositRequest(user, amountK);
+            // Minimum deposit 1M (1000K)
+            if (amountK < GpFormatter.MinimumDepositAmountK)
+            {
+                await ctx.RespondAsync($"Minimum deposit is {GpFormatter.Format(GpFormatter.MinimumDepositAmountK)}.");
+                return;
+            }
+
+            var transaction = await transactionsService.CreateDepositRequestAsync(user, amountK);
             if (transaction == null)
             {
                 await ctx.RespondAsync("Failed to create deposit request. Please try again later.");
-                serverManager.LogsService.Log(
+                await serverManager.LogsService.LogAsync(
                     source: nameof(DepositCommand),
                     level: "Error",
                     userIdentifier: user.Identifier,
@@ -73,17 +83,18 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Expected Balance", $"**{expectedBalanceText}**", true)
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/1hkVfFD.gif")
+                .WithFooter(ServerConfiguration.ServerName)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
             var userCancelButton = new DiscordButtonComponent(
-                ButtonStyle.Secondary,
+                DiscordButtonStyle.Secondary,
                 $"tx_usercancel_{transaction.Id}",
                 "Cancel",
                 emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
-                .AddEmbed(pendingEmbed)
-                .AddComponents(userCancelButton));
+                .AddEmbed(pendingEmbed));
+                //.AddComponents(userCancelButton));
 
             // Send to staff channel
             var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.DepositStaffChannelId);
@@ -94,34 +105,22 @@ namespace Server.Communication.Discord.Commands
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var acceptButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", emoji: new DiscordComponentEmoji("✅"));
-            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
-            var denyButton = new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
+            var acceptButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", emoji: new DiscordComponentEmoji("✅"));
+            var cancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            var denyButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
 
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")
                 .AddEmbed(staffEmbed)
-                .AddComponents(acceptButton, cancelButton, denyButton));
+                .AddActionRowComponent(new[] { acceptButton, cancelButton, denyButton }));
 
             // Persist message/channel IDs so we can update messages on status changes
-            transactionsService.UpdateTransactionMessages(
+            await transactionsService.UpdateTransactionMessagesAsync(
                 transaction.Id,
                 userMessage.Id,
                 userMessage.Channel.Id,
                 staffMessage.Id,
                 staffMessage.Channel.Id);
-        }
-
-        private bool IsRateLimited(ulong userId)
-        {
-            var now = DateTime.UtcNow;
-            if (LastUsed.TryGetValue(userId, out var last) && (now - last) < RateLimitInterval)
-            {
-                return true;
-            }
-
-            LastUsed[userId] = now;
-            return false;
         }
 
     }

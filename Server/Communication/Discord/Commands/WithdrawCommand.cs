@@ -19,7 +19,7 @@ namespace Server.Communication.Discord.Commands
 
         [Command("w")]
         [Aliases("withdraw", "wd")]
-        public async Task Withdraw(CommandContext ctx, string amount)
+        public async Task Withdraw(CommandContext ctx, string amount = null)
         {
             if (!await DiscordChannelPermissionService.EnforceWithdrawChannelAsync(ctx))
             {
@@ -29,6 +29,12 @@ namespace Server.Communication.Discord.Commands
             if (IsRateLimited(ctx.User.Id))
             {
                 await ctx.RespondAsync("You're doing that too fast. Please wait a moment.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(amount))
+            {
+                await ctx.RespondAsync("Please specify an amount. Usage: `!w <amount>` (e.g. `!w 100m`).");
                 return;
             }
 
@@ -44,17 +50,15 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!GpParser.TryParseAmountInK(amount, out var amountK))
+            if (!GpParser.TryParseAmountInK(amount, out var amountK, out var error))
             {
-                await ctx.RespondAsync("Invalid amount. Examples: `!w 100`, `!w 0.5`, `!w 1b`, `!w 1000m`.");
+                await ctx.RespondAsync($"Invalid amount: {error}\nExamples: `!w 100`, `!w 0.5`, `!w 1b`, `!w 1000m`.");
                 return;
             }
 
-            // Minimum withdrawal is 10M => 10,000K internally
-            const long minimumWithdrawalK = 10_000L;
-            if (amountK < minimumWithdrawalK)
+            if (amountK < GpFormatter.MinimumWithdrawAmountK)
             {
-                await ctx.RespondAsync($"Minimum withdrawal is {GpFormatter.Format(minimumWithdrawalK)}.");
+                await ctx.RespondAsync($"Minimum withdrawal is {GpFormatter.Format(GpFormatter.MinimumWithdrawAmountK)}.");
                 return;
             }
 
@@ -65,15 +69,21 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
+            if (user.WagerLock > 0)
+            {
+                await ctx.RespondAsync($"You have a wager lock of {GpFormatter.Format(user.WagerLock)}. You must wager this amount before withdrawing.");
+                return;
+            }
+
             // Lock the withdrawal amount up-front, similar to stakes
-            var balanceLocked = usersService.RemoveBalance(user.Identifier, amountK);
+            var balanceLocked = await usersService.RemoveBalanceAsync(user.Identifier, amountK);
             if (!balanceLocked)
             {
                 await ctx.RespondAsync("Failed to lock balance for this withdrawal. Please try again later.");
                 return;
             }
 
-            var transaction = transactionsService.CreateWithdrawRequest(user, amountK);
+            var transaction = await transactionsService.CreateWithdrawRequestAsync(user, amountK);
             if (transaction == null)
             {
                 await ctx.RespondAsync("Failed to create withdrawal request. Please try again later.");
@@ -85,7 +95,7 @@ namespace Server.Communication.Discord.Commands
                     message: $"Failed to create withdraw for {user.Identifier} amountK={amountK}",
                     exception: null);
                 // rollback locked balance if transaction creation failed
-                usersService.AddBalance(user.Identifier, amountK);
+                await usersService.AddBalanceAsync(user.Identifier, amountK);
                 return;
             }
 
@@ -103,13 +113,13 @@ namespace Server.Communication.Discord.Commands
                 .WithThumbnail("https://i.imgur.com/A4tPGOW.gif")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var ingameButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_deposit_ingame_{transaction.Id}", "In-game (5% fee)", emoji: new DiscordComponentEmoji("🎮"));
-            var cryptoButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_deposit_crypto_{transaction.Id}", "Crypto (0% fee)", emoji: new DiscordComponentEmoji("🪙"));
-            var userCancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            var ingameButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_deposit_ingame_{transaction.Id}", "In-game (5% fee)", emoji: new DiscordComponentEmoji("🎮"));
+            var cryptoButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_deposit_crypto_{transaction.Id}", "Crypto (0% fee)", emoji: new DiscordComponentEmoji("🪙"));
+            var userCancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_usercancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
 
             var userMessage = await ctx.RespondAsync(new DiscordMessageBuilder()
                 .AddEmbed(pendingEmbed)
-                .AddComponents(ingameButton, cryptoButton, userCancelButton));
+                .AddActionRowComponent(new[] { ingameButton, cryptoButton /*, userCancelButton*/ }));
 
             var staffChannel = await ctx.Client.GetChannelAsync(DiscordIds.WithdrawStaffChannelId);
 
@@ -119,16 +129,16 @@ namespace Server.Communication.Discord.Commands
                 .WithColor(DiscordColor.Orange)
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            var acceptButton = new DiscordButtonComponent(ButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅"));
-            var cancelButton = new DiscordButtonComponent(ButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
-            var denyButton = new DiscordButtonComponent(ButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
+            var acceptButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"tx_accept_{transaction.Id}", "Accept", disabled: true, emoji: new DiscordComponentEmoji("✅"));
+            var cancelButton = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"tx_cancel_{transaction.Id}", "Cancel", emoji: new DiscordComponentEmoji("❌"));
+            var denyButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"tx_deny_{transaction.Id}", "Deny", emoji: new DiscordComponentEmoji("❌"));
 
             var staffMessage = await staffChannel.SendMessageAsync(new DiscordMessageBuilder()
                 .WithContent($"<@&{DiscordIds.StaffRoleId}>")
                 .AddEmbed(staffEmbed)
-                .AddComponents(acceptButton, cancelButton, denyButton));
+                .AddActionRowComponent(new[] { acceptButton, cancelButton, denyButton }));
 
-            transactionsService.UpdateTransactionMessages(
+            await transactionsService.UpdateTransactionMessagesAsync(
                 transaction.Id,
                 userMessage.Id,
                 userMessage.Channel.Id,

@@ -13,67 +13,96 @@ namespace Server.Client.Users
             _databaseManager = databaseManager;
         }
 
-        public bool AddBalance(string identifier, long amount)
+        public async Task<bool> AddBalanceAsync(string identifier, long amount)
         {
             if (amount <= 0)
             {
                 return false;
             }
-            var updated = TryUpdateBalance(identifier, amount);
+            var updated = await UpdateBalanceAsync(identifier, amount);
 
-            try
+            if (updated)
             {
-                if (updated)
+                _ = Task.Run(async () =>
                 {
-                    var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LogsService.Log(
-                        source: nameof(UsersService),
-                        level: "Info",
-                        userIdentifier: identifier,
-                        action: "BalanceIncreased",
-                        message: $"Balance increased by {amount}K for user={identifier}",
-                        exception: null);
-                }
-            }
-            catch
-            {
-                // ignore logging failures
+                    try
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        await env.ServerManager.LogsService.LogAsync(
+                            source: nameof(UsersService),
+                            level: "Info",
+                            userIdentifier: identifier,
+                            action: "BalanceIncreased",
+                            message: $"Balance increased by {amount}K for user={identifier}",
+                            exception: null);
+                    }
+                    catch (Exception ex)
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        env.ServerManager.LoggerManager.LogError($"[UsersService] Failed to log balance increase for {identifier}: {ex.Message}");
+                    }
+                });
             }
 
             return updated;
         }
 
-        public bool RemoveBalance(string identifier, long amount)
+        // Keep synchronous method for backward compatibility
+        // public bool AddBalance(string identifier, long amount)
+        // {
+        //     return AddBalanceAsync(identifier, amount).GetAwaiter().GetResult();
+        // }
+
+        public async Task<bool> RemoveBalanceAsync(string identifier, long amount, bool isWager = false)
         {
             if (amount <= 0)
             {
                 return false;
             }
-            var updated = TryUpdateBalance(identifier, -amount);
-
-            try
+            
+            bool updated;
+            if (isWager)
             {
-                if (updated)
-                {
-                    var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LogsService.Log(
-                        source: nameof(UsersService),
-                        level: "Info",
-                        userIdentifier: identifier,
-                        action: "BalanceDecreased",
-                        message: $"Balance decreased by {amount}K for user={identifier}",
-                        exception: null);
-                }
+                updated = await ReduceBalanceAndWagerLockAsync(identifier, amount);
             }
-            catch
+            else
             {
-                // ignore logging failures
+                updated = await UpdateBalanceAsync(identifier, -amount);
+            }
+
+            if (updated)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        await env.ServerManager.LogsService.LogAsync(
+                            source: nameof(UsersService),
+                            level: "Info",
+                            userIdentifier: identifier,
+                            action: "BalanceDecreased",
+                            message: $"Balance decreased by {amount}K for user={identifier} (isWager={isWager})",
+                            exception: null);
+                    }
+                    catch (Exception ex)
+                    {
+                        var env = ServerEnvironment.GetServerEnvironment();
+                        env.ServerManager.LoggerManager.LogError($"[UsersService] Failed to log balance decrease for {identifier}: {ex.Message}");
+                    }
+                });
             }
 
             return updated;
         }
 
-        public bool UserExists(string identifier)
+        // Keep synchronous method for backward compatibility
+        // public bool RemoveBalance(string identifier, long amount)
+        // {
+        //     return RemoveBalanceAsync(identifier, amount).GetAwaiter().GetResult();
+        // }
+
+        public async Task<bool> UserExistsAsync(string identifier)
         {
             if (string.IsNullOrEmpty(identifier))
             {
@@ -86,7 +115,7 @@ namespace Server.Client.Users
                     command.SetCommand("SELECT COUNT(*) FROM users WHERE identifier = @identifier");
                     command.AddParameter("identifier", identifier);
 
-                    var result = command.ExecuteQuery();
+                    var result = await command.ExecuteScalarAsync();
 
                     return Convert.ToInt32(result) > 0;
                 }
@@ -106,13 +135,17 @@ namespace Server.Client.Users
             return false;
         }
 
-        public bool TryGetUser(string identifier, out User user)
-        {
-            user = null;
+        // Keep synchronous method for backward compatibility
+        // public bool UserExists(string identifier)
+        // {
+        //     return UserExistsAsync(identifier).GetAwaiter().GetResult();
+        // }
 
+        public async Task<User?> GetUserAsync(string identifier)
+        {
             if (string.IsNullOrEmpty(identifier))
             {
-                return false;
+                return null;
             }
 
             try
@@ -122,22 +155,23 @@ namespace Server.Client.Users
                     command.SetCommand("SELECT * FROM users WHERE identifier = @identifier LIMIT 1");
                     command.AddParameter("identifier", identifier);
 
-                    using (var reader = command.ExecuteDataReader())
+                    using (var reader = await command.ExecuteDataReaderAsync())
                     {
                         if (reader == null)
                         {
-                            return false;
+                            return null;
                         }
 
-                        while (reader.Read())
+                        if (await reader.ReadAsync())
                         {
-                            user = new User
+                            return new User
                             {
                                 Id = Convert.ToInt32(reader["id"]),
                                 Identifier = reader["identifier"].ToString(),
                                 Username = reader["username"].ToString(),
                                 DisplayName = reader["display_name"].ToString(),
                                 Balance = Convert.ToInt64(reader["balance"]),
+                                WagerLock = reader["wager_lock_amount"] == DBNull.Value ? 0 : Convert.ToInt64(reader["wager_lock_amount"]),
                                 StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"]),
                                 StakeLoseStreak = reader["stake_lose_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_lose_streak"])
                             };
@@ -150,45 +184,90 @@ namespace Server.Client.Users
                 try
                 {
                     var env = ServerEnvironment.GetServerEnvironment();
-                    env.ServerManager.LoggerManager.LogError($"[UsersService.TryGetUserError] identifier={identifier} ex={ex}");
+                    env.ServerManager.LoggerManager.LogError($"[UsersService.GetUserError] identifier={identifier} ex={ex}");
                 }
                 catch
                 {
-                    Console.WriteLine($"[UsersService.TryGetUserError] {ex}");
+                    Console.WriteLine($"[UsersService.GetUserError] {ex}");
                 }
             }
 
-            return user != null;
+            return null;
         }
 
-        public bool CreateUser(string identifier, string username, string displayName)
+        public async Task<User?> GetUserByUsernameAsync(string username)
         {
-            if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(username))
+            if (string.IsNullOrEmpty(username))
             {
-                return false;
-            }
-
-            // If the user already exists, treat creation as a no-op success.
-            if (UserExists(identifier))
-            {
-                return true;
+                return null;
             }
 
             try
             {
                 using (var command = new DatabaseCommand())
                 {
-                    command.SetCommand("INSERT INTO users (identifier, username, display_name, balance, stake_streak, stake_lose_streak) VALUES (@identifier, @username, @display_name, @balance, @stake_streak, @stake_lose_streak)");
+                    command.SetCommand("SELECT * FROM users WHERE username = @username LIMIT 1");
+                    command.AddParameter("username", username);
+
+                    using (var reader = await command.ExecuteDataReaderAsync())
+                    {
+                        if (reader != null && await reader.ReadAsync())
+                        {
+                            return new User
+                            {
+                                Id = Convert.ToInt32(reader["id"]),
+                                Identifier = reader["identifier"].ToString(),
+                                Username = reader["username"].ToString(),
+                                DisplayName = reader["display_name"].ToString(),
+                                Balance = Convert.ToInt64(reader["balance"]),
+                                WagerLock = reader["wager_lock_amount"] == DBNull.Value ? 0 : Convert.ToInt64(reader["wager_lock_amount"]),
+                                StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"]),
+                                StakeLoseStreak = reader["stake_lose_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_lose_streak"])
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService.GetUserByUsernameAsync] username={username} ex={ex}");
+            }
+            return null;
+        }
+
+        // Keep synchronous method for backward compatibility
+        // public bool TryGetUser(string identifier, out User user)
+        // {
+        //     user = GetUserAsync(identifier).GetAwaiter().GetResult();
+        //     return user != null;
+        // }
+
+        public async Task<bool> CreateUserAsync(string identifier, string username, string displayName)
+        {
+            if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(username))
+            {
+                return false;
+            }
+
+            // Optimization: Try to insert directly using INSERT IGNORE.
+            // This avoids the extra roundtrip to check if user exists.
+
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("INSERT IGNORE INTO users (identifier, username, display_name, balance, stake_streak, stake_lose_streak) VALUES (@identifier, @username, @display_name, 0, 0, 0)");
                     command.AddParameter("identifier", identifier);
                     command.AddParameter("username", username);
                     command.AddParameter("display_name", displayName);
-                    command.AddParameter("balance", 0);
-                    command.AddParameter("stake_streak", 0);
-                    command.AddParameter("stake_lose_streak", 0);
 
-                    int rowsAffected = command.ExecuteQuery();
+                    await command.ExecuteQueryAsync();
 
-                    return rowsAffected > 0;
+                    // With INSERT IGNORE, if it returns 0, it means user exists.
+                    // If it returns 1, user was created.
+                    // In both cases, we successfully ensured the user exists.
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -206,7 +285,13 @@ namespace Server.Client.Users
             }
         }
 
-        private bool TryUpdateBalance(string identifier, long delta)
+        // Keep synchronous method for backward compatibility
+        // public bool CreateUser(string identifier, string username, string displayName)
+        // {
+        //     return CreateUserAsync(identifier, username, displayName).GetAwaiter().GetResult();
+        // }
+
+        private async Task<bool> UpdateBalanceAsync(string identifier, long delta)
         {
             if (string.IsNullOrEmpty(identifier) || delta == 0)
             {
@@ -221,8 +306,8 @@ namespace Server.Client.Users
                     command.AddParameter("identifier", identifier);
                     command.AddParameter("delta", delta);
 
-                    var result = command.ExecuteQuery();
-                    return Convert.ToInt32(result) > 0;
+                    var result = await command.ExecuteQueryAsync();
+                    return result > 0;
                 }
             }
             catch (Exception ex)
@@ -240,28 +325,133 @@ namespace Server.Client.Users
             }
         }
 
-        public Task<User?> EnsureUserAsync(string userId, string username, string displayName)
+        private async Task<bool> ReduceBalanceAndWagerLockAsync(string identifier, long amount)
+        {
+            if (string.IsNullOrEmpty(identifier) || amount <= 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    // Decrease balance by amount
+                    // And reduce wager_lock_amount by amount, but clamp to 0 (don't go negative)
+                    command.SetCommand(@"
+                        UPDATE users 
+                        SET balance = balance - @amount, 
+                            wager_lock_amount = CASE 
+                                WHEN wager_lock_amount > @amount THEN wager_lock_amount - @amount 
+                                ELSE 0 
+                            END
+                        WHERE identifier = @identifier");
+                    
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("amount", amount);
+
+                    var result = await command.ExecuteQueryAsync();
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService.ReduceBalanceAndWagerLockAsync] identifier={identifier} amount={amount} ex={ex}");
+                return false;
+            }
+        }
+
+        public async Task<bool> AddWagerLockAsync(string identifier, long amount)
+        {
+            if (string.IsNullOrEmpty(identifier) || amount == 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand("UPDATE users SET wager_lock_amount = wager_lock_amount + @amount WHERE identifier = @identifier");
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("amount", amount);
+
+                    var result = await command.ExecuteQueryAsync();
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService.AddWagerLockAsync] identifier={identifier} amount={amount} ex={ex}");
+                return false;
+            }
+        }
+
+        // Keep synchronous method for backward compatibility
+        // private bool TryUpdateBalance(string identifier, long delta)
+        // {
+        //     return UpdateBalanceAsync(identifier, delta).GetAwaiter().GetResult();
+        // }
+
+        private async Task<User?> CreateAndGetUserAsync(string identifier, string username, string displayName)
+        {
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    // Combined INSERT IGNORE + SELECT to reduce roundtrips
+                    command.SetCommand(@"
+                        INSERT IGNORE INTO users (identifier, username, display_name, balance, stake_streak, stake_lose_streak) 
+                        VALUES (@identifier, @username, @display_name, 0, 0, 0);
+                        SELECT * FROM users WHERE identifier = @identifier LIMIT 1;");
+                    
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("username", username);
+                    command.AddParameter("display_name", displayName);
+
+                    using (var reader = await command.ExecuteDataReaderAsync())
+                    {
+                        if (reader != null && await reader.ReadAsync())
+                        {
+                            return new User
+                            {
+                                Id = Convert.ToInt32(reader["id"]),
+                                Identifier = reader["identifier"].ToString(),
+                                Username = reader["username"].ToString(),
+                                DisplayName = reader["display_name"].ToString(),
+                                Balance = Convert.ToInt64(reader["balance"]),
+                                StakeStreak = reader["stake_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_streak"]),
+                                StakeLoseStreak = reader["stake_lose_streak"] == DBNull.Value ? 0 : Convert.ToInt32(reader["stake_lose_streak"])
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService] CreateAndGetUserAsync failed for {identifier}: {ex.Message}");
+            }
+            return null;
+        }
+
+        public async Task<User?> EnsureUserAsync(string userId, string username, string displayName)
         {
             if (string.IsNullOrEmpty(userId))
             {
-                return Task.FromResult<User?>(null);
+                return null;
             }
 
-            if (!TryGetUser(userId, out var user) || user == null)
+            var user = await GetUserAsync(userId);
+            if (user == null)
             {
-                // User does not exist yet; try to create and then fetch.
-                if (!CreateUser(userId, username, displayName))
-                {
-                    return Task.FromResult<User?>(null);
-                }
-
-                if (!TryGetUser(userId, out user) || user == null)
-                {
-                    return Task.FromResult<User?>(null);
-                }
+                // Optimized creation: Try to create and fetch in one go
+                user = await CreateAndGetUserAsync(userId, username, displayName);
             }
 
-            return Task.FromResult<User?>(user);
+            return user;
         }
     }
 }

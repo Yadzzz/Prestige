@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Server.Infrastructure.Configuration;
 
 namespace Server
 {
     public class ServerConfiguration
     {
+        public static string ServerName => ConfigService.Current.ServerName;
+        public static string ShortName => ConfigService.Current.ShortName;
+
         //Database
-        public const string ConnectionString = "Server=127.0.0.1;Database=prestige_bets;Uid=root;Pwd=Yadz1042!;";
-        //public const string ConnectionString = "Server=127.0.0.1;Database=ocean_stakes;Uid=root;Pwd=Yadz1042!;";
+        public static string ConnectionString => ConfigService.Current.ConnectionString;
 
         //Network
         public const int MaxSocketConnection = 1000;

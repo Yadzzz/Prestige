@@ -8,11 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="4.5.1" />
-    <PackageReference Include="DSharpPlus.CommandsNext" Version="4.5.1" />
-    <PackageReference Include="DSharpPlus.Interactivity" Version="4.5.1" />
-    <PackageReference Include="DSharpPlus.SlashCommands" Version="4.5.1" />
+    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02562" />
+    <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02562" />
+    <PackageReference Include="DSharpPlus.CommandsNext" Version="5.0.0-nightly-02562" />
+    <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-02562" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
     <PackageReference Include="MySql.Data" Version="9.5.0" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +28,15 @@
   <ItemGroup>
     <Folder Include="Communication\Discord\Interactions\" />
     <Folder Include="Infrastructure\Discord\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\Images\race_template.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
