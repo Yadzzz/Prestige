@@ -80,6 +80,13 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            // Cracker buttons
+            if (e.Id.StartsWith("cracker_", StringComparison.OrdinalIgnoreCase))
+            {
+                await CrackerButtonHandler.Handle(client, e);
+                return;
+            }
+
             // Other button namespaces (game_, etc.) can be routed here later
         }
     }

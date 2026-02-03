@@ -135,6 +135,53 @@ namespace Server.Client.LiveFeed
             });
         }
 
+        public void PublishCracker(long amountK, bool win, decimal multiplier)
+        {
+            var client = TryGetClient();
+            if (client == null)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
+                    var amountPretty = GpFormatter.Format(amountK);
+
+                    var isBigWin = win && amountK >= 1_000_000L; // >= 1B
+
+                    string description;
+                    DiscordColor color;
+
+                    if (isBigWin)
+                    {
+                        description = $"{amountPretty} __**BIG WIN!**__ in Cracker ({multiplier}x) <:{nameof(DiscordIds.BigWinMvppEmojiId)}:{DiscordIds.BigWinMvppEmojiId}>";
+                        color = new DiscordColor("#AA66FF");
+                    }
+                    else if (win)
+                    {
+                        description = $"{amountPretty} **WIN** in Cracker ({multiplier}x) <:{nameof(DiscordIds.CoinflipGoldEmojiId)}:{DiscordIds.CoinflipGoldEmojiId}>";
+                        color = DiscordColor.SpringGreen;
+                    }
+                    else
+                    {
+                        description = $"{amountPretty} **LOST** in Cracker";
+                        color = DiscordColor.Red;
+                    }
+
+                    var embed = new DiscordEmbedBuilder()
+                        .WithDescription(description)
+                        .WithColor(color);
+
+                    await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed));
+                }
+                catch
+                {
+                    // Ignore
+                }
+            });
+        }
+
         public void PublishStake(long amountK, bool win)
         {
             var client = TryGetClient();
