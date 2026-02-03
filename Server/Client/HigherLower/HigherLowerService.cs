@@ -170,10 +170,17 @@ namespace Server.Client.HigherLower
                 game.LastCard = newCard;
                 game.CardHistory.Add(newCard);
                 game.UpdatedAt = DateTime.UtcNow;
-                
-                game.Status = HigherLowerGameStatus.Draw;
-                game.CurrentPayout = game.BetAmount;
-                await FinishGameAsync(game);
+                game.CurrentRound++;
+
+                if (game.CurrentRound >= game.MaxRounds)
+                {
+                    game.Status = HigherLowerGameStatus.Won;
+                    await FinishGameAsync(game);
+                }
+                else
+                {
+                    await SaveGameAsync(game);
+                }
                 
                 return (game, false, newCard);
             }
@@ -231,7 +238,7 @@ namespace Server.Client.HigherLower
             var env = ServerEnvironment.GetServerEnvironment();
             var usersService = env.ServerManager.UsersService;
 
-            if (game.Status == HigherLowerGameStatus.Won || game.Status == HigherLowerGameStatus.CashedOut || game.Status == HigherLowerGameStatus.Draw)
+            if (game.Status == HigherLowerGameStatus.Won || game.Status == HigherLowerGameStatus.CashedOut)
             {
                 long payout = (long)game.CurrentPayout;
                 if (payout > 0)

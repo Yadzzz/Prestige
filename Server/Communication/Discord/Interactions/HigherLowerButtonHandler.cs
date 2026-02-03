@@ -69,12 +69,17 @@ namespace Server.Communication.Discord.Interactions
                 var (updatedGame, isWin, newCard) = await hlService.GuessAsync(gameId, guessHigher);
 
                 string imageUrl = "https://i.imgur.com/lJ8D3h7.gif"; // Default/Draw
-                if (updatedGame.Status != HigherLowerGameStatus.Draw)
+                
+                // Determine if it was a draw (values equal) to show correct GIF
+                // We can infer draw if Status is Active/Won but isWin is false (since isWin=false on Loss sets Status=Lost)
+                bool isDraw = !isWin && updatedGame.Status != HigherLowerGameStatus.Lost;
+
+                if (!isDraw)
                 {
                     if (guessHigher)
-                        imageUrl = isWin ? "https://i.imgur.com/Kb87Dme.gif" : "https://i.imgur.com/OkFSiRj.gif";
+                        imageUrl = isWin ? "https://i.imgur.com/Kb87Dme.gif" : "https://i.imgur.com/8IHZ2tm.gif";
                     else
-                        imageUrl = isWin ? "https://i.imgur.com/wdEu2IQ.gif" : "https://i.imgur.com/8IHZ2tm.gif";
+                        imageUrl = isWin ? "https://i.imgur.com/wdEu2IQ.gif" : "https://i.imgur.com/OkFSiRj.gif";
                 }
                 
                 var user = await usersService.GetUserAsync(game.Identifier);
