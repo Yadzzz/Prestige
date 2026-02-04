@@ -99,6 +99,34 @@ namespace Server.Client.Cracker
             return null;
         }
 
+        public async Task<List<CrackerGame>> GetActiveGamesByUserIdAsync(int userId)
+        {
+            var games = new List<CrackerGame>();
+            try
+            {
+                using (var cmd = new DatabaseCommand())
+                {
+                    cmd.SetCommand("SELECT * FROM cracker_games WHERE user_id = @user_id AND status = @status");
+                    cmd.AddParameter("user_id", userId);
+                    cmd.AddParameter("status", (int)CrackerGameStatus.Active);
+
+                    using (var reader = await cmd.ExecuteDataReaderAsync())
+                    {
+                        while (reader != null && reader.Read())
+                        {
+                            games.Add(MapGame(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"GetActiveGamesByUserIdAsync failed: {ex}");
+            }
+            return games;
+        }
+
         public async Task UpdateGameAsync(CrackerGame game)
         {
             try

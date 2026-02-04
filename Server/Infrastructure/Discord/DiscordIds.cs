@@ -47,6 +47,14 @@ namespace Server.Infrastructure.Discord
         // Big win emoji (MVPP)
         public static ulong BigWinMvppEmojiId => ConfigService.Current.Discord.BigWinMvppEmojiId;
 
+        // Cracker Emojis
+        public static ulong CrackerBlueEmojiId => ConfigService.Current.Discord.CrackerBlueEmojiId;
+        public static ulong CrackerGreenEmojiId => ConfigService.Current.Discord.CrackerGreenEmojiId;
+        public static ulong CrackerPurpleEmojiId => ConfigService.Current.Discord.CrackerPurpleEmojiId;
+        public static ulong CrackerRedEmojiId => ConfigService.Current.Discord.CrackerRedEmojiId;
+        public static ulong CrackerWhiteEmojiId => ConfigService.Current.Discord.CrackerWhiteEmojiId;
+        public static ulong CrackerYellowEmojiId => ConfigService.Current.Discord.CrackerYellowEmojiId;
+
         // Higher/Lower Emojis
         public static ulong HigherLowerHigherEmojiId => ConfigService.Current.Discord.HigherLowerHigherEmojiId;
         public static ulong HigherLowerLowerEmojiId => ConfigService.Current.Discord.HigherLowerLowerEmojiId;

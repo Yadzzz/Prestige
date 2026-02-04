@@ -144,6 +144,7 @@ namespace Server.Communication.Discord.Commands
             {
                 embed.WithColor(DiscordColor.Blurple);
                 embed.WithDescription("Select partyhats to bet on!\nClick 'Pull' when ready.");
+                embed.WithThumbnail(GetCrackerImageUrl(null, false, true));
             }
             else if (game.Status == CrackerGameStatus.Finished)
             {
@@ -158,11 +159,13 @@ namespace Server.Communication.Discord.Commands
                 var suffix = won ? "Think you can do that again?" : "Perhaps next time...";
                  
                 embed.WithDescription($"**{resultTitle}**\n\n{body}\n\n*{suffix}*");
+                embed.WithThumbnail(GetCrackerImageUrl(game.ResultHat, won));
             }
             else if (game.Status == CrackerGameStatus.Cancelled)
             {
-                embed.WithColor(DiscordColor.Red);
-                embed.WithDescription("Game cancelled. Bet refunded.");
+                embed.WithColor(DiscordColor.Gray);
+                embed.WithDescription($"**Game Cancelled**\n\nYour bet of `{GpFormatter.Format(game.BetAmount)}` has been refunded.");
+                embed.WithThumbnail(GetCrackerImageUrl(null, false, true));
             }
 
             embed.AddField("Multiplier", $"`{potentialMult}x`", true);
@@ -171,7 +174,7 @@ namespace Server.Communication.Discord.Commands
             if (game.Status == CrackerGameStatus.Finished && !string.IsNullOrEmpty(game.ResultHat))
             {
                 var resultEmoji = GetDiscordEmoji(game.ResultHat);
-                embed.AddField("Winning hat", $"{resultEmoji.Name} {game.ResultHat}", true);
+                embed.AddField("Winning hat", $"<:{resultEmoji.Name}:{resultEmoji.Id}> {game.ResultHat}", true);
             }
 
             embed.WithFooter("Prestige Bets", null); 
@@ -342,18 +345,40 @@ namespace Server.Communication.Discord.Commands
              return rows;
         }
 
+        private static string GetCrackerImageUrl(string hatColor, bool isWin, bool isMenu = false)
+        {
+            if (isMenu) return "https://i.imgur.com/VZG4OIM.gif";
+
+            return (hatColor, isWin) switch
+            {
+                ("Blue", false) => "https://i.imgur.com/eTqhrev.gif",
+                ("Green", false) => "https://i.imgur.com/WdQuwhC.gif",
+                ("Purple", false) => "https://i.imgur.com/TTdqRqX.gif",
+                ("Red", false) => "https://i.imgur.com/U2UcRJH.gif",
+                ("Yellow", false) => "https://i.imgur.com/Qa5VNRp.gif",
+                ("White", false) => "https://i.imgur.com/CIoBGSk.gif",
+
+                ("Blue", true) => "https://i.imgur.com/paWZMGK.gif",
+                ("Green", true) => "https://i.imgur.com/QFD9Ich.gif",
+                ("Purple", true) => "https://i.imgur.com/VHOH1Xt.gif",
+                ("Red", true) => "https://i.imgur.com/la2dctD.gif",
+                ("White", true) => "https://i.imgur.com/Sik1GpL.gif",
+                ("Yellow", true) => "https://i.imgur.com/D6ZQ2sa.gif",
+                _ => "https://i.imgur.com/VZG4OIM.gif"
+            };
+        }
+
         private static DiscordComponentEmoji GetDiscordEmoji(string color)
         {
-            // Placeholder - need real IDs or standard emojis
-             return color switch
+            return color switch
             {
-                "Red" => new DiscordComponentEmoji("🔴"),
-                "Yellow" => new DiscordComponentEmoji("🟡"),
-                "Green" => new DiscordComponentEmoji("🟢"),
-                "Blue" => new DiscordComponentEmoji("🔵"),
-                "Purple" => new DiscordComponentEmoji("🟣"),
-                "White" => new DiscordComponentEmoji("⚪"),
-                _ => new DiscordComponentEmoji("👑")
+                "Red" => new DiscordComponentEmoji(DiscordIds.CrackerRedEmojiId),
+                "Yellow" => new DiscordComponentEmoji(DiscordIds.CrackerYellowEmojiId),
+                "Green" => new DiscordComponentEmoji(DiscordIds.CrackerGreenEmojiId),
+                "Blue" => new DiscordComponentEmoji(DiscordIds.CrackerBlueEmojiId),
+                "Purple" => new DiscordComponentEmoji(DiscordIds.CrackerPurpleEmojiId),
+                "White" => new DiscordComponentEmoji(DiscordIds.CrackerWhiteEmojiId),
+                _ => new DiscordComponentEmoji(DiscordIds.CrackerYellowEmojiId)
             };
         }
     }
