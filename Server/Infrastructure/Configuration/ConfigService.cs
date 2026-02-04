@@ -106,6 +106,11 @@ namespace Server.Infrastructure.Configuration
         public ulong CrackerRedEmojiId { get; set; }
         public ulong CrackerWhiteEmojiId { get; set; }
         public ulong CrackerYellowEmojiId { get; set; }
+        public ulong CrackerPullEmojiId { get; set; }
+        public ulong CrackerRmEmojiId { get; set; }
+        public ulong CrackerHalfEmojiId { get; set; }
+        public ulong CrackerMaxEmojiId { get; set; }
+        public ulong CrackerX2EmojiId { get; set; }
 
         public BlackjackCardConfig BlackjackCards { get; set; }
     }

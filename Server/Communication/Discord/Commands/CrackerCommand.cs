@@ -112,7 +112,7 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            var embed = BuildGameEmbed(game, user);
+            var embed = BuildGameEmbed(game, user, ctx.Client);
             var buttons = BuildButtons(game);
 
             var builder = new DiscordMessageBuilder().AddEmbed(embed);
@@ -127,7 +127,7 @@ namespace Server.Communication.Discord.Commands
             await crackerService.UpdateGameAsync(game);
         }
 
-        public static DiscordEmbed BuildGameEmbed(CrackerGame game, User user)
+        public static DiscordEmbed BuildGameEmbed(CrackerGame game, User user, DiscordClient client = null)
         {
             var selectedCount = game.SelectedHats.Count;
             // 0 selected -> Multiplier 0? Or just show what it WOULD be for 1? 
@@ -142,7 +142,7 @@ namespace Server.Communication.Discord.Commands
             
             if (game.Status == CrackerGameStatus.Active)
             {
-                embed.WithColor(DiscordColor.Blurple);
+                embed.WithColor(DiscordColor.White);
                 embed.WithDescription("Select partyhats to bet on!\nClick 'Pull' when ready.");
                 embed.WithThumbnail(GetCrackerImageUrl(null, false, true));
             }
@@ -173,8 +173,27 @@ namespace Server.Communication.Discord.Commands
             
             if (game.Status == CrackerGameStatus.Finished && !string.IsNullOrEmpty(game.ResultHat))
             {
-                var resultEmoji = GetDiscordEmoji(game.ResultHat);
-                embed.AddField("Winning hat", $"<:{resultEmoji.Name}:{resultEmoji.Id}> {game.ResultHat}", true);
+                var resultEmojiId = GetDiscordEmoji(game.ResultHat).Id;
+                string emojiDisplay = null;
+
+                // 1. Try Guild Emote
+                if (client != null && resultEmojiId != 0)
+                {
+                    if (DiscordEmoji.TryFromGuildEmote(client, resultEmojiId, out var emoji))
+                    {
+                        emojiDisplay = emoji.ToString();
+                    }
+                }
+
+                // 2. Fallback: Manual Construction
+                if (string.IsNullOrEmpty(emojiDisplay))
+                {
+                    var emojiName = GetEmojiName(game.ResultHat);
+                    // User indicated these are likely animated (GIFs), so we use the animated format <a:name:id>
+                    emojiDisplay = $"<a:{emojiName}:{resultEmojiId}>";
+                }
+
+                embed.AddField("Winning hat", $"{emojiDisplay} {game.ResultHat}", true);
             }
 
             embed.WithFooter("Prestige Bets", null); 
@@ -275,7 +294,7 @@ namespace Server.Communication.Discord.Commands
                 $"cracker_pull_{game.Id}",
                 "Pull",
                 pullDisabled,
-                new DiscordComponentEmoji("🧨")); // Cracker emoji?
+                new DiscordComponentEmoji(DiscordIds.CrackerPullEmojiId)); 
 
             // Using Blackjack cancel style? I need to know the emoji.
             // Assuming generic Cross for now or check BlackjackButtonHandler if it has emoji.
@@ -285,7 +304,7 @@ namespace Server.Communication.Discord.Commands
             var cancelBtn = new DiscordButtonComponent(
                 DiscordButtonStyle.Secondary, // "pull and cancel should be transparent no color (gray)"
                 $"cracker_cancel_{game.Id}",
-                " ", // "no text"
+                null, // "no text"
                 false,
                 new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId));
 
@@ -325,21 +344,21 @@ namespace Server.Communication.Discord.Commands
              bool canHalf = userBalance >= halfBet; 
              
              var styleHalf = string.Equals(highlightedAction, "half", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row3.Add(new DiscordButtonComponent(styleHalf, $"cracker_half_{game.Id}", $"1/2 ({GpFormatter.Format(halfBet)})", disableAll || !canHalf, new DiscordComponentEmoji("🍬")));
+             row3.Add(new DiscordButtonComponent(styleHalf, $"cracker_half_{game.Id}", $"1/2 ({GpFormatter.Format(halfBet)})", disableAll || !canHalf, new DiscordComponentEmoji(DiscordIds.CrackerHalfEmojiId)));
              
              bool canRm = userBalance >= game.BetAmount;
              var styleRm = string.Equals(highlightedAction, "rm", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row3.Add(new DiscordButtonComponent(styleRm, $"cracker_rm_{game.Id}", $"RM ({GpFormatter.Format(game.BetAmount)})", disableAll || !canRm, new DiscordComponentEmoji("🧨")));
+             row3.Add(new DiscordButtonComponent(styleRm, $"cracker_rm_{game.Id}", $"RM ({GpFormatter.Format(game.BetAmount)})", disableAll || !canRm, new DiscordComponentEmoji(DiscordIds.CrackerRmEmojiId)));
              rows.Add(row3);
              
              var row4 = new List<DiscordComponent>();
              long doubleBet = game.BetAmount * 2;
              bool canDouble = userBalance >= doubleBet;
              var styleX2 = string.Equals(highlightedAction, "x2", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row4.Add(new DiscordButtonComponent(styleX2, $"cracker_x2_{game.Id}", $"X2 ({GpFormatter.Format(doubleBet)})", disableAll || !canDouble, new DiscordComponentEmoji("🍬")));
+             row4.Add(new DiscordButtonComponent(styleX2, $"cracker_x2_{game.Id}", $"X2 ({GpFormatter.Format(doubleBet)})", disableAll || !canDouble, new DiscordComponentEmoji(DiscordIds.CrackerX2EmojiId)));
              
              var styleMax = string.Equals(highlightedAction, "max", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row4.Add(new DiscordButtonComponent(styleMax, $"cracker_max_{game.Id}", $"MAX ({GpFormatter.Format(userBalance)})", disableAll, new DiscordComponentEmoji("🍬")));
+             row4.Add(new DiscordButtonComponent(styleMax, $"cracker_max_{game.Id}", $"MAX ({GpFormatter.Format(userBalance)})", disableAll, new DiscordComponentEmoji(DiscordIds.CrackerMaxEmojiId)));
              rows.Add(row4);
              
              return rows;
@@ -379,6 +398,20 @@ namespace Server.Communication.Discord.Commands
                 "Purple" => new DiscordComponentEmoji(DiscordIds.CrackerPurpleEmojiId),
                 "White" => new DiscordComponentEmoji(DiscordIds.CrackerWhiteEmojiId),
                 _ => new DiscordComponentEmoji(DiscordIds.CrackerYellowEmojiId)
+            };
+        }
+
+        private static string GetEmojiName(string color)
+        {
+            return color switch
+            {
+                "Red" => "redphat",
+                "Yellow" => "yellowphat",
+                "Green" => "greenphat",
+                "Blue" => "bluephat",
+                "Purple" => "purplephat",
+                "White" => "whitephat",
+                _ => "cracker"
             };
         }
     }

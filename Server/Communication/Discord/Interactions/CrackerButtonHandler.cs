@@ -128,7 +128,7 @@ namespace Server.Communication.Discord.Interactions
                  await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, oldMessageUpdate);
 
                  // Send new game message
-                 var embed = CrackerCommand.BuildGameEmbed(newGame, user);
+                 var embed = CrackerCommand.BuildGameEmbed(newGame, user, client);
                  var buttons = CrackerCommand.BuildButtons(newGame);
                  var builder = new DiscordMessageBuilder().AddEmbed(embed);
                  foreach(var row in buttons) builder.AddActionRowComponent(new DiscordActionRowComponent(row));
@@ -156,7 +156,7 @@ namespace Server.Communication.Discord.Interactions
                  var color = parts[2];
                  await crackerService.ToggleHatAsync(game, color);
                  
-                 var embed = CrackerCommand.BuildGameEmbed(game, user);
+                 var embed = CrackerCommand.BuildGameEmbed(game, user, client);
                  var buttons = CrackerCommand.BuildButtons(game);
                  var builder = new DiscordInteractionResponseBuilder().AddEmbed(embed);
                  foreach(var row in buttons) builder.AddActionRowComponent(new DiscordActionRowComponent(row));
@@ -177,7 +177,7 @@ namespace Server.Communication.Discord.Interactions
                  await crackerService.PullAsync(game, user);
                  user = await usersService.GetUserAsync(user.Identifier); // Refresh balance
                  
-                 var embed = CrackerCommand.BuildGameEmbed(game, user);
+                 var embed = CrackerCommand.BuildGameEmbed(game, user, client);
                  var buttons = CrackerCommand.BuildRematchButtons(game, user.Balance);
                  var builder = new DiscordInteractionResponseBuilder().AddEmbed(embed);
                  foreach(var row in buttons) builder.AddActionRowComponent(new DiscordActionRowComponent(row));
@@ -189,7 +189,7 @@ namespace Server.Communication.Discord.Interactions
                  await crackerService.CancelGameAsync(game);
                  user = await usersService.GetUserAsync(user.Identifier); // Refresh balance
                  
-                 var embed = CrackerCommand.BuildGameEmbed(game, user);
+                 var embed = CrackerCommand.BuildGameEmbed(game, user, client);
                  // No buttons for cancelled game usually, or maybe disabled ones
                  var builder = new DiscordInteractionResponseBuilder().AddEmbed(embed);
                  
