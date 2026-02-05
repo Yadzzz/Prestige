@@ -25,6 +25,12 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            if (id.StartsWith("vault_", StringComparison.OrdinalIgnoreCase))
+            {
+                await VaultInteractionHandler.HandleModal(client, e);
+                return;
+            }
+
             if (id == "broadcast_modal")
             {
                 DiscordMember? member = null;

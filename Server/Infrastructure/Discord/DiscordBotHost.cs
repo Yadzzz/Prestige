@@ -201,6 +201,7 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<ReferralCommands>();
                 commands.RegisterCommands<WagerLockCommand>();
                 commands.RegisterCommands<HelpCommand>();
+                commands.RegisterCommands<VaultCommand>();
 
             }, new CommandsNextConfiguration
             {

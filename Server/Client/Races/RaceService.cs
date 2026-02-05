@@ -307,7 +307,7 @@ namespace Server.Client.Races
                         var channel = await client.GetChannelAsync(race.ChannelId);
                         
                         var topParticipants = GetTopParticipants(10);
-                        var imageStream = RaceImageGenerator.GenerateLeaderboardImage(topParticipants, race.GetPrizes());
+                        var imageStream = await Task.Run(() => RaceImageGenerator.GenerateLeaderboardImage(topParticipants, race.GetPrizes()));
                         var useImage = imageStream != null;
 
                         var embed = BuildRaceEmbed(race, topParticipants, isEnding, distributionLog, useImage);

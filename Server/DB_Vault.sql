@@ -1,0 +1,24 @@
+--CREATE TABLE IF NOT EXISTS `vault_rounds` (
+--  `Id` int NOT NULL AUTO_INCREMENT,
+--  `SecretCode` int NOT NULL,
+--  `Pool` bigint NOT NULL DEFAULT 0,
+--  `GuessCount` int NOT NULL DEFAULT 0,
+--  `Status` varchar(50) NOT NULL DEFAULT 'Active',
+--  `StartTime` datetime NOT NULL,
+--  `EndTime` datetime DEFAULT NULL,
+--  `WinnerId` varchar(50) DEFAULT NULL,
+--  `ChannelId` bigint unsigned NOT NULL DEFAULT 0,
+--  `MessageId` bigint unsigned NOT NULL DEFAULT 0,
+--  PRIMARY KEY (`Id`)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--CREATE TABLE IF NOT EXISTS `vault_guesses` (
+--  `Id` int NOT NULL AUTO_INCREMENT,
+--  `RoundId` int NOT NULL,
+--  `UserIdentifier` varchar(50) NOT NULL,
+--  `Username` varchar(100) DEFAULT NULL,
+--  `Guess` int NOT NULL,
+--  `Timestamp` datetime NOT NULL,
+--  PRIMARY KEY (`Id`),
+--  KEY `IX_RoundId` (`RoundId`)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
