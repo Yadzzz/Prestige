@@ -200,6 +200,8 @@ namespace Server.Infrastructure.Discord
                 commands.RegisterCommands<ChestCommand>();
                 commands.RegisterCommands<ReferralCommands>();
                 commands.RegisterCommands<WagerLockCommand>();
+                commands.RegisterCommands<CrackerCommand>();
+
                 commands.RegisterCommands<HelpCommand>();
                 commands.RegisterCommands<VaultCommand>();
 

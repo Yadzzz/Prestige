@@ -25,10 +25,10 @@ namespace Server.Client.HigherLower
         public decimal CalculateMultiplier(Card card, bool isHigher, int currentRound)
         {
             int value = HigherLowerGame.GetCardValue(card);
-            // Total cards: 13 (A=1 ... K=13)
-            // Higher wins if New > Old. Count of cards > value is (13 - value).
-            // Lower wins if New < Old. Count of cards < value is (value - 1).
-            int winningOutcomes = isHigher ? (13 - value) : (value - 1);
+            // Total cards: 13 (2=2 ... A=14)
+            // Higher wins if New > Old. Count of cards > value is (14 - value).
+            // Lower wins if New < Old. Count of cards < value is (value - 2).
+            int winningOutcomes = isHigher ? (14 - value) : (value - 2);
 
             if (winningOutcomes <= 0) return 0m; // Impossible to win
 

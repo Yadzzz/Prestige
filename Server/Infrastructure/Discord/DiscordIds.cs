@@ -47,6 +47,19 @@ namespace Server.Infrastructure.Discord
         // Big win emoji (MVPP)
         public static ulong BigWinMvppEmojiId => ConfigService.Current.Discord.BigWinMvppEmojiId;
 
+        // Cracker Emojis
+        public static ulong CrackerBlueEmojiId => ConfigService.Current.Discord.CrackerBlueEmojiId;
+        public static ulong CrackerGreenEmojiId => ConfigService.Current.Discord.CrackerGreenEmojiId;
+        public static ulong CrackerPurpleEmojiId => ConfigService.Current.Discord.CrackerPurpleEmojiId;
+        public static ulong CrackerRedEmojiId => ConfigService.Current.Discord.CrackerRedEmojiId;
+        public static ulong CrackerWhiteEmojiId => ConfigService.Current.Discord.CrackerWhiteEmojiId;
+        public static ulong CrackerYellowEmojiId => ConfigService.Current.Discord.CrackerYellowEmojiId;
+        public static ulong CrackerPullEmojiId => ConfigService.Current.Discord.CrackerPullEmojiId;
+        public static ulong CrackerRmEmojiId => ConfigService.Current.Discord.CrackerRmEmojiId;
+        public static ulong CrackerHalfEmojiId => ConfigService.Current.Discord.CrackerHalfEmojiId;
+        public static ulong CrackerMaxEmojiId => ConfigService.Current.Discord.CrackerMaxEmojiId;
+        public static ulong CrackerX2EmojiId => ConfigService.Current.Discord.CrackerX2EmojiId;
+
         // Higher/Lower Emojis
         public static ulong HigherLowerHigherEmojiId => ConfigService.Current.Discord.HigherLowerHigherEmojiId;
         public static ulong HigherLowerLowerEmojiId => ConfigService.Current.Discord.HigherLowerLowerEmojiId;
