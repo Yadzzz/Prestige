@@ -221,9 +221,14 @@ namespace Server.Client.Cracker
             if (game.Status != CrackerGameStatus.Active) return false;
             
             if (game.SelectedHats.Contains(color))
+            {
                 game.SelectedHats.Remove(color);
+            }
             else
+            {
+                if (game.SelectedHats.Count >= 5) return false; // Prevent selecting more than 5
                 game.SelectedHats.Add(color);
+            }
                 
             await UpdateGameAsync(game);
             return true;

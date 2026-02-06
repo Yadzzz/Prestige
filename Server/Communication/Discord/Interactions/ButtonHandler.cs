@@ -51,7 +51,12 @@ namespace Server.Communication.Discord.Interactions
                 await HigherLowerButtonHandler.Handle(client, e);
                 return;
             }
-
+            // Games selection buttons
+            if (e.Id.StartsWith("games_", StringComparison.OrdinalIgnoreCase))
+            {
+                await GamesInteractionHandler.HandleComponent(client, e);
+                return;
+            }
             // Chest buttons
             if (e.Id.StartsWith("chest_", StringComparison.OrdinalIgnoreCase))
             {

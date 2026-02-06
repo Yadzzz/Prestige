@@ -196,22 +196,22 @@ namespace Server.Communication.Discord.Commands
                         {
                             // Replay button
                             row.Add(new DiscordButtonComponent(
-                                DiscordButtonStyle.Primary,
+                                DiscordButtonStyle.Secondary,
                                 $"mines_replay_{game.Id}",
-                                " ",
+                                null,
                                 false,
-                                new DiscordComponentEmoji("🔄")
+                                new DiscordComponentEmoji(DiscordIds.MinesRematchEmojiId)
                             ));
                         }
                         else if (game.RevealedTiles.Count == 0)
                         {
                             // Cancel button
                             row.Add(new DiscordButtonComponent(
-                                DiscordButtonStyle.Danger,
+                                DiscordButtonStyle.Secondary,
                                 $"mines_cancel_{game.Id}",
-                                "Cancel",
+                                null,
                                 false,
-                                new DiscordComponentEmoji("✖️")
+                                new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)
                             ));
                         }
                         else
@@ -220,9 +220,9 @@ namespace Server.Communication.Discord.Commands
                             row.Add(new DiscordButtonComponent(
                                 DiscordButtonStyle.Secondary,
                                 $"mines_cashout_{game.Id}",
-                                " ",
+                                null, // No text mentioned, user said "under cashout we use minescashout". Often implied no text if custom emoji.
                                 false,
-                                new DiscordComponentEmoji("💰")
+                                new DiscordComponentEmoji(DiscordIds.MinesCashoutEmojiId)
                             ));
                         }
                     }
@@ -234,31 +234,39 @@ namespace Server.Communication.Discord.Commands
                         
                         var style = DiscordButtonStyle.Secondary;
                         var label = " ";
-                        var emoji = new DiscordComponentEmoji("🔹"); // Hidden
+                        var emoji = new DiscordComponentEmoji(DiscordIds.MinesPurpleGemEmojiId); // Hidden
 
                         if (game.Status != MinesGameStatus.Active)
                         {
-                            // Reveal everything at end
+                            // Reveal phase
                             if (isMine)
                             {
-                                style = DiscordButtonStyle.Danger;
-                                emoji = new DiscordComponentEmoji("💣");
+                                // All mines show as bomb icon at the end
+                                emoji = new DiscordComponentEmoji(DiscordIds.MinesBombEmojiId);
+
                                 if (game.Status == MinesGameStatus.Lost && game.RevealedTiles.Contains(index))
                                 {
-                                    // The mine that killed you
+                                    // The mine that killed you gets a red background (already handled by style logic below)
                                     style = DiscordButtonStyle.Danger; 
                                 }
                             }
                             else
                             {
-                                style = DiscordButtonStyle.Success;
-                                emoji = new DiscordComponentEmoji("💎");
+                                // Safe tile (Gem)
+                                emoji = new DiscordComponentEmoji(DiscordIds.MinesGreenGemEmojiId);
                             }
                         }
                         else if (isRevealed)
                         {
-                            style = DiscordButtonStyle.Success;
-                            emoji = new DiscordComponentEmoji("💎");
+                            // Active game, revealed tile
+                            emoji = new DiscordComponentEmoji(DiscordIds.MinesGreenGemEmojiId);
+                        }
+
+                        // Determine background style: Only clicked tiles get color
+                        if (isRevealed)
+                        {
+                            if (isMine) style = DiscordButtonStyle.Danger;
+                            else style = DiscordButtonStyle.Success;
                         }
 
                         row.Add(new DiscordButtonComponent(

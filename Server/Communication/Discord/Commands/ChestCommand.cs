@@ -16,6 +16,12 @@ namespace Server.Communication.Discord.Commands
         [Description("Start a chest game to win rare items.")]
         public async Task Chest(CommandContext ctx, [Description("Amount to bet")] string amountString)
         {
+            if (!ctx.Member.IsStaff())
+            {
+                await ctx.RespondAsync("You are not authorized to use this command.");
+                return;
+            }
+
             if (!await DiscordChannelPermissionService.EnforceChestChannelAsync(ctx))
             {
                 return;
@@ -64,17 +70,38 @@ namespace Server.Communication.Discord.Commands
             }
 
             // Build initial embed
-            var embed = new DiscordEmbedBuilder()
-                .WithTitle("Chest Game")
-                .WithDescription($"Bet: **{GpFormatter.Format(amountK)}**\n\nSelect items to add to your chest. The more value you add, the lower your chance to win!")
-                .WithColor(DiscordColor.Gold)
-                .AddField("Selected Items", "None", true)
-                .AddField("Total Prize Value", "0 GP", true)
-                .AddField("Win Chance", "0%", true)
-                .WithFooter("Select items below | Click Confirm to play");
+            var embed = BuildGameEmbed(amountK, new List<string>(), 0, 0);
+            var rows = BuildComponents(game.Id.ToString());
 
-            // Build buttons for items
-            // We have 9 items. 5 per row max.
+            var builder = new DiscordMessageBuilder().AddEmbed(embed);
+            foreach (var row in rows)
+            {
+                builder.AddActionRowComponent(row);
+            }
+
+            var msg = await ctx.RespondAsync(builder);
+            
+            // Update game with message ID
+            await env.ServerManager.ChestService.UpdateSelectionAsync(game.Id, new List<string>(), msg.Id);
+        }
+
+        public static DiscordEmbed BuildGameEmbed(long betAmount, List<string> selectedItems, long totalPrize, double winChance)
+        {
+            var itemNames = selectedItems.Count > 0 ? string.Join(", ", selectedItems) : "None";
+            
+            return new DiscordEmbedBuilder()
+                .WithTitle("Chest Game")
+                .WithDescription($"Bet: **{GpFormatter.Format(betAmount)}**\n\nSelect items to add to your chest. The more value you add, the lower your chance to win!")
+                .WithColor(DiscordColor.Gold)
+                .AddField("Selected Items", itemNames, true)
+                .AddField("Total Prize Value", GpFormatter.Format(totalPrize), true)
+                .AddField("Win Chance", $"{winChance:0.00}%", true)
+                .WithFooter("Select items below | Click Confirm to play")
+                .Build();
+        }
+
+        public static List<DiscordActionRowComponent> BuildComponents(string gameId)
+        {
             var rows = new List<DiscordActionRowComponent>();
             var buttons1 = new List<DiscordComponent>();
             var buttons2 = new List<DiscordComponent>();
@@ -85,7 +112,7 @@ namespace Server.Communication.Discord.Commands
                 var emoji = item.EmojiId > 0 ? new DiscordComponentEmoji(item.EmojiId) : null;
                 var btn = new DiscordButtonComponent(
                     DiscordButtonStyle.Secondary,
-                    $"chest_select_{game.Id}_{item.Id}",
+                    $"chest_select_{gameId}_{item.Id}",
                     item.Name,
                     false,
                     emoji
@@ -102,21 +129,12 @@ namespace Server.Communication.Discord.Commands
             // Control row
             var controlButtons = new List<DiscordComponent>
             {
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"chest_confirm_{game.Id}", "Play", false, new DiscordComponentEmoji("🔑")),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"chest_cancel_{game.Id}", "Cancel", false, new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"chest_confirm_{gameId}", "Play", false, new DiscordComponentEmoji("🔑")),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"chest_cancel_{gameId}", "Cancel", false, new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId))
             };
             rows.Add(new DiscordActionRowComponent(controlButtons));
-
-            var builder = new DiscordMessageBuilder().AddEmbed(embed);
-            foreach (var row in rows)
-            {
-                builder.AddActionRowComponent(row);
-            }
-
-            var msg = await ctx.RespondAsync(builder);
             
-            // Update game with message ID
-            await env.ServerManager.ChestService.UpdateSelectionAsync(game.Id, new List<string>(), msg.Id);
+            return rows;
         }
     }
 }

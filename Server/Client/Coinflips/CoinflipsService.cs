@@ -112,6 +112,36 @@ namespace Server.Client.Coinflips
         //     return GetCoinflipByIdAsync(id).GetAwaiter().GetResult();
         // }
 
+        public async Task UpdateCoinflipStateAsync(Coinflip flip)
+        {
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand(@"
+                        UPDATE coinflips 
+                        SET status = @status, 
+                            message_id = @message_id, 
+                            channel_id = @channel_id, 
+                            updated_at = @updated_at 
+                        WHERE id = @id");
+                    
+                    command.AddParameter("status", (int)flip.Status);
+                    command.AddParameter("message_id", flip.MessageId.HasValue ? (object)flip.MessageId.Value : DBNull.Value);
+                    command.AddParameter("channel_id", flip.ChannelId.HasValue ? (object)flip.ChannelId.Value : DBNull.Value);
+                    command.AddParameter("updated_at", DateTime.UtcNow);
+                    command.AddParameter("id", flip.Id);
+
+                    await command.ExecuteQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"UpdateCoinflipStateAsync failed: {ex}");
+            }
+        }
+
         public async Task<bool> UpdateCoinflipOutcomeAsync(int id, bool choseHeads, bool resultHeads, CoinflipStatus status, ulong messageId, ulong channelId, CoinflipStatus? expectedStatus = null)
         {
             try

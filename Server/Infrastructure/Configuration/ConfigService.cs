@@ -61,6 +61,13 @@ namespace Server.Infrastructure.Configuration
         public ulong CoinflipGoldEmojiId { get; set; }
         public ulong CoinflipSilverEmojiId { get; set; }
 
+        public ulong MinesPurpleGemEmojiId { get; set; }
+        public ulong MinesGreenGemEmojiId { get; set; }
+        public ulong MinesRedGemEmojiId { get; set; }
+        public ulong MinesBombEmojiId { get; set; }
+        public ulong MinesRematchEmojiId { get; set; }
+        public ulong MinesCashoutEmojiId { get; set; }
+
         // Balance Emojis
         public ulong BalanceSheetEmojiId { get; set; }
         public ulong WithdrawEmojiId { get; set; }

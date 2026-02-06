@@ -204,6 +204,7 @@ namespace Server.Infrastructure.Discord
 
                 commands.RegisterCommands<HelpCommand>();
                 commands.RegisterCommands<VaultCommand>();
+                commands.RegisterCommands<GamesCommand>();
 
             }, new CommandsNextConfiguration
             {

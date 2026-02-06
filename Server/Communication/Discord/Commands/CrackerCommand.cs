@@ -344,21 +344,21 @@ namespace Server.Communication.Discord.Commands
              bool canHalf = userBalance >= halfBet; 
              
              var styleHalf = string.Equals(highlightedAction, "half", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row3.Add(new DiscordButtonComponent(styleHalf, $"cracker_half_{game.Id}", $"1/2 ({GpFormatter.Format(halfBet)})", disableAll || !canHalf, new DiscordComponentEmoji(DiscordIds.CrackerHalfEmojiId)));
+             row3.Add(new DiscordButtonComponent(styleHalf, $"cracker_half_{game.Id}", "1/2", disableAll || !canHalf, new DiscordComponentEmoji(DiscordIds.CrackerHalfEmojiId)));
              
              bool canRm = userBalance >= game.BetAmount;
              var styleRm = string.Equals(highlightedAction, "rm", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row3.Add(new DiscordButtonComponent(styleRm, $"cracker_rm_{game.Id}", $"RM ({GpFormatter.Format(game.BetAmount)})", disableAll || !canRm, new DiscordComponentEmoji(DiscordIds.CrackerRmEmojiId)));
+             row3.Add(new DiscordButtonComponent(styleRm, $"cracker_rm_{game.Id}", "RM", disableAll || !canRm, new DiscordComponentEmoji(DiscordIds.CrackerRmEmojiId)));
              rows.Add(row3);
              
              var row4 = new List<DiscordComponent>();
              long doubleBet = game.BetAmount * 2;
              bool canDouble = userBalance >= doubleBet;
              var styleX2 = string.Equals(highlightedAction, "x2", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row4.Add(new DiscordButtonComponent(styleX2, $"cracker_x2_{game.Id}", $"X2 ({GpFormatter.Format(doubleBet)})", disableAll || !canDouble, new DiscordComponentEmoji(DiscordIds.CrackerX2EmojiId)));
+             row4.Add(new DiscordButtonComponent(styleX2, $"cracker_x2_{game.Id}", "X2", disableAll || !canDouble, new DiscordComponentEmoji(DiscordIds.CrackerX2EmojiId)));
              
              var styleMax = string.Equals(highlightedAction, "max", StringComparison.OrdinalIgnoreCase) ? DiscordButtonStyle.Success : DiscordButtonStyle.Secondary;
-             row4.Add(new DiscordButtonComponent(styleMax, $"cracker_max_{game.Id}", $"MAX ({GpFormatter.Format(userBalance)})", disableAll, new DiscordComponentEmoji(DiscordIds.CrackerMaxEmojiId)));
+             row4.Add(new DiscordButtonComponent(styleMax, $"cracker_max_{game.Id}", "MAX", disableAll, new DiscordComponentEmoji(DiscordIds.CrackerMaxEmojiId)));
              rows.Add(row4);
              
              return rows;

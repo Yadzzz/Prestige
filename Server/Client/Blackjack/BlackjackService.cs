@@ -524,7 +524,7 @@ namespace Server.Client.Blackjack
             game.Status = BlackjackGameStatus.Finished;
         }
 
-        private async Task SaveGameAsync(BlackjackGame game)
+        public async Task SaveGameAsync(BlackjackGame game)
         {
             try
             {

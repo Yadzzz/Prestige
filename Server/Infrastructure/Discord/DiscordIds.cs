@@ -68,6 +68,13 @@ namespace Server.Infrastructure.Discord
         public static ulong CoinflipGoldEmojiId => ConfigService.Current.Discord.CoinflipGoldEmojiId; // win
         public static ulong CoinflipSilverEmojiId => ConfigService.Current.Discord.CoinflipSilverEmojiId; // loss
 
+        // Mines Emojis
+        public static ulong MinesPurpleGemEmojiId => ConfigService.Current.Discord.MinesPurpleGemEmojiId;
+        public static ulong MinesGreenGemEmojiId => ConfigService.Current.Discord.MinesGreenGemEmojiId;
+        public static ulong MinesRedGemEmojiId => ConfigService.Current.Discord.MinesRedGemEmojiId;
+        public static ulong MinesBombEmojiId => ConfigService.Current.Discord.MinesBombEmojiId;
+        public static ulong MinesRematchEmojiId => ConfigService.Current.Discord.MinesRematchEmojiId;
+        public static ulong MinesCashoutEmojiId => ConfigService.Current.Discord.MinesCashoutEmojiId;
         // Blackjack Emojis
         public static ulong BlackjackHitEmojiId => ConfigService.Current.Discord.BlackjackHitEmojiId;
         public static ulong BlackjackStandEmojiId => ConfigService.Current.Discord.BlackjackStandEmojiId;
