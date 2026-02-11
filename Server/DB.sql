@@ -238,3 +238,20 @@
 --) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --ALTER TABLE `users` ADD COLUMN `wager_lock_amount` BIGINT NOT NULL DEFAULT 0;
+
+--CREATE TABLE IF NOT EXISTS `cracker_games` (
+--  `id` int NOT NULL AUTO_INCREMENT,
+--  `user_id` int NOT NULL,
+--  `identifier` varchar(50) NOT NULL,
+--  `bet_amount` bigint NOT NULL,
+--  `status` int NOT NULL DEFAULT 0,
+--  `selected_hats` text DEFAULT NULL,
+--  `result_hat` varchar(20) DEFAULT NULL,
+--  `multiplier` decimal(10,2) DEFAULT NULL,
+--  `payout` bigint DEFAULT 0,
+--  `message_id` bigint unsigned DEFAULT NULL,
+--  `channel_id` bigint unsigned DEFAULT NULL,
+--  `created_at` datetime NOT NULL,
+--  `updated_at` datetime NOT NULL,
+--  PRIMARY KEY (`id`)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
