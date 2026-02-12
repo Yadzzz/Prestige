@@ -72,7 +72,7 @@ namespace Server.Communication.Discord.Interactions
                  
                  if (e.Id == "games_select_mines")
                  {
-                     modal.AddTextInput(new DiscordTextInputComponent("Mines Count (1-23)", "mines", "3", required: true, min_length: 1, max_length: 2), "Mines Count (1-23)");
+                     modal.AddTextInput(new DiscordTextInputComponent("Mines Count (3-23)", "mines", "3", required: true, min_length: 1, max_length: 2), "Mines Count (3-23)");
                  }
                  
                  await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
@@ -405,7 +405,7 @@ namespace Server.Communication.Discord.Interactions
             }
 
             if (!int.TryParse(minesStr, out int minesCount)) minesCount = 3;
-            if (minesCount < 1) minesCount = 1;
+            if (minesCount < 3) minesCount = 3;
             if (minesCount > 23) minesCount = 23;
 
             if (!await usersService.RemoveBalanceAsync(user.Identifier, betAmount, isWager: true))

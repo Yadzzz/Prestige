@@ -21,21 +21,20 @@ namespace Server.Client.Help
             // General Commands (Everyone)
             string generalCommands = 
                 "**Games**\n" +
-                "`!cf <amount>` - Play Coinflip\n" +
+                "`!games` - Open Game Menu\n" +
+                "`!cf <amount>` - Play Coinflip (e.g. `!cf 100m`)\n" +
                 "`!bj <amount>` - Play Blackjack\n" +
                 "`!hl <amount>` - Play Higher/Lower\n" +
-                "`!mines <amount>` - Play Mines\n" +
+                "`!mines <amount> [mines]` - Play Mines (default 3 mines)\n" +
                 "`!cr <amount>` - Play Cracker\n" +
+                "`!s <amount>` - Play Stake\n" +
+                "`!cancel` - Cancel pending game sessions\n" +
                 "\n" +
                 "**Economy**\n" +
-                "`!bal` - Check Balance\n" +
-                "`!deposit` - Information on how to deposit\n" +
-                "`!withdraw <amount>` - Withdraw funds\n" +
-                "`!code <code>` - Redeem a referral code\n" +
-                "\n" +
-                "**Utility**\n" +
-                "`!ping` - Check bot latency\n" +
-                "`!id` - Get your User ID";
+                "`!bal` - Check your wallet balance\n" +
+                "`!d <amount>` - Request a deposit\n" +
+                "`!w <amount>` - Request a withdrawal\n" +
+                "`!code <code>` - Redeem a referral code";
 
             embed.AddField("General", generalCommands, false);
 
@@ -45,14 +44,19 @@ namespace Server.Client.Help
                 embed.AddField("\u200b", "\u200b", false);
 
                 string staffCommands =
-                    "**Management**\n" +
-                    "`!referralcode` - Manage referral codes\n" +
-                    "`/broadcast` - Send server-wide announcement\n" +
-                    "`/race start` - Start a new wagering race\n" +
-                    "`!add <amount> <user>` - Add (spawn) money to user\n" +
-                    "`!remove <amount> <user>` - Remove money from user\n" +
-                    "`!set <amount> <user>` - Set user balance exactly\n" +
-                    "`!b <user>` - Check any user's balance";
+                    "**Economy Management**\n" +
+                    "`!add <amount> <user>` - Add credits to user\n" +
+                    "`!remove <amount> <user>` - Remove credits from user\n" +
+                    "`!gift <amount> <user>` - Gift credits (logged as gift)\n" +
+                    "`!wagerlock <user> <amount>` - Add wager lock to user\n" +
+                    "`!buy <amount>` - Process a manual purchase\n" + 
+                    "\n" +
+                    "**Game Hosting & Events**\n" +
+                    "`!referralcode` - Create/Edit referral codes\n" +
+                    "`!chest <amount>` - Host a Chest game\n" +
+                    "`!vaultsetup` / `!vaultstop` - Manage Vault game\n" +
+                    "`!racecreate` / `!raceend` - Manage Races\n" +
+                    "`/broadcast` - Send server announcement (Slash command)";
                     
                 embed.AddField("🛡️ Staff Only", staffCommands, false);
             }

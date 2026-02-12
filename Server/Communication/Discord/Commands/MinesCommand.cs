@@ -38,9 +38,9 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (minesCount < 1 || minesCount > 23)
+            if (minesCount < 3 || minesCount > 23)
             {
-                await ctx.RespondAsync("Mines count must be between 1 and 23.");
+                await ctx.RespondAsync("Mines count must be between 3 and 23.");
                 return;
             }
 
