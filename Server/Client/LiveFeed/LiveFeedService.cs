@@ -103,7 +103,7 @@ namespace Server.Client.LiveFeed
 
                     if (push)
                     {
-                        description = $"{amountPretty} **PUSH** in Blackjack 🤝";
+                        description = $"{amountPretty} **PUSH** in Blackjack <:{nameof(DiscordIds.BlackjackSpadesEmojiId)}:{DiscordIds.BlackjackSpadesEmojiId}> 🤝";
                         color = DiscordColor.Yellow;
                     }
                     else if (isBigWin)
@@ -113,12 +113,12 @@ namespace Server.Client.LiveFeed
                     }
                     else if (win)
                     {
-                        description = $"{amountPretty} **WIN** in Blackjack <:{nameof(DiscordIds.CoinflipGoldEmojiId)}:{DiscordIds.CoinflipGoldEmojiId}>";
+                        description = $"{amountPretty} **WIN** in Blackjack <:{nameof(DiscordIds.BlackjackSpadesEmojiId)}:{DiscordIds.BlackjackSpadesEmojiId}>";
                         color = DiscordColor.SpringGreen;
                     }
                     else
                     {
-                        description = $"{amountPretty} **LOST** in Blackjack <:{nameof(DiscordIds.CoinflipSilverEmojiId)}:{DiscordIds.CoinflipSilverEmojiId}>";
+                        description = $"{amountPretty} **LOST** in Blackjack <:{nameof(DiscordIds.BlackjackSpadesEmojiId)}:{DiscordIds.BlackjackSpadesEmojiId}>";
                         color = DiscordColor.Red;
                     }
 
@@ -160,12 +160,12 @@ namespace Server.Client.LiveFeed
                     }
                     else if (win)
                     {
-                        description = $"{amountPretty} **WIN** in Cracker ({multiplier}x) <:{nameof(DiscordIds.CoinflipGoldEmojiId)}:{DiscordIds.CoinflipGoldEmojiId}>";
+                        description = $"{amountPretty} **WIN** from a Classic cracker game <a:cracker:{DiscordIds.CrackerHalfEmojiId}>";
                         color = DiscordColor.SpringGreen;
                     }
                     else
                     {
-                        description = $"{amountPretty} **LOST** in Cracker";
+                        description = $"{amountPretty} **LOST** from a Classic cracker game <a:cracker:{DiscordIds.CrackerRmEmojiId}>";
                         color = DiscordColor.Red;
                     }
 
@@ -230,6 +230,92 @@ namespace Server.Client.LiveFeed
                 {
                     // Swallow errors: live feed must not affect gameplay.
                 }
+            });
+        }
+
+        public void PublishMines(long amountK, int minesCount, bool win, decimal multiplier)
+        {
+            var client = TryGetClient();
+            if (client == null)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
+                    var amountPretty = GpFormatter.Format(amountK);
+                    var isBigWin = win && amountK >= 1_000_000L;
+
+                    string description;
+                    DiscordColor color;
+
+                    if (isBigWin)
+                    {
+                        description = $"{amountPretty} __**BIG WIN!**__ with a x{multiplier:0.00} mines multiplier <:{nameof(DiscordIds.BigWinMvppEmojiId)}:{DiscordIds.BigWinMvppEmojiId}>";
+                         color = new DiscordColor("#AA66FF");
+                    }
+                    else if (win)
+                    {
+                        description = $"{amountPretty} **WIN** with a x{multiplier:0.00} mines multiplier <a:mines:{DiscordIds.MinesGreenGemEmojiId}>";
+                        color = DiscordColor.SpringGreen;
+                    }
+                    else
+                    {
+                        description = $"{amountPretty} **LOST** with a x{multiplier:0.00} mines multiplier <a:mines:{DiscordIds.MinesBombEmojiId}>";
+                        color = DiscordColor.Red;
+                    }
+
+                    var embed = new DiscordEmbedBuilder()
+                        .WithDescription(description)
+                        .WithColor(color);
+
+                    await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed));
+                }
+                catch { }
+            });
+        }
+
+        public void PublishHigherLower(long amountK, int round, bool win, decimal multiplier)
+        {
+            var client = TryGetClient();
+            if (client == null)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var channel = await client.GetChannelAsync(DiscordIds.LiveFeedChannelId);
+                    var amountPretty = GpFormatter.Format(amountK);
+                    var isBigWin = win && amountK >= 1_000_000L;
+
+                    string description;
+                    DiscordColor color;
+
+                    if (isBigWin)
+                    {
+                        description = $"{amountPretty} ({multiplier:0.00}x) __**BIG WIN!**__ on Higher/Lower (Rd {round}) <:{nameof(DiscordIds.BigWinMvppEmojiId)}:{DiscordIds.BigWinMvppEmojiId}>";
+                         color = new DiscordColor("#AA66FF");
+                    }
+                    else if (win)
+                    {
+                        description = $"{amountPretty} ({multiplier:0.00}x) **WIN** on Higher/Lower (Rd {round}) <a:hl:{DiscordIds.HigherLowerHigherEmojiId}>";
+                        color = DiscordColor.SpringGreen;
+                    }
+                    else
+                    {
+                        description = $"{amountPretty} **LOST** on Higher/Lower (Rd {round}) <a:hl:{DiscordIds.HigherLowerHigherEmojiId}>";
+                        color = DiscordColor.Red;
+                    }
+
+                    var embed = new DiscordEmbedBuilder()
+                        .WithDescription(description)
+                        .WithColor(color);
+
+                    await channel.SendMessageAsync(new DiscordMessageBuilder().AddEmbed(embed));
+                }
+                catch { }
             });
         }
     }

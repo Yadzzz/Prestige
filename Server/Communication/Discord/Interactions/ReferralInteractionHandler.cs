@@ -31,10 +31,13 @@ namespace Server.Communication.Discord.Interactions
                 var modal = new DiscordModalBuilder()
                     .WithTitle("Create Referral Code")
                     .WithCustomId("ref_create_modal")
+                    // Removed named 'placeholder' argument to avoid CS1744. Passing as positional 3rd argument (likely Value or Placeholder).
+                    // If it renders as pre-filled Value, that's acceptable.
                     .AddTextInput(new DiscordTextInputComponent("Referral Code", "code", "e.g. MyCode", required: true), "Referral Code")
-                    .AddTextInput(new DiscordTextInputComponent("New User Reward (M/K)", "reward", "e.g. 0.5 (for 500k) or 1m", required: true), "New User Reward (M/K)")
-                    .AddTextInput(new DiscordTextInputComponent("Referrer Reward (M/K)", "ref_reward", "e.g. 0.1 (for 100k) or 100k", required: true), "Referrer Reward (M/K)")
-                    .AddTextInput(new DiscordTextInputComponent("Max Uses (-1 for inf)", "uses", "-1", required: true), "Max Uses (-1 for inf)");
+                    .AddTextInput(new DiscordTextInputComponent("New User Reward (M/B)", "reward", "e.g. 1m or 0.5m", required: true), "New User Reward (M/B)")
+                    .AddTextInput(new DiscordTextInputComponent("Referrer Reward (M/B)", "ref_reward", "e.g. 1m", required: true), "Referrer Reward (M/B)")
+                    .AddTextInput(new DiscordTextInputComponent("Max Uses (-1 for inf)", "uses", "-1", required: true), "Max Uses (-1 for inf)")
+                    .AddTextInput(new DiscordTextInputComponent("User Wager Lock (M/B)", "wager_lock", "e.g. 5m", required: true), "User Wager Lock (M/B)");
 
                 await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.Modal, modal);
             }
@@ -61,15 +64,18 @@ namespace Server.Communication.Discord.Interactions
                     // DSharpPlus version quirk: e.Values keys are often the LABELS, not the CustomIDs.
                     // We must match the labels provided in AddTextInput exactly.
                     var code = GetValue(e.Values, "Referral Code");
-                    var rewardStr = GetValue(e.Values, "New User Reward (M/K)");
-                    var refRewardStr = GetValue(e.Values, "Referrer Reward (M/K)");
+                    var rewardStr = GetValue(e.Values, "New User Reward (M/B)");
+                    var refRewardStr = GetValue(e.Values, "Referrer Reward (M/B)");
                     var usesStr = GetValue(e.Values, "Max Uses (-1 for inf)");
+                    var wagerLockStr = GetValue(e.Values, "User Wager Lock (M/B)");
                     
                     if (!GpParser.TryParseAmountInK(rewardStr, out var reward, out _)) reward = 0;
                     if (!GpParser.TryParseAmountInK(refRewardStr, out var refReward, out _)) refReward = 0;
+                    if (!GpParser.TryParseAmountInK(wagerLockStr, out var wagerLock, out _)) wagerLock = reward; // Default to reward amount if failed? Or 0? Let's default to reward.
                     
                     // Simple int parse helper because manual .ToString() handles nulls weirdly occasionally
                     if (!int.TryParse(usesStr, out var uses)) uses = -1;
+
 
 
                     var env = ServerEnvironment.GetServerEnvironment();
@@ -126,7 +132,7 @@ namespace Server.Communication.Discord.Interactions
                         reward, 
                         refReward, 
                         uses, 
-                        reward, // Automatic Wager Lock = Reward Amount
+                        wagerLock, // Use the custom wager lock
                         false // newUsersOnly default false for now, or we can parse from somewhere?
                     );
 

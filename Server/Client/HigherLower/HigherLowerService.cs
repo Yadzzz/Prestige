@@ -246,6 +246,13 @@ namespace Server.Client.HigherLower
                     await usersService.AddBalanceAsync(game.Identifier, payout);
                 }
                 
+                try 
+                {
+                   decimal val = game.BetAmount > 0 ? (decimal)payout / game.BetAmount : 0;
+                   env.ServerManager.LiveFeedService?.PublishHigherLower(payout, game.CurrentRound, true, val);
+                } 
+                catch {}
+                
                 // Register wager for races
                 var user = await usersService.GetUserAsync(game.Identifier);
                 if (user != null)
@@ -261,6 +268,12 @@ namespace Server.Client.HigherLower
             }
             else if (game.Status == HigherLowerGameStatus.Lost)
             {
+                try 
+                {
+                   env.ServerManager.LiveFeedService?.PublishHigherLower(game.BetAmount, game.CurrentRound, false, 0m);
+                } 
+                catch {}
+
                  // Register wager for races even on loss
                 var user = await usersService.GetUserAsync(game.Identifier);
                 if (user != null)

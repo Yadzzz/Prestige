@@ -30,6 +30,14 @@ namespace Server.Client.Mines
             {
                 game.Status = MinesGameStatus.Lost;
                 game.RevealedTiles.Add(tileIndex); // Reveal the mine
+                
+                // Publish Loss
+                try 
+                {
+                    ServerEnvironment.GetServerEnvironment().ServerManager.LiveFeedService?.PublishMines(game.BetAmount, game.MinesCount, false, 0m);
+                }
+                catch {}
+
                 try
                 {
                     await UpdateGameAsync(game);
@@ -75,6 +83,13 @@ namespace Server.Client.Mines
 
             game.Status = MinesGameStatus.CashedOut;
             
+            // Publish Win
+            try
+            {
+                ServerEnvironment.GetServerEnvironment().ServerManager.LiveFeedService?.PublishMines(payout, game.MinesCount, true, (decimal)multiplier);
+            }
+            catch {}
+
             try
             {
                 await UpdateGameAsync(game);

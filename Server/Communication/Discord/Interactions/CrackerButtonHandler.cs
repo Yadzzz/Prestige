@@ -116,6 +116,12 @@ namespace Server.Communication.Discord.Interactions
                      return;
                  }
                  
+                 // Copy selected hats from previous game
+                 if (game.SelectedHats != null)
+                 {
+                     newGame.SelectedHats = new System.Collections.Generic.HashSet<string>(game.SelectedHats);
+                 }
+
                  // Update the old message: disable buttons and highlight the selected rematch option
                  var disabledButtons = CrackerCommand.BuildRematchButtons(game, user.Balance, action, true);
                  var oldMessageUpdate = new DiscordInteractionResponseBuilder();

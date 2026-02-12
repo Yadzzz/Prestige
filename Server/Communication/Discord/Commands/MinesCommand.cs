@@ -32,12 +32,6 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            if (!ctx.Member.IsStaff())
-            {
-                await ctx.RespondAsync("This command is currently restricted to staff only.");
-                return;
-            }
-
             if (string.IsNullOrWhiteSpace(amount))
             {
                 await ctx.RespondAsync("Please specify an amount. Usage: `!mines <amount> <mines>` (e.g. `!mines 100m 3`).");

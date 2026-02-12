@@ -25,7 +25,7 @@ namespace Server.Client.Help
                 "`!bj <amount>` - Play Blackjack\n" +
                 "`!hl <amount>` - Play Higher/Lower\n" +
                 "`!mines <amount>` - Play Mines\n" +
-                "`!chest <amount>` - Open Chests\n" +
+                "`!cr <amount>` - Play Cracker\n" +
                 "\n" +
                 "**Economy**\n" +
                 "`!bal` - Check Balance\n" +
