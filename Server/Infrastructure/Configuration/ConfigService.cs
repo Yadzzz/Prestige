@@ -32,6 +32,7 @@ namespace Server.Infrastructure.Configuration
         public string BotToken { get; set; }
         public ulong GuildId { get; set; }
         public ulong StaffRoleId { get; set; }
+        public ulong VerifiedRoleId { get; set; }
         
         // Channels
         public ulong DepositStaffChannelId { get; set; }

@@ -32,6 +32,7 @@ namespace Server.Configuration
         public string BotToken { get; set; }
         public ulong GuildId { get; set; }
         public ulong StaffRoleId { get; set; }
+        public ulong VerifiedRoleId { get; set; }
         public DiscordChannels Channels { get; set; }
         public DiscordTicketCategories TicketCategories { get; set; }
         public DiscordEmojis Emojis { get; set; }

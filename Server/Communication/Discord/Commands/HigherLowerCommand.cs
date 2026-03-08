@@ -22,11 +22,11 @@ namespace Server.Communication.Discord.Commands
         public async Task HigherLower(CommandContext ctx, string amount = null)
         {
             // Check if user is staff
-            if (!ctx.Member.IsStaff())
-            {
-                await ctx.RespondAsync("This command is currently restricted to staff members only.");
-                return;
-            }
+            //if (!ctx.Member.IsStaff())
+            //{
+            //    await ctx.RespondAsync("This command is currently restricted to staff members only.");
+            //    return;
+            //}
 
             // Assuming we want to enforce channel permissions similar to Blackjack
             // if (!await DiscordChannelPermissionService.EnforceBlackjackChannelAsync(ctx)) return; 

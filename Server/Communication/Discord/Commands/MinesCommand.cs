@@ -166,7 +166,7 @@ namespace Server.Communication.Discord.Commands
                 .AddField("Payout", $"**{GpFormatter.Format(currentPayout)}**", true)
                 .AddField("Next", $"**{nextMultiplier:0.00}x**", true)
                 .WithColor(color)
-                .WithThumbnail(thumbnailUrl)
+                //.WithThumbnail(thumbnailUrl)
                 .WithFooter($"{ServerConfiguration.ServerName} Game ID: {game.Id}")
                 .WithTimestamp(DateTimeOffset.UtcNow);
 

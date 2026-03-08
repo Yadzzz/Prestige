@@ -15,6 +15,7 @@ namespace Server.Infrastructure.Discord
 
         // Roles
         public static ulong StaffRoleId => ConfigService.Current.Discord.StaffRoleId;
+        public static ulong VerifiedRoleId => ConfigService.Current.Discord.VerifiedRoleId;
 
         // Channels
         public static ulong DepositStaffChannelId => ConfigService.Current.Discord.DepositStaffChannelId;
