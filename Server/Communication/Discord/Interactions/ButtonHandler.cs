@@ -51,7 +51,12 @@ namespace Server.Communication.Discord.Interactions
                 await HigherLowerButtonHandler.Handle(client, e);
                 return;
             }
-
+            // Games selection buttons
+            if (e.Id.StartsWith("games_", StringComparison.OrdinalIgnoreCase))
+            {
+                await GamesInteractionHandler.HandleComponent(client, e);
+                return;
+            }
             // Chest buttons
             if (e.Id.StartsWith("chest_", StringComparison.OrdinalIgnoreCase))
             {
@@ -77,6 +82,13 @@ namespace Server.Communication.Discord.Interactions
             if (e.Id.StartsWith("mines_", StringComparison.OrdinalIgnoreCase))
             {
                 await MinesButtonHandler.Handle(client, e);
+                return;
+            }
+
+            // Cracker buttons
+            if (e.Id.StartsWith("cracker_", StringComparison.OrdinalIgnoreCase))
+            {
+                await CrackerButtonHandler.Handle(client, e);
                 return;
             }
 

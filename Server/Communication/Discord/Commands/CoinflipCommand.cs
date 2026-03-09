@@ -79,49 +79,55 @@ namespace Server.Communication.Discord.Commands
                 return;
             }
 
-            var prettyAmount = GpFormatter.Format(flip.AmountK);
+            var embed = BuildGameEmbed();
+            var actionRow = BuildActionRow(flip.Id);
 
-            var embed = new DiscordEmbedBuilder()
+            var message = await ctx.RespondAsync(new DiscordMessageBuilder()
+                .AddEmbed(embed)
+                .AddActionRowComponent(actionRow));
+
+            // Only update if the status is still Pending.
+            // If the user already clicked a button (race condition), the status might be Finished or Cancelled.
+            // In that case, we do NOT want to overwrite it back to Pending.
+            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id, expectedStatus: CoinflipStatus.Pending);
+        }
+
+        public static DiscordEmbed BuildGameEmbed()
+        {
+            return new DiscordEmbedBuilder()
                 .WithTitle("One, two, three")
                 .WithDescription("**We are gonna see...**\n\n*What's it gonna be?*")
                 .WithColor(DiscordColor.Gold)
                 .WithThumbnail("https://i.imgur.com/W6mx4qd.gif")
                 .WithFooter(ServerConfiguration.ServerName)
-                .WithTimestamp(DateTimeOffset.UtcNow);
+                .WithTimestamp(DateTimeOffset.UtcNow)
+                .Build();
+        }
 
-            //var headsButton = new DiscordButtonComponent(DiscordButtonStyle.Success, $"cf_heads_{flip.Id}", "🪙 Heads");
-            //var tailsButton = new DiscordButtonComponent(DiscordButtonStyle.Primary, $"cf_tails_{flip.Id}", "🧠 Tails");
-            //var exitButton = new DiscordButtonComponent(DiscordButtonStyle.Danger, $"cf_exit_{flip.Id}", "Exit");
-
+        public static DiscordActionRowComponent BuildActionRow(int flipId)
+        {
             var headsButton = new DiscordButtonComponent(
                 DiscordButtonStyle.Secondary,
-                $"cf_heads_{flip.Id}",
+                $"cf_heads_{flipId}",
                 " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipHeadsEmojiId)
             );
 
             var tailsButton = new DiscordButtonComponent(
                 DiscordButtonStyle.Secondary,
-                $"cf_tails_{flip.Id}",
+                $"cf_tails_{flipId}",
                 " ",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipTailsEmojiId)
             );
 
             var exitButton = new DiscordButtonComponent(
                 DiscordButtonStyle.Secondary,
-                $"cf_exit_{flip.Id}",
+                $"cf_exit_{flipId}",
                 "Refund",
                 emoji: new DiscordComponentEmoji(DiscordIds.CoinflipExitEmojiId)
             );
 
-            var message = await ctx.RespondAsync(new DiscordMessageBuilder()
-                .AddEmbed(embed)
-                .AddActionRowComponent(new[] { headsButton, tailsButton, exitButton }));
-
-            // Only update if the status is still Pending.
-            // If the user already clicked a button (race condition), the status might be Finished or Cancelled.
-            // In that case, we do NOT want to overwrite it back to Pending.
-            await coinflipsService.UpdateCoinflipOutcomeAsync(flip.Id, choseHeads: false, resultHeads: false, status: CoinflipStatus.Pending, messageId: message.Id, channelId: message.Channel.Id, expectedStatus: CoinflipStatus.Pending);
+            return new DiscordActionRowComponent(new[] { headsButton, tailsButton, exitButton });
         }
     }
 }

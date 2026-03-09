@@ -22,11 +22,11 @@ namespace Server.Communication.Discord.Commands
         public async Task HigherLower(CommandContext ctx, string amount = null)
         {
             // Check if user is staff
-            if (!ctx.Member.IsStaff())
-            {
-                await ctx.RespondAsync("This command is currently restricted to staff members only.");
-                return;
-            }
+            //if (!ctx.Member.IsStaff())
+            //{
+            //    await ctx.RespondAsync("This command is currently restricted to staff members only.");
+            //    return;
+            //}
 
             // Assuming we want to enforce channel permissions similar to Blackjack
             // if (!await DiscordChannelPermissionService.EnforceBlackjackChannelAsync(ctx)) return; 
@@ -190,8 +190,8 @@ namespace Server.Communication.Discord.Commands
 
             var buttons = new List<DiscordComponent>
             {
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"hl_higher_{game.Id}", $"{higherMult.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}x", higherMult == 0, new DiscordComponentEmoji(1449749026353451049)),
-                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"hl_lower_{game.Id}", $"{lowerMult.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}x", lowerMult == 0, new DiscordComponentEmoji(1449752437471842374)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"hl_higher_{game.Id}", $"{higherMult.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}x", higherMult == 0, new DiscordComponentEmoji(DiscordIds.HigherLowerHigherEmojiId)),
+                new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"hl_lower_{game.Id}", $"{lowerMult.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}x", lowerMult == 0, new DiscordComponentEmoji(DiscordIds.HigherLowerLowerEmojiId)),
                 new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"hl_cashout_{game.Id}", "Cashout", game.CurrentRound < 1, new DiscordComponentEmoji("💰"))
             };
 

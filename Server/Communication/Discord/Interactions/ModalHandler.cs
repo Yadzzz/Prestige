@@ -31,6 +31,12 @@ namespace Server.Communication.Discord.Interactions
                 return;
             }
 
+            if (id.StartsWith("games_", StringComparison.OrdinalIgnoreCase))
+            {
+                await GamesInteractionHandler.HandleModal(client, e);
+                return;
+            }
+
             if (id == "broadcast_modal")
             {
                 DiscordMember? member = null;

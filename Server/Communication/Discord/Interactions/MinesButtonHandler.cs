@@ -52,30 +52,8 @@ namespace Server.Communication.Discord.Interactions
                 }
             }
             
-            // If game is finished, do nothing (or show result)
-            if (game.Status != MinesGameStatus.Active)
-            {
-                 await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, 
-                    new DiscordInteractionResponseBuilder().WithContent("Game is already finished."));
-                 return;
-            }
-
-            MinesGame updatedGame = null;
-
-            if (action == "click")
-            {
-                if (parts.Length < 4 || !int.TryParse(parts[3], out int tileIndex)) return;
-                updatedGame = await minesService.RevealTileAsync(gameId, tileIndex);
-            }
-            else if (action == "cashout")
-            {
-                updatedGame = await minesService.CashoutAsync(gameId);
-            }
-            else if (action == "cancel")
-            {
-                updatedGame = await minesService.CancelGameAsync(gameId);
-            }
-            else if (action == "replay")
+            // Handle Replay (Start New Game)
+            if (action == "replay")
             {
                 if (user.Balance < game.BetAmount)
                 {
@@ -93,21 +71,60 @@ namespace Server.Communication.Discord.Interactions
 
                 user.Balance -= game.BetAmount;
 
-                updatedGame = await minesService.CreateGameAsync(user, game.BetAmount, game.MinesCount);
+                var newGame = await minesService.CreateGameAsync(user, game.BetAmount, game.MinesCount);
 
-                if (updatedGame != null)
+                if (newGame != null)
                 {
-                    updatedGame.MessageId = e.Message.Id;
-                    updatedGame.ChannelId = e.Channel.Id;
-                    await minesService.UpdateGameAsync(updatedGame);
+                    var newEmbed = MinesCommand.BuildGameEmbed(newGame, user);
+                    var newButtons = MinesCommand.BuildButtons(newGame);
+
+                    var replayBuilder = new DiscordInteractionResponseBuilder()
+                        .AddEmbed(newEmbed);
+
+                    foreach (var row in newButtons)
+                    {
+                        replayBuilder.AddActionRowComponent(new DiscordActionRowComponent(row));
+                    }
+
+                    // Send new game as a new message response
+                    await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, replayBuilder);
+                    
+                    var newMsg = await e.Interaction.GetOriginalResponseAsync();
+                    newGame.MessageId = newMsg.Id;
+                    newGame.ChannelId = newMsg.ChannelId;
+                    await minesService.UpdateGameAsync(newGame);
                 }
                 else
                 {
                     await usersService.AddBalanceAsync(user.Identifier, game.BetAmount);
                     await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder().WithContent("Failed to start new game.").AsEphemeral(true));
-                    return;
                 }
+                return;
+            }
+            
+            // If game is finished, disallow other actions
+            if (game.Status != MinesGameStatus.Active)
+            {
+                 await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, 
+                    new DiscordInteractionResponseBuilder().WithContent("Game is already finished.").AsEphemeral(true));
+                 return;
+            }
+
+            MinesGame updatedGame = null;
+
+            if (action == "click")
+            {
+                if (parts.Length < 4 || !int.TryParse(parts[3], out int tileIndex)) return;
+                updatedGame = await minesService.RevealTileAsync(gameId, tileIndex);
+            }
+            else if (action == "cashout")
+            {
+                updatedGame = await minesService.CashoutAsync(gameId);
+            }
+            else if (action == "cancel")
+            {
+                updatedGame = await minesService.CancelGameAsync(gameId);
             }
 
             if (updatedGame == null)

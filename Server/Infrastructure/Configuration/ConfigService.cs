@@ -32,6 +32,7 @@ namespace Server.Infrastructure.Configuration
         public string BotToken { get; set; }
         public ulong GuildId { get; set; }
         public ulong StaffRoleId { get; set; }
+        public ulong VerifiedRoleId { get; set; }
         
         // Channels
         public ulong DepositStaffChannelId { get; set; }
@@ -60,6 +61,13 @@ namespace Server.Infrastructure.Configuration
         public ulong BigWinMvppEmojiId { get; set; }
         public ulong CoinflipGoldEmojiId { get; set; }
         public ulong CoinflipSilverEmojiId { get; set; }
+
+        public ulong MinesPurpleGemEmojiId { get; set; }
+        public ulong MinesGreenGemEmojiId { get; set; }
+        public ulong MinesRedGemEmojiId { get; set; }
+        public ulong MinesBombEmojiId { get; set; }
+        public ulong MinesRematchEmojiId { get; set; }
+        public ulong MinesCashoutEmojiId { get; set; }
 
         // Balance Emojis
         public ulong BalanceSheetEmojiId { get; set; }
@@ -98,6 +106,19 @@ namespace Server.Infrastructure.Configuration
         public ulong ChestScytheEmojiId { get; set; }
         public ulong ChestElysianEmojiId { get; set; }
         public ulong ChestPickaxeEmojiId { get; set; }
+
+        // Cracker Emojis
+        public ulong CrackerBlueEmojiId { get; set; }
+        public ulong CrackerGreenEmojiId { get; set; }
+        public ulong CrackerPurpleEmojiId { get; set; }
+        public ulong CrackerRedEmojiId { get; set; }
+        public ulong CrackerWhiteEmojiId { get; set; }
+        public ulong CrackerYellowEmojiId { get; set; }
+        public ulong CrackerPullEmojiId { get; set; }
+        public ulong CrackerRmEmojiId { get; set; }
+        public ulong CrackerHalfEmojiId { get; set; }
+        public ulong CrackerMaxEmojiId { get; set; }
+        public ulong CrackerX2EmojiId { get; set; }
 
         public BlackjackCardConfig BlackjackCards { get; set; }
     }

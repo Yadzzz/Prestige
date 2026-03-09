@@ -15,6 +15,7 @@ namespace Server.Infrastructure.Discord
 
         // Roles
         public static ulong StaffRoleId => ConfigService.Current.Discord.StaffRoleId;
+        public static ulong VerifiedRoleId => ConfigService.Current.Discord.VerifiedRoleId;
 
         // Channels
         public static ulong DepositStaffChannelId => ConfigService.Current.Discord.DepositStaffChannelId;
@@ -47,6 +48,19 @@ namespace Server.Infrastructure.Discord
         // Big win emoji (MVPP)
         public static ulong BigWinMvppEmojiId => ConfigService.Current.Discord.BigWinMvppEmojiId;
 
+        // Cracker Emojis
+        public static ulong CrackerBlueEmojiId => ConfigService.Current.Discord.CrackerBlueEmojiId;
+        public static ulong CrackerGreenEmojiId => ConfigService.Current.Discord.CrackerGreenEmojiId;
+        public static ulong CrackerPurpleEmojiId => ConfigService.Current.Discord.CrackerPurpleEmojiId;
+        public static ulong CrackerRedEmojiId => ConfigService.Current.Discord.CrackerRedEmojiId;
+        public static ulong CrackerWhiteEmojiId => ConfigService.Current.Discord.CrackerWhiteEmojiId;
+        public static ulong CrackerYellowEmojiId => ConfigService.Current.Discord.CrackerYellowEmojiId;
+        public static ulong CrackerPullEmojiId => ConfigService.Current.Discord.CrackerPullEmojiId;
+        public static ulong CrackerRmEmojiId => ConfigService.Current.Discord.CrackerRmEmojiId;
+        public static ulong CrackerHalfEmojiId => ConfigService.Current.Discord.CrackerHalfEmojiId;
+        public static ulong CrackerMaxEmojiId => ConfigService.Current.Discord.CrackerMaxEmojiId;
+        public static ulong CrackerX2EmojiId => ConfigService.Current.Discord.CrackerX2EmojiId;
+
         // Higher/Lower Emojis
         public static ulong HigherLowerHigherEmojiId => ConfigService.Current.Discord.HigherLowerHigherEmojiId;
         public static ulong HigherLowerLowerEmojiId => ConfigService.Current.Discord.HigherLowerLowerEmojiId;
@@ -55,6 +69,13 @@ namespace Server.Infrastructure.Discord
         public static ulong CoinflipGoldEmojiId => ConfigService.Current.Discord.CoinflipGoldEmojiId; // win
         public static ulong CoinflipSilverEmojiId => ConfigService.Current.Discord.CoinflipSilverEmojiId; // loss
 
+        // Mines Emojis
+        public static ulong MinesPurpleGemEmojiId => ConfigService.Current.Discord.MinesPurpleGemEmojiId;
+        public static ulong MinesGreenGemEmojiId => ConfigService.Current.Discord.MinesGreenGemEmojiId;
+        public static ulong MinesRedGemEmojiId => ConfigService.Current.Discord.MinesRedGemEmojiId;
+        public static ulong MinesBombEmojiId => ConfigService.Current.Discord.MinesBombEmojiId;
+        public static ulong MinesRematchEmojiId => ConfigService.Current.Discord.MinesRematchEmojiId;
+        public static ulong MinesCashoutEmojiId => ConfigService.Current.Discord.MinesCashoutEmojiId;
         // Blackjack Emojis
         public static ulong BlackjackHitEmojiId => ConfigService.Current.Discord.BlackjackHitEmojiId;
         public static ulong BlackjackStandEmojiId => ConfigService.Current.Discord.BlackjackStandEmojiId;

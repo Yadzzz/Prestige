@@ -6,6 +6,7 @@ using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using Server.Client.Blackjack;
 using Server.Client.Coinflips;
+using Server.Client.Cracker;
 using Server.Client.Stakes;
 using Server.Client.Utils;
 using Server.Infrastructure;
@@ -197,8 +198,69 @@ namespace Server.Communication.Discord.Commands
                 cancelledCount++;
             }
 
+            // 3. Cancel Pending Cracker Games
+            var crackerService = serverManager.CrackerService;
+            if (crackerService != null)
+            {
+                var activeCrackerGames = await crackerService.GetActiveGamesByUserIdAsync(user.Id);
+                foreach (var game in activeCrackerGames)
+                {
+                    // Update Status to Cancelled & Refund
+                    await crackerService.CancelGameAsync(game);
+                    
+                    if (rowsShown < 8)
+                    {
+                        sbGame.AppendLine("`CRACKER`");
+                        sbAmount.AppendLine($"`{GpFormatter.Format(game.BetAmount)}`");
+                        if (game.ChannelId > 0 && game.MessageId > 0 && ctx.Guild != null)
+                        {
+                            var url = $"https://discord.com/channels/{ctx.Guild.Id}/{game.ChannelId}/{game.MessageId}";
+                            sbPanel.AppendLine($"[View]({url})");
+                        }
+                        else
+                        {
+                            sbPanel.AppendLine("N/A");
+                        }
+                        rowsShown++;
+                    }
+                    else if (rowsShown == 8)
+                    {
+                        sbGame.AppendLine("... (more hidden)");
+                        sbAmount.AppendLine("...");
+                        sbPanel.AppendLine("...");
+                        rowsShown++;
+                    }
+
+                    cancelledCount++;
+                    
+                    if (game.ChannelId > 0 && game.MessageId > 0)
+                    {
+                        try 
+                        {
+                            var channel = await ctx.Client.GetChannelAsync((ulong)game.ChannelId);
+                            var msg = await channel.GetMessageAsync((ulong)game.MessageId);
+                            
+                            var updatedUser = await usersService.GetUserAsync(user.Identifier);
+                            var cancelEmbed = CrackerCommand.BuildGameEmbed(game, updatedUser);
+                            
+                            await msg.ModifyAsync(mb => 
+                            {
+                                mb.ClearEmbeds();
+                                mb.AddEmbed(cancelEmbed);
+                                mb.ClearComponents();
+                            });
+                             await Task.Delay(100);
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
+                }
+            }
+
             /*
-            // 3. Cancel Pending Blackjack Games
+            // 4. Cancel Pending Blackjack Games
             var blackjackService = serverManager.BlackjackService;
             var activeGames = await blackjackService.GetActiveGamesByUserIdAsync(user.Id);
             foreach (var game in activeGames)

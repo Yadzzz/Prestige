@@ -25,7 +25,7 @@ namespace Server.Client.HigherLower
         {
             return card.Rank switch
             {
-                "A" => 1,
+                "A" => 14,
                 "2" => 2,
                 "3" => 3,
                 "4" => 4,

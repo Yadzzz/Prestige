@@ -5,6 +5,7 @@ using Server.Infrastructure;
 using Server.Client.Users;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
 using Server.Infrastructure.Discord;
 
 namespace Server.Communication.Discord.Commands
@@ -47,6 +48,18 @@ namespace Server.Communication.Discord.Commands
         [Description("Redeem a referral code.")]
         public async Task RedeemCode(CommandContext ctx, string code)
         {
+                if (ctx.Member == null)
+                {
+                    await ctx.RespondAsync("❌ This command must be used in a server channel.");
+                    return;
+                }
+
+                if (DiscordIds.VerifiedRoleId != 0 && !ctx.Member.Roles.Any(r => r.Id == DiscordIds.VerifiedRoleId))
+                {
+                    await ctx.RespondAsync("❌ You do not have the verified role so you are unable to use this code.");
+                    return;
+                }
+
             var env = ServerEnvironment.GetServerEnvironment();
             var referralService = env.ServerManager.ReferralService;
             var usersService = env.ServerManager.UsersService;

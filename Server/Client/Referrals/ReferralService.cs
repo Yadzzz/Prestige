@@ -112,7 +112,7 @@ namespace Server.Client.Referrals
 
             if (refCode.OwnerIdentifier == user.Identifier) return "You cannot redeem your own code.";
 
-            if (refCode.CurrentUses >= refCode.MaxUses) return "This code has reached its maximum usage limit.";
+            if (refCode.MaxUses != -1 && refCode.CurrentUses >= refCode.MaxUses) return "This code has reached its maximum usage limit.";
 
             // 1. Check if user has already redeemed ANY code (assuming 1 per user)
             bool alreadyRedeemed = await HasRedeemedAnyCodeAsync(user.Identifier);
@@ -132,7 +132,7 @@ namespace Server.Client.Referrals
                 {
                     // Update usage count + Insert usage record
                     command.SetCommand(@"
-                        UPDATE referral_codes SET current_uses = current_uses + 1 WHERE code = @code AND current_uses < max_uses;
+                        UPDATE referral_codes SET current_uses = current_uses + 1 WHERE code = @code AND (max_uses = -1 OR current_uses < max_uses);
                         INSERT INTO referral_usages (code, user_identifier, redeemed_at) VALUES (@code, @userId, NOW());
                     ");
                     command.AddParameter("code", code);
@@ -151,8 +151,8 @@ namespace Server.Client.Referrals
                 {
                     await _usersService.AddBalanceAsync(user.Identifier, refCode.RewardAmount);
                     
-                    // Apply Wager Lock: New user gets locked for the amount of the reward
-                    await _usersService.AddWagerLockAsync(user.Identifier, refCode.RewardAmount);
+                    // Apply Wager Lock: New user gets locked for the specified wager lock amount
+                    await _usersService.AddWagerLockAsync(user.Identifier, refCode.WagerLock);
                 }
 
                 if (refCode.ReferrerRewardAmount > 0)
