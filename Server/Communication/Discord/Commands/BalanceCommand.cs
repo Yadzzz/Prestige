@@ -98,9 +98,15 @@ namespace Server.Communication.Discord.Commands
             else
             {
                 // Staff View
+                var description = $"{displayName} has **{formatted}** in their wallet.";
+                if (user.WagerLock > 0)
+                {
+                    description += $"\n\n🔒 **Required Wager:** `{GpFormatter.Format(user.WagerLock)}`";
+                }
+
                 var embed = new DiscordEmbedBuilder()
                     .WithTitle("User Balance")
-                    .WithDescription($"{displayName} has **{formatted}** in their wallet.")
+                    .WithDescription(description)
                     .WithColor(DiscordColor.Blurple)
                     .WithThumbnail(targetUser.AvatarUrl ?? targetUser.DefaultAvatarUrl)
                     .WithFooter(ServerConfiguration.ServerName)

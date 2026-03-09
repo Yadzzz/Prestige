@@ -389,6 +389,39 @@ namespace Server.Client.Users
             }
         }
 
+        public async Task<bool> RemoveWagerLockAsync(string identifier, long amount)
+        {
+            if (string.IsNullOrEmpty(identifier) || amount <= 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                using (var command = new DatabaseCommand())
+                {
+                    command.SetCommand(@"
+                        UPDATE users 
+                        SET wager_lock_amount = CASE 
+                                WHEN wager_lock_amount > @amount THEN wager_lock_amount - @amount 
+                                ELSE 0 
+                            END
+                        WHERE identifier = @identifier");
+                    command.AddParameter("identifier", identifier);
+                    command.AddParameter("amount", amount);
+
+                    var result = await command.ExecuteQueryAsync();
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                var env = ServerEnvironment.GetServerEnvironment();
+                env.ServerManager.LoggerManager.LogError($"[UsersService.RemoveWagerLockAsync] identifier={identifier} amount={amount} ex={ex}");
+                return false;
+            }
+        }
+
         // Keep synchronous method for backward compatibility
         // private bool TryUpdateBalance(string identifier, long delta)
         // {
