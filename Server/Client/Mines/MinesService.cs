@@ -245,7 +245,7 @@ namespace Server.Client.Mines
 
             double probability = combinationsSafe / combinationsTotal;
             double fair = 1.0 / probability;
-            double multiplier = fair * 0.97;
+            double multiplier = fair * 0.93;
 
             // Always round down (truncate) to 2 decimal places? Or just floor?
             // User said "Always round down (never up)". Usually implies floor to 2 decimals or just floor.
